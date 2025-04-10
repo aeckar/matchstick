@@ -1,17 +1,21 @@
-package io.github.aeckar
+package io.github.aeckar.parsing
+
+/** Returns a mutable stack holding elements of type [E]. */
+public fun <E> emptyStack(): Stack<E> = ArrayStack<E>()
 
 /** Pushes the element to the top of the stack. */
 public operator fun <E> Stack<E>.plusAssign(element: E) {
     push(element)
 }
 
-/** Removes the given number of elements, beginning from the top of the stack. */
-public fun <E> Stack<E>.pop(count: Int) {
-    try {
-        repeat(count) { pop() }
-    } catch (_: StackUnderflowException) {
-        throw StackUnderflowException("Pop count $count exceeds stack size $size")
+/** Returns a stack representation of this list. */
+public fun <E> List<E>.asStack(): Stack<E> {
+    if (this is Stack) {
+        return this
     }
+    val stack = emptyStack<E>()
+    forEach { stack += it }
+    return stack
 }
 
 /** Thrown when an element is retrieved from an empty [Stack]. */
@@ -23,7 +27,7 @@ public interface Stack<E> : List<E> {
      * Returns the element at the top of the stack.
      * @throws StackUnderflowException the stack is empty
      */
-    public fun peek(): E
+    public fun top(): E
 
     /** Adds the element to the top of the stack. */
     public fun push(element: E)
@@ -34,8 +38,8 @@ public interface Stack<E> : List<E> {
      */
     public fun pop(): E
 
-    /** Returns a mutable view of this stack. */
-    public fun asReversed(): Stack<E>
+    /** Removes all elements from the stack. */
+    public fun clear()
 
     /**
      * Returns the element at the specified index in the list.
@@ -68,16 +72,16 @@ public interface Stack<E> : List<E> {
  * Unlike [MutableList], enforces first-in-last-out (FILO) insertion and removal
  * by not implementing [set].
  */
-public class ArrayStack<E> : AbstractList<E>(), Stack<E> {
+public class ArrayStack<E>(initialCapacity: Int = 0) : AbstractList<E>(), Stack<E> {
     override val size: Int get() = elements.size
-    internal val elements = ArrayDeque<E>()
+    internal val elements = ArrayDeque<E>(initialCapacity)
     private var modCount = 0
 
     override fun get(index: Int): E = elements[index]
     override fun contains(element: E): Boolean = element in elements
     override fun containsAll(elements: Collection<E>): Boolean = this.elements.containsAll(elements)
 
-    override fun peek(): E {
+    override fun top(): E {
         checkForEmpty()
         return elements.last()
     }
@@ -93,44 +97,9 @@ public class ArrayStack<E> : AbstractList<E>(), Stack<E> {
         elements += element
     }
 
-    override fun asReversed(): Stack<E> = object : AbstractList<E>(), Stack<E> {
-        override val size: Int get() = this@ArrayStack.size
-
-        override fun get(index: Int) = elements[elements.lastIndex - index]
-        override fun contains(element: E): Boolean = element in elements
-        override fun containsAll(elements: Collection<E>): Boolean = this@ArrayStack.elements.containsAll(elements)
-        override fun asReversed() = this@ArrayStack
-
-        override fun peek(): E {
-            checkForEmpty()
-            return elements.first()
-        }
-
-        override fun pop(): E {
-            checkForEmpty()
-            ++modCount
-            return elements.removeFirst()
-        }
-
-        override fun push(element: E) {
-            ++modCount
-            elements.addFirst(element)
-        }
-
-        override fun iterator(): Iterator<E> = object : Iterator<E> {
-            var index = elements.lastIndex
-            val expectedModCount = this@ArrayStack.modCount
-
-            override fun next(): E {
-                checkForModification(expectedModCount)
-                return elements[index--]
-            }
-
-            override fun hasNext(): Boolean {
-                checkForModification(expectedModCount)
-                return index >= 0
-            }
-        }
+    override fun clear() {
+        ++modCount
+        elements.clear()
     }
 
     override fun iterator(): Iterator<E> = object : Iterator<E> {
