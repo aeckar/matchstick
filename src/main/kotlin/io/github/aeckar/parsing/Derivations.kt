@@ -6,42 +6,48 @@ package io.github.aeckar.parsing
  * Substrings are evaluated lazily upon conversion to a [Derivation] of the same predicate.
  * @param begin the offset of the full sequence where the matched substring begins
  * @param endExclusive one past the last index containing a character in the matched substring
- * @param predicate the predicate matching the substring with the given bounds
+ * @param predicate the predicate matching the substring with the given bounds, if present
  * @param depth the depth of the predicate, if nested. If the predicate is not nested, the value of this property is 0
  */
 @ConsistentCopyVisibility
 public data class Match internal constructor(
-    public val predicate: Predicate,
+    public val predicate: Predicate?,
     public val depth: Int,
     public val begin: Int,
     public val endExclusive: Int
 ) {
-    /** Creates a match with the predicate and depth of the collector. */
+    /** Creates a match with the predicate and depth of the funnel. */
     internal constructor(
-        collector: Collector,
+        funnel: Funnel,
         begin: Int,
         endExclusive: Int
-    ) : this(collector.predicate(), collector.depth, begin, endExclusive)
+    ) : this(funnel.predicate(), funnel.depth, begin, endExclusive)
 
-    override fun toString(): String = "$begin..<$endExclusive @ $predicate($depth)"
+    /** Returns a string in the form "`begin`..`endExclusive` @ `predicate`(`depth`)".  */
+    override fun toString(): String {
+        val predicateOrEmpty = predicate ?: ""
+        return "$begin..<$endExclusive @ $predicateOrEmpty($depth)"
+    }
 }
 
+/** Thrown by [Derivation] when there exists no matches from which to derive a syntax tree from. */
+public class DerivationException(message: String) : RuntimeException(message)
 /**
- * Collects the , in tree form.
- *
- * <illustrate derivation>
- *
+ * Collects the matching substrings in the input, in tree form.
  * @param input the original,
  */
-public class Derivation(input: FullSequence, matches: Stack<Match>) {
+public class Derivation internal constructor(input: FullSequence, matches: Stack<Match>): Tree() {
     public val substring: String
-    public val predicate: Predicate
-    public val children: List<Derivation>
+    public val predicate: Predicate?
+    override val children: List<Derivation>
 
     init {
         /* initialize root */
-
-        val (predicate, depth, begin, endExclusive) = matches.pop()
+        val (predicate, depth, begin, endExclusive) = try {
+            matches.pop()
+        } catch (_: StackUnderflowException) {
+            throw DerivationException("Expected a match")
+        }
         substring = input.substring(begin, endExclusive)
         this.predicate = predicate
 
@@ -52,4 +58,113 @@ public class Derivation(input: FullSequence, matches: Stack<Match>) {
             }
         }
     }
+
+    /** Returns true if this substring was not derived from a predicate. */
+    public fun isYield(): Boolean = predicate != null
+
+    /**
+     * Returns the [predicate],
+     * @throws NoSuchElementException
+     */
+    public fun predicate(): Predicate {
+        return predicate
+            ?: throw NoSuchElementException("Substring was not derived from a predicate")
+    }
+
+    override fun toString(): String {
+        if (predicate == null) {
+            return "\"$substring\""
+        }
+        return "\"$substring\" @ $predicate"
+    }
+}
+
+public abstract class Tree {
+    /** The child nodes of this one, if any exist. */
+    public abstract val children: List<Tree>
+
+    /** Contains the specific characters used to create the [treeString] of a node. */
+    public data class Style(val vertical: Char, val horizontal: Char, val turnstile: Char, val corner: Char) {
+        /**
+         * Returns a line map containing the given characters.
+         * @throws IllegalArgumentException [chars] does not contain exactly 4 characters
+         */
+        public constructor(chars: String) : this(chars[0], chars[1], chars[2], chars[3]) {
+            require(chars.length == 4) { "String '$chars' must have 4 characters'" }
+        }
+
+        public companion object {
+            /**
+             * Can be passed to [treeString] so that the lines in the returned string are made of UTF-8 characters.
+             */
+            public val UTF_8: Style = Style("│─├└")
+
+            /**
+             * Can be passed to [treeString] so that the lines in the returned string are made of ASCII characters.
+             */
+            public val ASCII: Style = Style("|-++")
+        }
+    }
+
+    private class TreeString(
+        val style: Style,
+        val lineSeparator: String,
+        val branches: MutableList<Boolean> = mutableListOf()
+    ) {
+        private val builder = StringBuilder()
+
+        operator fun plusAssign(obj: Any) {
+            builder.append(obj.toString())
+        }
+
+        fun trimLast() {
+            builder.deleteCharAt(builder.lastIndex)
+        }
+
+        override fun toString() = builder.toString()
+    }
+
+    /**
+     * Returns a multi-line string containing the entire tree whose root is this node.
+     * @param style the characters used to draw branch connections
+     * @param lineSeparator the character sequence used to denote a new line
+     */
+    public fun treeString(style: Style = Style.UTF_8, lineSeparator: String = "\n"): String {
+        val tree = TreeString(style, lineSeparator)
+        appendSubtreeTo(tree)
+        tree.trimLast() // Remove trailing newline
+        return tree.toString()
+    }
+
+    private fun appendSubtreeTo(tree: TreeString) {
+        fun prefixBranchWith(corner: Char, tree: TreeString) {
+            val style = tree.style
+            tree.branches.forEach { tree += if (it) "${style.vertical}   " else "    " }
+            tree += corner
+            tree += style.horizontal
+            tree += style.horizontal
+            tree += ' '
+        }
+
+        tree += toString()
+        tree += tree.lineSeparator
+        val branches = tree.branches
+        if (children.isNotEmpty()) {
+            children.asSequence()
+                .take(children.size.coerceAtLeast(1) - 1)
+                .forEach {
+                    prefixBranchWith(tree.style.turnstile, tree)
+                    branches += true
+                    it.appendSubtreeTo(tree)
+                    branches.removeLast()
+                }
+            prefixBranchWith(tree.style.corner, tree)
+            branches += false
+            children.last().appendSubtreeTo(tree)
+            branches.removeLast()
+        }
+    }
+
+    /** Returns a string representation of the tree node this instance represents. */
+    abstract override fun toString(): String
 }

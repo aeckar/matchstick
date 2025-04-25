@@ -1,33 +1,68 @@
 package io.github.aeckar.parsing
 
+import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-// fun rule
-// fun logic
-
-// fun map
-// fun action
-
-
-public fun map() {
-
+/**
+ * Configures and returns a transform whose next value is the one returned by the given scope.
+ * @param builder provides a scope, evaluated on invocation of the transform, to describe transformation logic
+ * @see actionOn
+ */
+public fun <R> map(builder: TransformBuilder<R>.() -> R): Transform<R> {
+    TODO()
 }
 
-public fun action() {
-
+/**
+ * Configures and returns a transform whose next value is the previous.
+ * @param builder provides a scope, evaluated on invocation of the transform, to describe transformation logic
+ * @see mapOn
+ */
+public fun <R> action(builder: TransformBuilder<R>.() -> Unit): Transform<R> {
+    TODO()
 }
 
-/** Returns an equivalent transform whose string representation is the name of the property. */
-@Suppress("unused")
-public operator fun <R> Transform<R>.provideDelegate(thisRef: Any?, property: KProperty<*>): Getter<Transform<R>> {
-    return NamedTransform(property.name, this).toGetter()
+/**
+ * Returns a [mapOn] factory that conforms to the given output type.
+ *
+ * Storing the return value of this function improves readability for
+ * related parsers being fed the same output.
+ * ```kotlin
+ * val map = map<Output>()
+ * val parser by
+ *     rule { /* ... */ } feeds
+ *     map { /* this: TransformBuilder<Output> */ }
+ * ```
+ */
+public fun <R> mapOn(): (builder: TransformBuilder<R>.() -> R) -> Transform<R> = ::map
+
+/**
+ * Returns an [actionOn] factory that conforms to the given output type.
+ *
+ * Storing the return value of this function improves readability for
+ * related parsers being fed the same output.
+ * ```kotlin
+ * val action = action<Output>()
+ * val parser by
+ *     rule { /* ... */ } feeds
+ *     action { /* this: TransformBuilder<Output> */ }
+ * ```
+ */
+public fun <R> actionOn(): (builder: TransformBuilder<R>.() -> Unit) -> Transform<R> = ::action
+
+/** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */
+@Suppress("unused") // thisRef
+public operator fun <R> Transform<R>.provideDelegate(
+    thisRef: Any?,
+    property: KProperty<*>
+): ReadOnlyProperty<Any?, Transform<R>> {
+    return NamedTransform(property.name, this).toReadOnlyProperty()
 }
 
 /**
  * Transforms an input value according to a syntax tree in list form.
  * @param R the type of the input value
- * @see map
- * @see action
+ * @see mapOn
+ * @see actionOn
  * @see TransformBuilder
  * @see Predicate
  */
@@ -39,7 +74,7 @@ public interface Transform<R> {
      * recursively followed by matches to any sub-symbol.
      * The previous
      */
-    public fun recombine(collector: Collector, output: R): R
+    public fun recombine(funnel: Funnel, output: R): R
 }
 
 private class NamedTransform<R>(

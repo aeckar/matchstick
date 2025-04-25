@@ -1,6 +1,7 @@
 package io.github.aeckar.parsing
 
 import java.io.Serial
+import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 /**
@@ -11,19 +12,6 @@ import kotlin.reflect.KProperty
 public val nothing: Predicate = NamedPredicate("[]", logic { /* no-op */ })
 
 /**
- * The predicate assigned to matches recorded by [yield][LogicBuilder.yieldRemaining].
- *
- * When converted to string form, yields an empty string.
- *
- * Substrings associated with this predicate match a [procedure][logic] or a different [predicate][rule].
- * As such, throws an [UnsupportedOperationException] when [collect][Predicate.collect] invoked.
- */
-public val yield: Predicate = NamedPredicate(
-    "",
-    logic { throw UnsupportedOperationException("Void predicate invoked") }
-)
-
-/**
  * Configures and returns a logic-based predicate.
  * @param builder provides a scope, evaluated on invocation of the predicate, to describe predicate behavior
  * @see rule
@@ -32,16 +20,16 @@ public fun logic(builder: LogicBuilder.() -> Unit): Predicate = object : Predica
     override fun equals(other: Any?): Boolean = other === this || other is NamedPredicate && other.original == this
     override fun toString() = "<unnamed>"
 
-    override fun collect(collector: Collector) = PredicateFailure.handle {
+    override fun collect(funnel: Funnel) = PredicateFailure.handle {
         val predicate = this
-        val begin = collector.offset
-        collector.withPredicate(this) {
-            LogicBuilder(collector)
+        val begin = funnel.offset
+        funnel.withPredicate(this) {
+            LogicBuilder(funnel)
                 .apply(builder)
                 .apply(LogicBuilder::yieldRemaining)
         }
-        with(collector) { matches?.push(Match(predicate, depth, begin, offset)) }
-        collector.offset - begin  // Match length
+        with(funnel) { matches?.push(Match(predicate, depth, begin, offset)) }
+        funnel.offset - begin  // Match length
     }
 }
 
@@ -62,14 +50,30 @@ public fun rule(builder: RuleBuilder.() -> Predicate): Predicate = RuleBuilder()
 public fun Predicate.match(sequence: CharSequence, delimiter: Predicate = nothing): Stack<Match> {
     val matches = emptyStack<Match>()
     val input = suffixOf(sequence)
-    collect(Collector(input, matches, delimiter))
+    collect(Funnel(input, delimiter, matches))
     return matches
 }
 
+/**
+ * Returns the syntax tree created by applying the predicate to this character sequence, in tree form.
+ *
+ * The location of the matched substring is given by the bounds of the last element in the returned stack.
+ * @throws DerivationException the sequence does not match the predicate with the given delimiter
+ */
+public fun Predicate.matchToTree(sequence: CharSequence, delimiter: Predicate = nothing): Derivation {
+    val matches = emptyStack<Match>()
+    val input = suffixOf(sequence)
+    collect(Funnel(input, delimiter, matches))
+    return Derivation(input.original, matches)
+}
+
 /** Returns an equivalent predicate whose string representation is the name of the property. */
-@Suppress("unused")
-public operator fun Predicate.provideDelegate(thisRef: Any?, property: KProperty<*>): Getter<Predicate> {
-    return NamedPredicate(property.name, this).toGetter()
+@Suppress("unused") // thisRef
+public operator fun Predicate.provideDelegate(
+    thisRef: Any?,
+    property: KProperty<*>
+): ReadOnlyProperty<Any?, Predicate> {
+    return NamedPredicate(property.name, this).toReadOnlyProperty()
 }
 
 /**
@@ -104,20 +108,20 @@ public interface Predicate {
      * Matches emitted by this predicate and their sub-matches are collectively considered to be *derived*
      * from this predicate.
      *
-     * This function is called whenever this predicate is used to
-     * [query][LogicBuilder.query] or [match][RuleBuilder.match] a substring in an input.
+     * This function is called whenever this predicate
+     * [queries][LogicBuilder.lengthOf] or [matches][RuleBuilder.match] a substring in an input.
      *
-     * **API Note:** Passage of [Collector] argument restricts parser creation to the provided builders.
+     * **API Note:** Passage of [Funnel] argument restricts parser creation to the provided builders.
      * @return the size of the matching substring, or -1 if one was not found
      * @see split
      */
-    public fun collect(collector: Collector): Int
+    public fun collect(funnel: Funnel): Int
 }
 
 internal open class NamedPredicate(name: String, override val original: Predicate) : Named(name, original), Predicate {
-    override fun collect(collector: Collector): Int {
-        val matchLength = original.collect(collector)
-        val matches = collector.matches
+    override fun collect(funnel: Funnel): Int {
+        val matchLength = original.collect(funnel)
+        val matches = funnel.matches
         if (matches == null) {
             return matchLength
         }
@@ -153,15 +157,15 @@ private data object PredicateFailure : Throwable() {
  */
 public open class RuleBuilder {
     /** Returns a symbol matching the substring containing the single character. */
-    public fun match(char: Char): Predicate = logic { yield(query(char)) }
+    public fun match(char: Char): Predicate = logic { yield(lengthOf(char)) }
 
     /** Returns a symbol matching the given substring. */
-    public fun match(substring: CharSequence): Predicate = logic { yield(query(substring)) }
+    public fun match(substring: CharSequence): Predicate = logic { yield(lengthOf(substring)) }
 
     /**
      * Returns a symbol matching a single character satisfying the pattern.
      */
-    public fun matchBy(pattern: CharSequence): Predicate = logic { yield(queryBy(pattern)) }
+    public fun matchBy(pattern: CharSequence): Predicate = logic { yield(lengthBy(pattern)) }
 
     /** . */
     public operator fun Predicate.plus(other: Predicate): Predicate {
@@ -200,7 +204,7 @@ public open class RuleBuilder {
      *
      */
     public fun zeroOrSpread(parser: Predicate): Predicate {
-    TODO()
+        TODO()
     }
 
     /**
@@ -210,6 +214,7 @@ public open class RuleBuilder {
         TODO()
     }
 }
+
 /**
  * Assembles a [Predicate].
  *
@@ -217,34 +222,32 @@ public open class RuleBuilder {
  *
  * If any member function modifies the value of the such that the combined offset
  * exceeds the length of the original input, the parse attempt fails and -1 is returned to the enclosing scope.
- *
- * **API Note:** `Char`-based overloads should be used when possible to improve performance.
  * @see logic
  * @see Predicate.collect
  */
-public class LogicBuilder internal constructor(private val collector: Collector) : RuleBuilder(), PartialSequence {
+public class LogicBuilder internal constructor(private val funnel: Funnel) : RuleBuilder(), PartialSequence {
     /* reflect changes to backing fields */
-    override val original: FullSequence get() = collector.original
-    override val offset: Int get() = collector.offset
+    override val original: FullSequence get() = funnel.original
+    override val offset: Int get() = funnel.offset
 
     internal var includeBegin = -1
         private set
 
-    override fun minus(offset: Int): Suffix = collector.remaining - offset
+    override fun minus(offset: Int): Suffix = funnel.remaining - offset
 
     /* ------------------------------ match queries ------------------------------ */
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
-    public fun query(predicate: Predicate): Int = collector.withoutTracking { predicate.collect(collector) }
+    public fun lengthOf(predicate: Predicate): Int = funnel.withoutTracking { predicate.collect(funnel) }
 
     /** Returns 1 if the character prefixes the offset input, or -1 if one is not found. */
-    public fun query(char: Char): Int = if (startsWith(char)) 1 else -1
+    public fun lengthOf(char: Char): Int = if (startsWith(char)) 1 else -1
 
     /** Returns the length of the substring if it prefixes the offset input, or -1 if one is not found. */
-    public fun query(substring: CharSequence): Int = if (startsWith(substring)) substring.length else -1
+    public fun lengthOf(substring: CharSequence): Int = if (startsWith(substring)) substring.length else -1
 
     /** Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found. */
-    public fun queryBy(pattern: CharSequence): Int {
+    public fun lengthBy(pattern: CharSequence): Int {
         if (isEmpty()) {
             // fail fast
         }
@@ -262,7 +265,7 @@ public class LogicBuilder internal constructor(private val collector: Collector)
         if (offset + length > original.length) {
             throw PredicateFailure
         }
-        collector.remaining -= length
+        funnel.remaining -= length
     }
 
     /**
@@ -277,7 +280,7 @@ public class LogicBuilder internal constructor(private val collector: Collector)
         }
         yieldRemaining()
         consume(length)
-        collector.matches?.push(Match(yield, collector.depth, offset - length, offset))
+        funnel.matches?.push(Match(null, funnel.depth, offset - length, offset))
     }
 
     /**
@@ -301,7 +304,7 @@ public class LogicBuilder internal constructor(private val collector: Collector)
         if (includeBegin == -1) {
             return
         }
-        collector.matches?.push(Match(collector, includeBegin, offset))
+        funnel.matches?.push(Match(funnel, includeBegin, offset))
         includeBegin = -1
     }
 }

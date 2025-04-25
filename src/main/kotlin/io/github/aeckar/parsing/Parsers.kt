@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 /**
@@ -7,26 +8,35 @@ import kotlin.reflect.KProperty
  *
  * The returned parser requires the output to be passed as an argument on [transform][Transform.recombine].
  */
-public fun <R> parser(predicate: Predicate, transform: Transform<R>): Parser<R> = parser<R>()(predicate, transform)
+public infix fun <R> Predicate.feeds(transform: Transform<R>): Parser<R> {
+    return object : Parser<R>, Predicate by this, Transform<R> by transform {}
+}
 
-/** Invokes */
+// todo greedy/repeated parsing
+
+/**
+ * Transforms the output according to the syntax tree produced from the input.
+ * @throws DerivationException a match cannot be made to the input
+ */
 public fun <R> Parser<R>.parse(input: CharSequence, output: R, delimiter: Predicate = nothing): R {
-    val matches = emptyStack<Match>()
-    val collector = Collector(suffixOf(input), matches, delimiter)
-    collect(collector)
-    return recombine(collector, output)
+    val funnel = Funnel(suffixOf(input), delimiter)
+    collect(funnel)
+    return recombine(funnel, output)
 }
 
 /** Returns an equivalent parser whose string representation is the name of the property. */
-@Suppress("unused")
-public operator fun <R> Parser<R>.provideDelegate(thisRef: Any?, property: KProperty<*>): Getter<Parser<R>> {
-    return NamedParser(property.name, this).toGetter()
+@Suppress("unused") // thisRef
+public operator fun <R> Parser<R>.provideDelegate(
+    thisRef: Any?,
+    property: KProperty<*>
+): ReadOnlyProperty<Any?, Parser<R>> {
+    return NamedParser(property.name, this).toReadOnlyProperty()
 }
 
 /**
  * Evaluates the bounds produced by this same symbol after parsing a sub-sequence of some input.
  * @param T the type of the output state
- * @see parser
+ * @see feeds
  */
 public interface Parser<T> : Predicate, Transform<T>
 

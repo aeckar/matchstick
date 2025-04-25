@@ -70,6 +70,8 @@ public value class FullSequence(private val original: CharSequence) : CharSequen
             throw IllegalArgumentException("Character sequence is partial: '$original'")
         }
     }
+
+    override fun toString(): String = original.toString()
 }
 
 /** Applies an offset to an existing [full][FullSequence] sequence. */
@@ -99,7 +101,7 @@ public class Suffix : PartialSequence {
         if (offset == 0) {
             return this
         }
-        if (offset == length) {
+        if (isEmpty()) {
             return EMPTY_SUFFIX
         }
         return Suffix(original, this.offset + offset)

@@ -1,8 +1,4 @@
-import io.github.aeckar.parsing.logic
-import io.github.aeckar.parsing.match
-import io.github.aeckar.parsing.parser
-import io.github.aeckar.parsing.provideDelegate
-import io.github.aeckar.parsing.rule
+import io.github.aeckar.parsing.*
 import kotlin.test.Test
 
 object Compiler
@@ -81,11 +77,11 @@ class Tester {
 
     @Test
     fun test() {
-
-        val sym by
-            rule {  } feeds
-            action {  }
-        val helloWorld by logic { yield(query("hello world")) }
-        println(helloWorld.match("hello world"))
+//        val action = actionOn<Compiler>()
+//        val symbol by
+//            nothing feeds
+//            action {  }
+        val helloWorld by logic { yield(lengthOf("hello world")) }
+        println(helloWorld.matchToTree("hello world").treeString())
     }
 }

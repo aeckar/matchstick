@@ -1,11 +1,9 @@
 package io.github.aeckar.parsing
 
 import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KProperty
 
-/** A read-only property that can be delegated to a property of any type. */
-public typealias Getter<T> = ReadOnlyProperty<Any?, T>
-
-internal fun <T> T.toGetter() = Getter { _, _ -> this }
+internal fun <T> T.toReadOnlyProperty() = ReadOnlyProperty<Any?, T> { _: Any?, _: KProperty<*> -> this }
 
 /**
  * An object named using delegation.
