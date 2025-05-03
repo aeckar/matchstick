@@ -1,55 +1,58 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.state.Stack
+import io.github.aeckar.state.StackUnderflowException
+
 /**
- * A slice of input satisfying a predicate.
+ * A slice of input satisfying a matcher.
  *
- * Substrings are evaluated lazily upon conversion to a [Derivation] of the same predicate.
+ * Substrings are evaluated lazily upon conversion to a [Derivation] of the same matcher.
  * @param begin the offset of the full sequence where the matched substring begins
  * @param endExclusive one past the last index containing a character in the matched substring
- * @param predicate the predicate matching the substring with the given bounds, if present
- * @param depth the depth of the predicate, if nested. If the predicate is not nested, the value of this property is 0
+ * @param matcher the matcher matching the substring with the given bounds, if present
+ * @param depth the depth of the matcher, if nested. If the matcher is not nested, the value of this property is 0
  */
 @ConsistentCopyVisibility
 public data class Match internal constructor(
-    public val predicate: Predicate?,
+    public val matcher: Matcher?,
     public val depth: Int,
     public val begin: Int,
     public val endExclusive: Int
 ) {
-    /** Creates a match with the predicate and depth of the funnel. */
+    /** Creates a match with the matcher and depth of the funnel. */
     internal constructor(
         funnel: Funnel,
         begin: Int,
         endExclusive: Int
-    ) : this(funnel.predicate(), funnel.depth, begin, endExclusive)
+    ) : this(funnel.matcher(), funnel.depth, begin, endExclusive)
 
-    /** Returns a string in the form "`begin`..`endExclusive` @ `predicate`(`depth`)".  */
+    /** Returns a string in the form "`begin`..`endExclusive` @ `matcher`(`depth`)".  */
     override fun toString(): String {
-        val predicateOrEmpty = predicate ?: ""
+        val predicateOrEmpty = matcher ?: ""
         return "$begin..<$endExclusive @ $predicateOrEmpty($depth)"
     }
 }
 
 /** Thrown by [Derivation] when there exists no matches from which to derive a syntax tree from. */
-public class DerivationException(message: String) : RuntimeException(message)
+public class DerivationException internal constructor(message: String) : RuntimeException(message)
 /**
  * Collects the matching substrings in the input, in tree form.
  * @param input the original,
  */
-public class Derivation internal constructor(input: FullSequence, matches: Stack<Match>): Tree() {
+public class Derivation internal constructor(input: CharSequence, matches: Stack<Match>): Tree() {
     public val substring: String
-    public val predicate: Predicate?
+    public val matcher: Matcher?
     override val children: List<Derivation>
 
     init {
         /* initialize root */
-        val (predicate, depth, begin, endExclusive) = try {
+        val (matcher, depth, begin, endExclusive) = try {
             matches.pop()
         } catch (_: StackUnderflowException) {
             throw DerivationException("Expected a match")
         }
         substring = input.substring(begin, endExclusive)
-        this.predicate = predicate
+        this.matcher = matcher
 
         /* recursively initialize subtree */
         children = buildList {
@@ -59,23 +62,23 @@ public class Derivation internal constructor(input: FullSequence, matches: Stack
         }
     }
 
-    /** Returns true if this substring was not derived from a predicate. */
-    public fun isYield(): Boolean = predicate != null
+    /** Returns true if this substring was not derived from a matcher. */
+    public fun isYield(): Boolean = matcher != null
 
     /**
-     * Returns the [predicate],
+     * Returns the [matcher],
      * @throws NoSuchElementException
      */
-    public fun predicate(): Predicate {
-        return predicate
-            ?: throw NoSuchElementException("Substring was not derived from a predicate")
+    public fun matcher(): Matcher {
+        return matcher
+            ?: throw NoSuchElementException("Substring was not derived from a matcher")
     }
 
     override fun toString(): String {
-        if (predicate == null) {
+        if (matcher == null) {
             return "\"$substring\""
         }
-        return "\"$substring\" @ $predicate"
+        return "\"$substring\" @ $matcher"
     }
 }
 

@@ -1,34 +1,38 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.state.Stack
+import io.github.aeckar.state.Suffix
+import io.github.aeckar.state.emptyStack
+import io.github.aeckar.state.plusAssign
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-/** Thrown when a [Funnel] is reused between multiple invocations of [Predicate.collect]. */
+/** Thrown when a [Funnel] is reused between multiple invocations of [Matcher.collect]. */
 public class EmptiedFunnelException(message: String) : RuntimeException(message)
 
 /**
- * Collects matches in an input using a predicate.
+ * Collects matches in an input using a matcher.
  *
- * Instances of this class may be reused between top-level invocations of [Predicate.collect].
+ * Instances of this class may be reused between top-level invocations of [Matcher.collect].
  * @param remaining the remaining portion of the original input
- * @param matches collects all matches in the input derived from this predicate, in list form, if present
- * @param delimiter the predicate used to skip between
+ * @param matches collects all matches in the input derived from this matcher, in list form, if present
+ * @param delimiter the matcher used to skip between
  * @param depth the starting depth, typically 0. In other words,
  * the number of predicates currently being matched to the input
- * @see Predicate.collect
+ * @see Matcher.collect
  */
 public class Funnel private constructor(
     internal var remaining: Suffix,
-    internal val delimiter: Predicate,
+    internal val delimiter: Matcher,
     matches: Stack<Match>?,
     depth: Int
 ) {
     /* reflect changes to backing fields */
-    internal val original inline get() = remaining.original
+    internal val input inline get() = remaining.original
     internal val offset inline get() = remaining.offset
 
-    private val predicates = emptyStack<Predicate>()
+    private val matchers = emptyStack<Matcher>()
 
     internal var matches = matches
         private set
@@ -38,25 +42,25 @@ public class Funnel private constructor(
 
     public constructor(
         remaining: Suffix,
-        delimiter: Predicate = nothing,
+        delimiter: Matcher = emptyString,
         matches: Stack<Match> = emptyStack()
     ) : this(remaining, delimiter, matches, 0)
 
     /** Returns the derivation of the first matched substring. */
     public fun toTree(): Derivation = Derivation(remaining.original, matches!!)
 
-    internal fun predicate() = predicates.top()
+    internal fun matcher() = matchers.top()
 
-    /** While the block is executed, descends with the given predicate. */
+    /** While the block is executed, descends with the given matcher. */
     @OptIn(ExperimentalContracts::class)
-    internal inline fun <R> withPredicate(predicate: Predicate, block: () -> R): R {
+    internal inline fun <R> withPredicate(matcher: Matcher, block: () -> R): R {
         contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-        if (predicates.isEmpty()) {
+        if (matchers.isEmpty()) {
             matches?.clear()
         }
-        predicates += predicate
+        matchers += matcher
         ++depth
-        return block().also { predicates.pop(); --depth }
+        return block().also { matchers.pop(); --depth }
     }
 
     @OptIn(ExperimentalContracts::class)
@@ -68,12 +72,13 @@ public class Funnel private constructor(
     }
 
     override fun toString(): String {
-        val remaining = remaining.asSequence().joinToString(
-            separator = "",
-            limit = 20,
-            prefix = "\"",
-            postfix = "\""
-        )
+        val remaining = remaining.asSequence()
+            .joinToString(
+                separator = "",
+                limit = 20,
+                prefix = "\"",
+                postfix = "\""
+            )
         return "Funnel(remaining=$remaining,delimiter=$delimiter,depth=$depth,matches=$matches)"
     }
 }

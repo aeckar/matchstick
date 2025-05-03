@@ -1,9 +1,11 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.state
 
+import io.github.aeckar.parsing.provideDelegate
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-internal fun <T> T.toReadOnlyProperty() = ReadOnlyProperty<Any?, T> { _: Any?, _: KProperty<*> -> this }
+/** Returns a property delegate returning this value. */
+public fun <T> T.toReadOnlyProperty() = ReadOnlyProperty { _: Any?, _: KProperty<*> -> this }
 
 /**
  * An object named using delegation.
@@ -11,7 +13,7 @@ internal fun <T> T.toReadOnlyProperty() = ReadOnlyProperty<Any?, T> { _: Any?, _
  * @param original the original object, which may be named
  * @see provideDelegate
  */
-public sealed class Named(public val name: String, public open val original: Any?) {
+public abstract class Named internal constructor(public val name: String, public open val original: Any?) {
     final override fun hashCode(): Int = original.hashCode()
 
     /** Returns the name given to this object. */

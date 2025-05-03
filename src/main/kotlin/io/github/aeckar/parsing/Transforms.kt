@@ -1,5 +1,7 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.state.Named
+import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -64,7 +66,7 @@ public operator fun <R> Transform<R>.provideDelegate(
  * @see mapOn
  * @see actionOn
  * @see TransformBuilder
- * @see Predicate
+ * @see Matcher
  */
 public interface Transform<R> {
     /**

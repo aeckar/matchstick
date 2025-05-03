@@ -1,5 +1,8 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.state.Named
+import io.github.aeckar.state.Suffix
+import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -8,8 +11,8 @@ import kotlin.reflect.KProperty
  *
  * The returned parser requires the output to be passed as an argument on [transform][Transform.recombine].
  */
-public infix fun <R> Predicate.feeds(transform: Transform<R>): Parser<R> {
-    return object : Parser<R>, Predicate by this, Transform<R> by transform {}
+public infix fun <R> Matcher.feeds(transform: Transform<R>): Parser<R> {
+    return object : Parser<R>, Matcher by this, Transform<R> by transform {}
 }
 
 // todo greedy/repeated parsing
@@ -18,8 +21,8 @@ public infix fun <R> Predicate.feeds(transform: Transform<R>): Parser<R> {
  * Transforms the output according to the syntax tree produced from the input.
  * @throws DerivationException a match cannot be made to the input
  */
-public fun <R> Parser<R>.parse(input: CharSequence, output: R, delimiter: Predicate = nothing): R {
-    val funnel = Funnel(suffixOf(input), delimiter)
+public fun <R> Parser<R>.parse(input: CharSequence, output: R, delimiter: Matcher = emptyString): R {
+    val funnel = Funnel(Suffix(input), delimiter)
     collect(funnel)
     return recombine(funnel, output)
 }
@@ -38,7 +41,7 @@ public operator fun <R> Parser<R>.provideDelegate(
  * @param T the type of the output state
  * @see feeds
  */
-public interface Parser<T> : Predicate, Transform<T>
+public interface Parser<T> : Matcher, Transform<T>
 
 private class NamedParser<R>(
     name: String,

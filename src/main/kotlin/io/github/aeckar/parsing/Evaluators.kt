@@ -5,7 +5,7 @@ package io.github.aeckar.parsing
  * according to the predicate and transform of this parser.
  */
 public inline fun <R> Parser<R>.toEvaluator(
-    delimiter: Predicate = nothing,
+    delimiter: Matcher = emptyString,
     crossinline outputFactory: (input: CharSequence) -> R
 ): Evaluator<R> = Evaluator { input ->
     parse(input, outputFactory(input), delimiter)

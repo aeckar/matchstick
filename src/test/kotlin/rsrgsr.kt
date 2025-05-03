@@ -81,6 +81,8 @@ class Tester {
 //        val symbol by
 //            nothing feeds
 //            action {  }
+        val p = patternOf("a..z,[%d_]|A..Z")
+        println(p("hello", 1))
         val helloWorld by logic { yield(lengthOf("hello world")) }
         println(helloWorld.matchToTree("hello world").treeString())
     }
