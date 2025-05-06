@@ -4,14 +4,9 @@ package io.github.aeckar.parsing
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.
  *
  * The resulting matcher is analogous to a *rule* in a context-free grammar.
- *
- * # Pattern Syntax
- *
- * todo
- *
  * @see rule
  * @see LogicBuilder
- * @see Matcher.collect
+ * @see MatcherImpl.collectMatches
  */
 public open class RuleBuilder {
     /** Returns a symbol matching the substring containing the single character. */
@@ -22,53 +17,49 @@ public open class RuleBuilder {
 
     /**
      * Returns a symbol matching a single character satisfying the pattern.
+     *
+     * todo explain patterns
      */
     public fun matchBy(pattern: CharSequence): Matcher = logic { yield(lengthBy(pattern)) }
 
-    /** . */
+    /** Returns a symbol matching this symbol, then the [delimiter][Matcher.match], then the other. */
     public operator fun Matcher.plus(other: Matcher): Matcher {
-        TODO()
+        (this as MatcherImpl).collectMatches()
     }
 
-    /**
-     *
-     */
+    /** Returns a symbol matching this symbol, then the other directly after. */
     public operator fun Matcher.times(other: Matcher): Matcher {
         TODO()
     }
 
     /**
-     *
+     * Returns a symbol matching the given symbol one or more times,
+     * with the [delimiter][Matcher.match] between each match.
      */
-    public fun oneOrMore(parser: Matcher): Matcher {
+    public fun oneOrMore(matcher: Matcher): Matcher {
         TODO()
     }
 
     /**
-     *
+     * Returns a symbol matching the given symbol zero or more times,
+     * with the [delimiter][Matcher.match] between each match.
      */
-    public fun zeroOrMore(parser: Matcher): Matcher {
+    public fun zeroOrMore(matcher: Matcher): Matcher {
         TODO()
     }
 
-    /**
-     *
-     */
-    public fun oneOrSpread(parser: Matcher): Matcher {
+    /** Returns a symbol matching the given symbol one or more times successively. */
+    public fun oneOrSpread(matcher: Matcher): Matcher {
         TODO()
     }
 
-    /**
-     *
-     */
-    public fun zeroOrSpread(parser: Matcher): Matcher {
+    /** Returns a symbol matching the given symbol zero or more times successively. */
+    public fun zeroOrSpread(matcher: Matcher): Matcher {
         TODO()
     }
 
-    /**
-     *
-     */
-    public fun maybe(parser: Matcher): Matcher {
+    /** Returns a symbol matching the given symbol zero or one time. */
+    public fun maybe(matcher: Matcher): Matcher {
         TODO()
     }
 }

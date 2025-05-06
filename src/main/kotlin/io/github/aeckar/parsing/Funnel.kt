@@ -8,30 +8,22 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
-/** Thrown when a [Funnel] is reused between multiple invocations of [Matcher.collect]. */
-public class EmptiedFunnelException(message: String) : RuntimeException(message)
-
 /**
  * Collects matches in an input using a matcher.
  *
- * Instances of this class may be reused between top-level invocations of [Matcher.collect].
+ * Instances of this class may be reused between top-level invocations of [MatcherImpl.collectMatches].
  * @param remaining the remaining portion of the original input
  * @param matches collects all matches in the input derived from this matcher, in list form, if present
  * @param delimiter the matcher used to skip between
  * @param depth the starting depth, typically 0. In other words,
  * the number of predicates currently being matched to the input
- * @see Matcher.collect
  */
-public class Funnel private constructor(
+internal class Funnel private constructor(
     internal var remaining: Suffix,
     internal val delimiter: Matcher,
     matches: Stack<Match>?,
     depth: Int
 ) {
-    /* reflect changes to backing fields */
-    internal val input inline get() = remaining.original
-    internal val offset inline get() = remaining.offset
-
     private val matchers = emptyStack<Matcher>()
 
     internal var matches = matches
@@ -40,20 +32,20 @@ public class Funnel private constructor(
     internal var depth = depth
         private set
 
-    public constructor(
+    constructor(
         remaining: Suffix,
-        delimiter: Matcher = emptyString,
+        delimiter: Matcher = Matcher.emptyString,
         matches: Stack<Match> = emptyStack()
     ) : this(remaining, delimiter, matches, 0)
 
     /** Returns the derivation of the first matched substring. */
-    public fun toTree(): Derivation = Derivation(remaining.original, matches!!)
+    fun toTree() = Derivation(remaining.original, matches!!)
 
     internal fun matcher() = matchers.top()
 
     /** While the block is executed, descends with the given matcher. */
     @OptIn(ExperimentalContracts::class)
-    internal inline fun <R> withPredicate(matcher: Matcher, block: () -> R): R {
+    internal inline fun <R> withMatcher(matcher: Matcher, block: () -> R): R {
         contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
         if (matchers.isEmpty()) {
             matches?.clear()
@@ -72,13 +64,12 @@ public class Funnel private constructor(
     }
 
     override fun toString(): String {
-        val remaining = remaining.asSequence()
-            .joinToString(
-                separator = "",
-                limit = 20,
-                prefix = "\"",
-                postfix = "\""
-            )
+        val remaining = remaining.asSequence().joinToString(
+            separator = "",
+            limit = 20,
+            prefix = "\"",
+            postfix = "\""
+        )
         return "Funnel(remaining=$remaining,delimiter=$delimiter,depth=$depth,matches=$matches)"
     }
 }

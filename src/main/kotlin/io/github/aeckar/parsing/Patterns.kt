@@ -115,7 +115,7 @@ private class Pattern(val stringRep: String, val predicate: Predicate) : Predica
 
     companion object {
         val cache: MutableMap<String, Predicate> = ConcurrentHashMap()
-        val placeholder = Pattern("") { _, _ -> throw IllegalStateException("Cannot match to placeholder") }
+        val placeholder = Pattern("<placeholder>") { _, _ -> throw IllegalStateException("Cannot match to placeholder") }
     }
 }
 

@@ -5,6 +5,8 @@ import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
+/* ------------------------------ transform factories ------------------------------ */
+
 /**
  * Configures and returns a transform whose next value is the one returned by the given scope.
  * @param builder provides a scope, evaluated on invocation of the transform, to describe transformation logic
@@ -51,6 +53,8 @@ public fun <R> mapOn(): (builder: TransformBuilder<R>.() -> R) -> Transform<R> =
  */
 public fun <R> actionOn(): (builder: TransformBuilder<R>.() -> Unit) -> Transform<R> = ::action
 
+/* ------------------------------ transform operations ------------------------------ */
+
 /** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */
 @Suppress("unused") // thisRef
 public operator fun <R> Transform<R>.provideDelegate(
@@ -60,6 +64,8 @@ public operator fun <R> Transform<R>.provideDelegate(
     return NamedTransform(property.name, this).toReadOnlyProperty()
 }
 
+/* ------------------------------ transform classes ------------------------------ */
+
 /**
  * Transforms an input value according to a syntax tree in list form.
  * @param R the type of the input value
@@ -68,30 +74,22 @@ public operator fun <R> Transform<R>.provideDelegate(
  * @see TransformBuilder
  * @see Matcher
  */
-public interface Transform<R> {
+public sealed interface Transform<R>
+
+/** Provides internal transform functions. */
+internal interface TransformImpl<R> : Transform<R> {
     /**
-     * Transforms an input value according to a syntax tree in list form.
-     * @param output the input, which the output is dependent on
-     * @param subtree contains a match to the symbol using this mapper,
-     * recursively followed by matches to any sub-symbol.
-     * The previous
+     * Returns an output according to an input and the matched collected in the funnel.
+     * @param funnel contains a match to the symbol using this transform,
+     * recursively followed by matches to any sub-symbol
+     * @param input the input, which the output is dependent on
      */
-    public fun recombine(funnel: Funnel, output: R): R
+    fun consumeMatches(funnel: Funnel, input: R): R
 }
 
 private class NamedTransform<R>(
     name: String,
-    override val original: Transform<R>
-) : Named(name, original), Transform<R> by original
-
-/**
- * Assembles a [Transform].
- * @param output the output state
- * @param localBounds
- * the recorded bounds of the substring matching this symbol,
- * recursively followed by those matching any sub-symbols
- * @see Transform.accept
- */
-public class TransformBuilder<R>(public val output: R, public val localBounds: List<IntRange>) {
-    /** todo */
+    override val original: TransformImpl<R>
+) : Named(name, original), TransformImpl<R> by original {
+    constructor(name: String, original: Transform<R>) : this(name, original as TransformImpl<R>)
 }

@@ -1,39 +1,31 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.Named
-import io.github.aeckar.state.Stack
-import io.github.aeckar.state.Suffix
-import io.github.aeckar.state.emptyStack
-import io.github.aeckar.state.toReadOnlyProperty
+import io.github.aeckar.state.*
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-/**
- * A matcher accepting a zero-length substring.
- *
- * When converted to string form, yields `[]`.
- */
-public val emptyString: Matcher = NamedMatcher("emptyString", logic { /* no-op */ })
+/* ------------------------------ matcher factories ------------------------------ */
 
 /**
  * Configures and returns a logic-based matcher.
  * @param builder provides a scope, evaluated on invocation of the matcher, to describe matcher behavior
  * @see rule
  */
-public fun logic(builder: LogicBuilder.() -> Unit): Matcher = object : Matcher {
+public fun logic(builder: LogicBuilder.() -> Unit): Matcher = object : MatcherImpl {
     override fun equals(other: Any?): Boolean = other === this || other is NamedMatcher && other.original == this
     override fun toString() = "<unnamed>"
 
-    override fun collect(funnel: Funnel) = Failure.handle {
+    override fun collectMatches(funnel: Funnel) = Failure.handle {
         val matcher = this
-        val begin = funnel.offset
-        funnel.withPredicate(this) {
+        val remaining = funnel.remaining
+        val begin = remaining.offset
+        funnel.withMatcher(this) {
             LogicBuilder(funnel)
                 .apply(builder)
                 .apply(LogicBuilder::yieldRemaining)
         }
-        with(funnel) { matches?.push(Match(matcher, depth, begin, offset)) }
-        funnel.offset - begin  // Match length
+        with(funnel) { matches?.push(Match(matcher, depth, begin, remaining.offset)) }
+        remaining.offset - begin  // Match length
     }
 }
 
@@ -44,6 +36,8 @@ public fun logic(builder: LogicBuilder.() -> Unit): Matcher = object : Matcher {
  */
 public fun rule(builder: RuleBuilder.() -> Matcher): Matcher = RuleBuilder().run(builder)
 
+/* ------------------------------ matcher operations  ------------------------------ */
+
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
  *
@@ -51,10 +45,10 @@ public fun rule(builder: RuleBuilder.() -> Matcher): Matcher = RuleBuilder().run
  *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  */
-public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = emptyString): Stack<Match> {
+public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): Stack<Match> {
     val matches = emptyStack<Match>()
     val input = Suffix(sequence)
-    collect(Funnel(input, delimiter, matches))
+    (this as MatcherImpl).collectMatches(Funnel(input, delimiter, matches))
     return matches
 }
 
@@ -64,10 +58,10 @@ public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = emptyStrin
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  * @throws DerivationException the sequence does not match the matcher with the given delimiter
  */
-public fun Matcher.matchToTree(sequence: CharSequence, delimiter: Matcher = emptyString): Derivation {
+public fun Matcher.matchToTree(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): Derivation {
     val matches = emptyStack<Match>()
     val input = Suffix(sequence)
-    collect(Funnel(input, delimiter, matches))
+    (this as MatcherImpl).collectMatches(Funnel(input, delimiter, matches))
     return Derivation(input.original, matches)
 }
 
@@ -80,16 +74,26 @@ public operator fun Matcher.provideDelegate(
     return NamedMatcher(property.name, this).toReadOnlyProperty()
 }
 
+/* ------------------------------ matcher classes ------------------------------ */
+
 /**
  * Recursively finds a meaningful substring within a sub-sequence of the input
- * for this matcher and any nested predicates.
+ * for this matcher and any nested matchers.
  * @see logic
  * @see rule
  * @see RuleBuilder
  * @see LogicBuilder
  * @see Transform
  */
-public interface Matcher {
+public sealed interface Matcher {
+    public companion object {
+        /** A matcher accepting a zero-length substring. */
+        public val emptyString: Matcher = NamedMatcher("''", logic {})
+    }
+}
+
+/** Provides internal matcher functions. */
+internal interface MatcherImpl : Matcher {
     /**
      * Returns the size of the matching substring at the beginning of the input.
      *
@@ -99,15 +103,15 @@ public interface Matcher {
      * is useful because of the many pre-existing extension functions operating on them.
      *
      * A substring is said to *match* a matcher if a non-negative integer is returned
-     * when a sub-sequence of the input prefixed with that substring is passed to [collect].
+     * when a sub-sequence of the input prefixed with that substring is passed to [collectMatches].
      *
      * Implementations of this function use [offset views][Suffix]
      * instead of passing an offset to the original input to improve readability.
      *
-     * Predicates which are used to create this one are considered to be *nested*.
+     * Matchers which are used to create this one are considered to be *nested*.
      *
      * Matches immediately preceding those emitted by this matcher with a greater [depth][Match.depth]
-     * are those recursively emitted by nested predicates. These matches are considered to be *sub-matches*.
+     * are those recursively emitted by nested matchers. These matches are considered to be *sub-matches*.
      *
      * Matches emitted by this matcher and their sub-matches are collectively considered to be *derived*
      * from this matcher.
@@ -117,17 +121,19 @@ public interface Matcher {
      * @return the size of the matching substring, or -1 if one was not found
      * @see split
      */
-    public fun collect(funnel: Funnel): Int
+    fun collectMatches(funnel: Funnel): Int
 }
 
-internal open class NamedMatcher(name: String, override val original: Matcher) : Named(name, original), Matcher {
-    override fun collect(funnel: Funnel): Int {
-        val matchLength = original.collect(funnel)
+internal open class NamedMatcher(name: String, override val original: MatcherImpl) : Named(name, original), MatcherImpl {
+    constructor(name: String, original: Matcher) : this(name, original as MatcherImpl)
+
+    override fun collectMatches(funnel: Funnel): Int {
+        val matchLength = original.collectMatches(funnel)
         val matches = funnel.matches
         if (matches == null) {
             return matchLength
         }
-        matches += matches.pop().copy(matcher = this) // Reassign to named matcher
+        matches += matches.pop().copy(matcher = this)   // Reassign to named matcher
         return matchLength
     }
 }

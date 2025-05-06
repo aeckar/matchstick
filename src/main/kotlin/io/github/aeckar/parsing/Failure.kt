@@ -2,7 +2,7 @@ package io.github.aeckar.parsing
 
 import java.io.Serial
 
-/** When thrown, signals that -1 should be returned from [collect][Matcher.collect]. */
+/** When thrown, signals that -1 should be returned from [collect][MatcherImpl.collectMatches]. */
 internal data object Failure : Throwable() {
     @Serial
     private fun readResolve(): Any = Failure

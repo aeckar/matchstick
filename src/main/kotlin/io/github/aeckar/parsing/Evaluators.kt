@@ -2,14 +2,12 @@ package io.github.aeckar.parsing
 
 /**
  * Returns an evaluator that transforms a character sequence to a value
- * according to the predicate and transform of this parser.
+ * according to the matcher and transform of this parser.
  */
 public inline fun <R> Parser<R>.toEvaluator(
-    delimiter: Matcher = emptyString,
+    delimiter: Matcher = Matcher.emptyString,
     crossinline outputFactory: (input: CharSequence) -> R
-): Evaluator<R> = Evaluator { input ->
-    parse(input, outputFactory(input), delimiter)
-}
+): Evaluator<R> = Evaluator { parse(it, outputFactory(it), delimiter) }
 
 /** Evaluates a character sequence. */
 public fun interface Evaluator<R> {
