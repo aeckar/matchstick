@@ -1,18 +1,13 @@
 package io.github.aeckar.state
 
-/** Returns a mutable stack holding elements of type [E]. */
-public fun <E> emptyStack(): Stack<E> = ArrayStack()
-
-/** Pushes the element to the top of the stack. */
-public operator fun <E> Stack<E>.plusAssign(element: E) {
-    push(element)
-}
-
 /** An ordered collection of elements providing first-in-last-out (FILO) insertion and removal. */
 public interface Stack<E> : List<E> {
+    /** Thrown when an element is retrieved from an empty [Stack]. */
+    public class UnderflowException(override val message: String) : RuntimeException(message)
+
     /**
      * Returns the element at the top of the stack.
-     * @throws StackUnderflowException the stack is empty
+     * @throws UnderflowException the stack is empty
      */
     public fun top(): E
 
@@ -21,7 +16,7 @@ public interface Stack<E> : List<E> {
 
     /**
      * Removes and returns the element at the top of the stack.
-     * @throws StackUnderflowException the stack is empty
+     * @throws UnderflowException the stack is empty
      */
     public fun pop(): E
 
@@ -51,5 +46,9 @@ public interface Stack<E> : List<E> {
      * @throws ConcurrentModificationException the stack is modified while being iterated over
      */
     override fun listIterator(index: Int): ListIterator<E>
-}
 
+    public companion object {
+        /** Returns a mutable stack holding elements of type [E]. */
+        public fun <E> empty(): Stack<E> = ArrayStack()
+    }
+}

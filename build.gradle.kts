@@ -11,6 +11,7 @@ repositories {
 
 dependencies {
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.8")
     testImplementation(kotlin("test"))
 }
 

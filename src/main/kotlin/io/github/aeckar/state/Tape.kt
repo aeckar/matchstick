@@ -7,21 +7,23 @@ package io.github.aeckar.state
  *
  * Offsets exceeding the length of the original sequence are allowed, however,
  * negative offsets are not.
- *
- * Offsets applied to other suffixes are compounded,
- * with the new instance holding the original sequence held by the offset suffix.
  */
-public class Suffix public constructor(
+public class Tape public constructor(
     public val original: CharSequence,
     offset: Int = 0
 ) : CharSequence {
     public var offset: Int = offset
-        private set
+        set(value) {
+            if (value < 0) {
+                throw IllegalArgumentException("Offset cannot be negative")
+            }
+            field = value
+        }
 
     override val length: Int get() = original.length - offset
 
     init {
-        if (original is Suffix) {
+        if (original is Tape) {
             throw IllegalArgumentException("Sequence '${original.original}' has an offset of ${original.offset}")
         }
         require (offset >= 0) { "Offset $offset is negative" }
@@ -30,16 +32,19 @@ public class Suffix public constructor(
     override fun get(index: Int): Char = original[index + offset]
     override fun hashCode(): Int = 31 * original.hashCode() + offset
 
-    public operator fun minusAssign(offset: Int) {
-        this.offset += offset
-    }
-
     /** Returns the original sequence, truncated and prepended with ellipses if the offset is greater than 0. */
     override fun toString(): String {
         if (offset == 0) {
             return original.toString()
         }
-        return "..." + original.subSequence(offset, original.length)
+        return (offset - 10..offset + 10).mapNotNull {
+            if (it in original.indices) {
+                val c = original[it]
+                if (it == offset) "[$c]" else c
+            } else {
+                null
+            }
+        }.joinToString("")
     }
 
     /**
@@ -67,12 +72,12 @@ public class Suffix public constructor(
         require(startIndex <= endIndex) { "Start index $startIndex exceeds end index $endIndex" }
         val actualStartIndex = startIndex + offset
         if (endIndex == original.length) {
-            return Suffix(original, actualStartIndex)
+            return Tape(original, actualStartIndex)
         }
         return LazySubSequence(original, actualStartIndex, endIndex + offset)
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is Suffix && other.original == original && other.offset == offset
+        return other is Tape && other.original == original && other.offset == offset
     }
 }

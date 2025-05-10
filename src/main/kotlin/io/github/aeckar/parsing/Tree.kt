@@ -1,90 +1,13 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.Stack
-import io.github.aeckar.state.StackUnderflowException
+import kotlinx.collections.immutable.ImmutableList
 
 /**
- * A slice of input satisfying a matcher.
  *
- * Substrings are evaluated lazily upon conversion to a [Derivation] of the same matcher.
- * @param begin the offset of the full sequence where the matched substring begins
- * @param endExclusive one past the last index containing a character in the matched substring
- * @param matcher the matcher matching the substring with the given bounds, if present
- * @param depth the depth of the matcher, if nested. If the matcher is not nested, the value of this property is 0
  */
-@ConsistentCopyVisibility
-public data class Match internal constructor(
-    public val matcher: Matcher?,
-    public val depth: Int,
-    public val begin: Int,
-    public val endExclusive: Int
-) {
-    /** Creates a match with the matcher and depth of the funnel. */
-    internal constructor(
-        funnel: Funnel,
-        begin: Int,
-        endExclusive: Int
-    ) : this(funnel.matcher(), funnel.depth, begin, endExclusive)
-
-    /** Returns a string in the form "`begin`..`endExclusive` @ `matcher`(`depth`)".  */
-    override fun toString(): String {
-        val predicateOrEmpty = matcher ?: ""
-        return "$begin..<$endExclusive @ $predicateOrEmpty($depth)"
-    }
-}
-
-/** Thrown by [Derivation] when there exists no matches from which to derive a syntax tree from. */
-public class DerivationException internal constructor(message: String) : RuntimeException(message)
-/**
- * Collects the matching substrings in the input, in tree form.
- * @param input the original,
- */
-public class Derivation internal constructor(input: CharSequence, matches: Stack<Match>): Tree() {
-    public val substring: String
-    public val matcher: Matcher?
-    override val children: List<Derivation>
-
-    init {
-        /* initialize root */
-        val (matcher, depth, begin, endExclusive) = try {
-            matches.pop()
-        } catch (_: StackUnderflowException) {
-            throw DerivationException("Expected a match")
-        }
-        substring = input.substring(begin, endExclusive)
-        this.matcher = matcher
-
-        /* recursively initialize subtree */
-        children = buildList {
-            while (matches.top().depth < depth) {
-                this += Derivation(input, matches)
-            }
-        }
-    }
-
-    /** Returns true if this substring was not derived from a matcher. */
-    public fun isYield(): Boolean = matcher != null
-
-    /**
-     * Returns the [matcher],
-     * @throws NoSuchElementException
-     */
-    public fun matcher(): Matcher {
-        return matcher
-            ?: throw NoSuchElementException("Substring was not derived from a matcher")
-    }
-
-    override fun toString(): String {
-        if (matcher == null) {
-            return "\"$substring\""
-        }
-        return "\"$substring\" @ $matcher"
-    }
-}
-
 public abstract class Tree {
     /** The child nodes of this one, if any exist. */
-    public abstract val children: List<Tree>
+    public abstract val children: ImmutableList<Tree>
 
     /** Contains the specific characters used to create the [treeString] of a node. */
     public data class Style(val vertical: Char, val horizontal: Char, val turnstile: Char, val corner: Char) {

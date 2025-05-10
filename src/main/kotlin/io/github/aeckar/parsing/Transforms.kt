@@ -77,7 +77,7 @@ public operator fun <R> Transform<R>.provideDelegate(
 public sealed interface Transform<R>
 
 /** Provides internal transform functions. */
-internal interface TransformImpl<R> : Transform<R> {
+internal fun interface TransformImpl<R> : Transform<R> {
     /**
      * Returns an output according to an input and the matched collected in the funnel.
      * @param funnel contains a match to the symbol using this transform,

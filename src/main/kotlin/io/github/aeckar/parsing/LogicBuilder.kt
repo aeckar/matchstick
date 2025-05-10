@@ -2,6 +2,27 @@ package io.github.aeckar.parsing
 
 // todo greedy/repeated parsing
 
+public typealias LogicContext = LogicBuilder.() -> Unit
+
+/**
+ * Configures and returns a logic-based matcher.
+ * @param builder provides a scope, evaluated on invocation of the matcher, to describe matcher behavior
+ * @see rule
+ */
+public fun logic(builder: LogicContext): Matcher = object : MatcherImpl {
+    override fun equals(other: Any?): Boolean = other === this || other is NamedMatcher && other.original == this
+    override fun toString() = "<unnamed>"
+
+    override fun collectMatches(funnel: Funnel): Int {
+        val begin = funnel.remaining.offset
+        return funnel.withRecovery {
+            funnel.applyLogic(this, builder)
+            funnel.registerMatch(this, begin)
+            funnel.remaining.offset - begin
+        }
+    }
+}
+
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
  * whose logic is provided by a user-defined function.
@@ -13,16 +34,13 @@ package io.github.aeckar.parsing
 public class LogicBuilder internal constructor(
     private val funnel: Funnel
 ) : RuleBuilder(), CharSequence by funnel.remaining {
-    private val original: CharSequence get() = funnel.remaining.original
-    private val offset: Int get() = funnel.remaining.offset
-
     internal var includeStart = -1
         private set
 
     /* ------------------------------ match queries ------------------------------ */
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
-    public fun lengthOf(matcher: Matcher): Int = funnel.withoutTracking { (matcher as MatcherImpl).collectMatches(funnel) }
+    public fun lengthOf(matcher: Matcher): Int = funnel.withRestore { matcher.collectMatches(funnel) }
 
     /** Returns 1 if the character prefixes the offset input, or -1 if one is not found. */
     public fun lengthOf(char: Char): Int = if (startsWith(char)) 1 else -1
@@ -34,7 +52,9 @@ public class LogicBuilder internal constructor(
      * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see matchBy
      */
-    public fun lengthBy(pattern: CharSequence): Int = if (patternOf(pattern)(original, offset)) 1 else -1
+    public fun lengthBy(pattern: CharSequence): Int {
+        return with (funnel.remaining) { if (patternOf(pattern)(original, offset)) 1 else -1 }
+    }
 
     /* ------------------------------ offset modification ------------------------------ */
 
@@ -44,10 +64,12 @@ public class LogicBuilder internal constructor(
         if (length < 0) {
             return
         }
-        if (offset + length > original.length) {
-            throw Failure
+        with(funnel.remaining) {
+            if (offset + length > original.length) {
+                Funnel.fail()
+            }
         }
-        funnel.remaining -= length
+        funnel.remaining.offset += length
     }
 
     /**
@@ -58,11 +80,11 @@ public class LogicBuilder internal constructor(
      */
     public fun yield(length: Int) {
         if (length < 0) {
-            throw Failure
+            Funnel.fail()
         }
         yieldRemaining()
         consume(length)
-        funnel.matches?.push(Match(null, funnel.depth, offset - length, offset))
+        funnel.registerMatch(null, funnel.remaining.offset - length)
     }
 
     /**
@@ -73,10 +95,10 @@ public class LogicBuilder internal constructor(
      */
     public fun include(length: Int) {
         if (length < 0) {
-            throw Failure
+            Funnel.fail()
         }
         if (includeStart == -1) {
-            includeStart = offset
+            includeStart = funnel.remaining.offset
         }
         consume(length)
     }
@@ -86,7 +108,7 @@ public class LogicBuilder internal constructor(
         if (includeStart == -1) {
             return
         }
-        funnel.matches?.push(Match(funnel, includeStart, offset))
+        funnel.registerMatch(funnel.currentMatcher(), includeStart)
         includeStart = -1
     }
 }

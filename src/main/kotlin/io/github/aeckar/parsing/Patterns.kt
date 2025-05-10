@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.Suffix
+import io.github.aeckar.state.Tape
 import io.github.aeckar.state.indexOfAnyOrLength
 import io.github.aeckar.state.indexOfOrLength
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -95,7 +95,7 @@ private data object CharRange : PredicateProfile(
  * Patterns used to create other patterns are considered *predicates*,
  * alongside any lambdas which precipitate pattern matching.
  *
- * **API Note:** Cannot merge sequence and index into a [Suffix], as it would disable lookbehind.
+ * **API Note:** Cannot merge sequence and index into a [Tape], as it would disable lookbehind.
  * @param stringRep the string representation of this predicate when [toString] is called
  */
 private class Pattern(val stringRep: String, val predicate: Predicate) : Predicate {
@@ -137,7 +137,7 @@ private class PredicateBuilder(private val def: String) {
     override fun toString() = "{ $def, $predicate, $index }"
 
     private fun raise(message: String): Nothing {
-        throw MalformedPatternException("$message in pattern '$def'")
+        throw PatternException("$message in pattern '$def'")
     }
 
     private fun warn(lazyMessage: () -> String) {

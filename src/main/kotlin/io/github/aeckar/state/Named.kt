@@ -1,11 +1,6 @@
 package io.github.aeckar.state
 
 import io.github.aeckar.parsing.provideDelegate
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
-
-/** Returns a property delegate returning this value. */
-public fun <T> T.toReadOnlyProperty() = ReadOnlyProperty { _: Any?, _: KProperty<*> -> this }
 
 /**
  * An object named using delegation.

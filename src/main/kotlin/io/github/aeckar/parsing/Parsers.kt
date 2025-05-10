@@ -1,7 +1,8 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.state.Named
-import io.github.aeckar.state.Suffix
+import io.github.aeckar.state.Stack
+import io.github.aeckar.state.Tape
 import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -16,7 +17,7 @@ public infix fun <R> Matcher.feeds(transform: Transform<R>): Parser<R> {
  * @throws DerivationException a match cannot be made to the input
  */
 public fun <R> Parser<R>.parse(input: CharSequence, output: R, delimiter: Matcher = Matcher.emptyString): R {
-    val funnel = Funnel(Suffix(input), delimiter)
+    val funnel = Funnel(Tape(input), delimiter, Stack.empty())
     (this as ParserImpl<R>).collectMatches(funnel)
     return consumeMatches(funnel, output)
 }
