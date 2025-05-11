@@ -13,6 +13,7 @@ dependencies {
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.8")
     testImplementation(kotlin("test"))
+    testImplementation("org.slf4j:slf4j-simple:2.0.17")
 }
 
 tasks.test {

@@ -5,7 +5,7 @@ import kotlinx.collections.immutable.ImmutableSet
 /**
  * A slice of input satisfying a matcher.
  *
- * Substrings are evaluated lazily upon conversion to a [Derivation] of the same matcher.
+ * Substrings are evaluated lazily upon conversion to a [SyntaxTreeNode] of the same matcher.
  * @param begin the offset of the full sequence where the matched substring begins
  * @param endExclusive one past the last index containing a character in the matched substring
  * @param matcher the matcher matching the substring with the given bounds, if present

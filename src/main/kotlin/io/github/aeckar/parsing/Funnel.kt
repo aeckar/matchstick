@@ -8,14 +8,14 @@ import java.io.Serial
  * Collects matches in an input using a matcher.
  *
  * Instances of this class may be reused between top-level invocations of [MatcherImpl.collectMatches].
- * @param remaining the remaining portion of the original input
+ * @param tape the remaining portion of the original input
  * @param matches collects all matches in the input derived from this matcher, in list form
  * @param delimiter the matcher used to skip between
  * @param depth the starting depth, typically 0. In other words,
  * the number of predicates currently being matched to the input
  */
 internal class Funnel private constructor(
-    var remaining: Tape,
+    var tape: Tape,
     val delimiter: Matcher,
     val matches: Stack<Match>,
     depth: Int
@@ -42,7 +42,7 @@ internal class Funnel private constructor(
     ) : this(remaining, delimiter, matches, 0)
 
     /** Returns the derivation of the first matched substring. */
-    fun toTree() = Derivation(remaining.original, matches)
+    fun toTree() = SyntaxTreeNode(tape.original, matches)
 
     /* ------------------------------ top-down parsing ------------------------------ */
 
@@ -58,7 +58,7 @@ internal class Funnel private constructor(
 
     /** Pushes a match at the current depth and ending at the current offset. */
     fun registerMatch(matcher: Matcher?, begin: Int) {
-        val match = Match(matcher, depth, begin, remaining.offset, dependencies.toImmutableSet())
+        val match = Match(matcher, depth, begin, tape.offset, dependencies.toImmutableSet())
         matches += match
         if (matcher is Rule) {
             successCache.getOrPut(begin) { mutableSetOf() } += match
@@ -66,39 +66,28 @@ internal class Funnel private constructor(
     }
 
     /** While the block is executed, descends with the given matcher. */
-    inline fun applyLogic(matcher: Matcher, logic: LogicContext) {
+    inline fun applyLogic(logic: LogicContext) {
+        val matcher = currentMatcher()
         if (matcher is Rule) {
-            val begin = remaining.offset
+            val begin = tape.offset
             successCache.findInSet(begin) { it.matcher == matcher && matchers.containsAll(it.dependencies) }?.let {
-                remaining.offset += it.length
+                tape.offset += it.length
                 return
             }
             failCache.findInSet(begin) { it === matcher}?.let {
-                fail()
+                abortMatch()
             }
         }
-        matchers += matcher
-        ++depth
         engine.apply(logic)
         engine.yieldRemaining()
-        matchers.pop()
-        --depth
     }
 
     /* ------------------------------ scope functions ------------------------------ */
 
-    /** After the block is executed, restores the tape to its original offset. */
-    inline fun withRestore(matchLength: () -> Int): Int {
-        val length = matchLength()
-        if (length != -1) {
-            remaining.offset -= length
-        }
-        return length
-    }
-
-    inline fun withRecovery(matchLength: () -> Int): Int {
-        val begin = remaining.offset
-        val matcher = currentMatcher()
+    inline fun withMatcher(matcher: Matcher, matchLength: () -> Int): Int {
+        val begin = tape.offset
+        matchers += matcher
+        ++depth
         return try {
             val length = matchLength()
             if (matcher is Rule) {
@@ -109,19 +98,31 @@ internal class Funnel private constructor(
             if (matcher is Rule) {
                 failCache.putInSet(begin, matcher)
             }
-            remaining.offset -= remaining.offset - begin
+            tape.offset -= tape.offset - begin
             -1
+        } finally {
+            matchers.pop()
+            --depth
         }
+    }
+
+    /** After the block is executed, restores the tape to its original offset. */
+    inline fun withRestore(matchLength: () -> Int): Int {
+        val length = matchLength()
+        if (length != -1) {
+            tape.offset -= length
+        }
+        return length
     }
 
     /* ----------------------------------------------------------------------------- */
 
     override fun toString(): String {
-        return "Funnel(remaining=$remaining,delimiter=$delimiter,depth=$depth,matches=$matches)"
+        return "Funnel(remaining=$tape,delimiter=$delimiter,depth=$depth,matches=$matches)"
     }
 
     companion object {
         /** When called, signals that -1 should be returned from [collect][MatcherImpl.collectMatches]. */
-        fun fail(): Nothing { throw Failure }
+        fun abortMatch(): Nothing { throw Failure }
     }
 }

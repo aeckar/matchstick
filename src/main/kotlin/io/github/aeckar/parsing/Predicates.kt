@@ -1,26 +1,39 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.Tape
+import io.github.aeckar.state.SingleUseBuilder
 import io.github.aeckar.state.indexOfAnyOrLength
 import io.github.aeckar.state.indexOfOrLength
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.ConcurrentHashMap
 
-/* ------------------------------ pattern API ------------------------------ */
-
-internal typealias Predicate = (CharSequence, Int) -> Boolean
+/* ------------------------------ predicate API ------------------------------ */
 
 /**
- * Returns the pre-compiled pattern specified by the definition,
- * or a new one if the pattern has not been cached.
+ * When [matched][invoke] to a character in a sequence,
+ * returns true if the character and its position in the sequence satisfies some condition.
  */
-internal fun patternOf(def: CharSequence): Predicate {
-    val defString = def.toString()  // Use immutable keys
-    val cache = Pattern.cache
-    if (defString !in cache) {
-        cache[defString] = PredicateBuilder(defString).build()
+public fun interface Predicate {
+    /** Thrown when a [Predicate] definition is malformed. */
+    public class MalformedException internal constructor(message: String) : RuntimeException(message)
+
+    /** Attempts a match to the specified character. */
+    public operator fun invoke(sequence: CharSequence, index: Int): Boolean
+
+    public companion object {
+        /**
+         * Returns the pre-compiled predicate specified by the definition,
+         * or a new one if the predicate has not been cached.
+         * @see RuleBuilder.matchBy
+         */
+        internal fun instanceOf(def: CharSequence): Predicate {
+            val defString = def.toString()  // Use immutable keys
+            val cache = CacheablePredicate.cache
+            if (defString !in cache) {
+                cache[defString] = PredicateBuilder(defString).build()
+            }
+            return cache.getValue(defString)
+        }
     }
-    return cache.getValue(defString)
 }
 
 /* ------------------------------ predicate classes ------------------------------ */
@@ -84,21 +97,18 @@ private data object CharRange : PredicateProfile(
         '%' to "%"
     )
 ) {
-    const val dotPlaceholder = '\uFFFF'
+    const val DOT_PLACEHOLDER = '\uFFFF'
     val pattern = Regex("^[^.][.]{2}[^.]$")
 }
 
 /**
- * When [matched][invoke] to a character in a sequence,
- * returns true if the character and its position in the sequence satisfies some condition.
+ * A cacheable predicate.
  *
- * Patterns used to create other patterns are considered *predicates*,
- * alongside any lambdas which precipitate pattern matching.
- *
- * **API Note:** Cannot merge sequence and index into a [Tape], as it would disable lookbehind.
+ * Predicates used to create other predicates are considered *sub-predicates*,
+ * alongside any lambdas which precipitate predicate matching.
  * @param stringRep the string representation of this predicate when [toString] is called
  */
-private class Pattern(val stringRep: String, val predicate: Predicate) : Predicate {
+private class CacheablePredicate(val stringRep: String, val predicate: Predicate) : Predicate {
     override fun toString(): String = stringRep
 
     /** @throws IllegalArgumentException [index] is negative */
@@ -107,7 +117,7 @@ private class Pattern(val stringRep: String, val predicate: Predicate) : Predica
             predicate(sequence, index)
         } catch (e: StringIndexOutOfBoundsException) {
             if (index < 0) {
-                throw IllegalArgumentException("Index $index is negative for pattern '$this'")
+                throw IllegalArgumentException("Index $index is negative for predicate '$this'")
             }
             throw e
         }
@@ -115,46 +125,78 @@ private class Pattern(val stringRep: String, val predicate: Predicate) : Predica
 
     companion object {
         val cache: MutableMap<String, Predicate> = ConcurrentHashMap()
-        val placeholder = Pattern("<placeholder>") { _, _ -> throw IllegalStateException("Cannot match to placeholder") }
+
+        val placeholder = CacheablePredicate("<placeholder>") { _, _ ->
+            throw IllegalStateException("Cannot match to placeholder")
+        }
     }
 }
 
 /* ------------------------------ predicate builder ------------------------------ */
 
-/**
- * Builds the pattern specified by the given [definition][def].
- *
- * Tracks the current index and holds intermediate data during this process.
- * Once built, a pattern is considered to be *compiled*.
- * @see build
- */
-private class PredicateBuilder(private val def: String) {
-    private var predicate: Predicate = Pattern.placeholder
+private class PredicateBuilder(private val def: String) : SingleUseBuilder<Predicate>() {
+    private var predicate: Predicate = CacheablePredicate.placeholder
     private var index = 0
+
+    /**
+     * Performs top-down parsing to compile the predicate specified by [def].
+     *
+     * While [index] is not out of the bounds of the definition, the algorithm below is followed.
+     * 1. If an atomic predicate is found, parse it and set it as current.
+     * 2. If a compound predicate is found,
+     *     1. Parse the predicate up to next delimiter.
+     *     2. Instantiate compound predicate with current and parsed predicate.
+     *     3. Flatten compound predicate and set as current.
+     * 3. Set cursor to one after current predicate.
+     */
+    override fun buildLogic(): Predicate {
+        while (index < def.length) {    // 'index' modified by predicate builders
+            when (def[index]) {
+                '|' -> compileUnion()
+                ',' -> compileIntersection()
+                '(' -> compileGrouping()
+                '[' -> compileCharSet()
+                '!' -> compileNegation()
+                '<' -> compileSuffix()
+                '>' -> compilePrefix()
+                else -> compileCharRange()
+            }
+        }
+        if (predicate === CacheablePredicate.placeholder) {
+            raise("Expected a predicate")
+        }
+        return predicate
+    }
 
     /* ------------------------------ exception handling ------------------------------ */
 
     override fun toString() = "{ $def, $predicate, $index }"
 
     private fun raise(message: String): Nothing {
-        throw PatternException("$message in pattern '$def'")
+        val richMessage = "$message in predicate '$def'"
+        logger.error { richMessage }
+        throw Predicate.MalformedException(richMessage)
     }
 
     private fun warn(lazyMessage: () -> String) {
-        logger.warn { "$lazyMessage in pattern '$def'" }
+        logger.warn { "$lazyMessage in predicate '$def'" }
     }
 
-    /* ------------------------------ predicate builders ------------------------------ */
+    /* ------------------------------ predicate compilers ------------------------------ */
 
-    private fun buildUnion() {
-        if (predicate === Pattern.placeholder || index == def.lastIndex) {
+    private fun compilePredicate(startIndex: Int, endIndex: Int): Predicate {
+        return PredicateBuilder(def.substring(startIndex, endIndex)).build()
+    }
+
+    private fun compileUnion() {
+        if (predicate === CacheablePredicate.placeholder || index == def.lastIndex) {
             warn { "Incomplete union at index $index" }
             ++index
             return
         }
         val next = index + 1
         index = def.indexOfOrLength(Union.sentinel, next)
-        val nextPred = parsePredicate(next, index)
+        val nextPred = compilePredicate(next, index)
         predicate = when {
             predicate is Union -> Union((predicate as Union).predicates + nextPred)
             nextPred is Union -> Union(nextPred.predicates + predicate)
@@ -162,9 +204,9 @@ private class PredicateBuilder(private val def: String) {
         }
     }
 
-    /** Returns true if the current pattern was changed. */
-    private fun buildIntersection(): Boolean {
-        if (predicate === Pattern.placeholder || index == def.lastIndex) {
+    /** Returns true if the current predicate was changed. */
+    private fun compileIntersection(): Boolean {
+        if (predicate === CacheablePredicate.placeholder || index == def.lastIndex) {
             warn { "Incomplete intersection at index $index" }
             ++index
             return false
@@ -188,7 +230,7 @@ private class PredicateBuilder(private val def: String) {
                 break
             }
         }
-        val nextPred = parsePredicate(next, index)
+        val nextPred = compilePredicate(next, index)
         predicate = when {
             predicate is Intersection -> Intersection((predicate as Intersection).predicates + nextPred)
             nextPred is Intersection -> Intersection(nextPred.predicates + predicate)
@@ -197,78 +239,74 @@ private class PredicateBuilder(private val def: String) {
         return true
     }
 
-    private fun buildGrouping() {
+    private fun compileGrouping() {
         val atPar = index
         val afterPar = index + 1
         index = def.indexOfOrLength(')', index) // Skip over opening parenthesis and body
         if (index == def.length) {
             warn { "Unclosed parentheses at index $atPar" }
         }
-        val nextPred = parsePredicate(afterPar, index++) // Skip over closing parenthesis, if present
-        predicate = Pattern("($nextPred)") { s, i -> nextPred(s, i) }
+        val nextPred = compilePredicate(afterPar, index++) // Skip over closing parenthesis, if present
+        predicate = CacheablePredicate("($nextPred)") { s, i -> nextPred(s, i) }
     }
 
-    private fun buildCharSet() {
+    private fun compileCharSet() {
         val (body, endChars) = parsePredicateBody(CharSet)
         val acceptsEnd = endChars.isNotEmpty()
         val charSet = body.filterIndexed { i, c -> body.indexOf(c) == i } // Filter by unique
         ++index // Skip over closing bracket, if present
         predicate = when {
-            acceptsEnd && charSet.isNotEmpty() -> { s, i -> i >= s.length || s[i] in charSet }
-            acceptsEnd -> { s, i -> i >= s.length }
-            else -> { s, i -> s[i] in charSet }
+            acceptsEnd && charSet.isNotEmpty() -> Predicate { s, i -> i >= s.length || s[i] in charSet }
+            acceptsEnd -> Predicate { s, i -> i >= s.length }
+            else -> Predicate { s, i -> s[i] in charSet }
         }
-        predicate = Pattern(if (acceptsEnd) "[$charSet^]" else "[$charSet]", predicate) // Supply string form
+        predicate = CacheablePredicate(if (acceptsEnd) "[$charSet^]" else "[$charSet]", predicate) // Supply string form
     }
 
-    private fun buildNegation() {
+    private fun compileNegation() {
         val next = index + 1
         index = def.indexOfAnyOrLength(Intersection.sentinels, next)
         if (next == index) {
             raise("Expected a predicate at index $next")
         }
-        val subPred = parsePredicate(next, index)
-        predicate = Pattern("!($subPred)") { s, i -> !subPred(s, i) }
+        val subPred = compilePredicate(next, index)
+        predicate = CacheablePredicate("!($subPred)") { s, i -> !subPred(s, i) }
     }
 
-    private fun buildPrefix() {
+    private fun compilePrefix() {
         val (prefix, endChars, atGreaterThan) = parsePredicateBody(Affix)
         if (endChars.isNotEmpty()) {
             raise("Prefix at index $atGreaterThan is adjacent to end-of-input")
         }
-        predicate = Pattern(">$prefix") { s, i ->
+        predicate = CacheablePredicate(">$prefix") { s, i ->
             val next = i - prefix.length
             prefix.indices.all { s[next + it] == prefix[it] }
         }
     }
 
-    private fun buildSuffix() {
+    private fun compileSuffix() {
         val (suffix, endChars, atLessThan) = parsePredicateBody(Affix)
         if (endChars.any { it != suffix.lastIndex }) { // Multiple at end is allowed, '^' specifies any index after last
             raise("Suffix at index $atLessThan continues after end-of-input")
         }
-        predicate = Pattern("<$suffix") predicate@ { s, i ->
+        predicate = CacheablePredicate("<$suffix") predicate@ { s, i ->
             val next = i + 1
             suffix.indices.all { s[next + it] == suffix[it] } || return@predicate false
             endChars.isEmpty() || next + suffix.length == s.length
         }
     }
 
-    private fun buildCharRange() {
-        val (body, _, start) = parsePredicateBody(CharRange)
-        if (CharRange.pattern !in body) {
+    private fun compileCharRange() {
+        val (body, endChars, start) = parsePredicateBody(CharRange)
+        if (endChars.isNotEmpty() || CharRange.pattern !in body) {
             raise("Malformed predicate at index $start")
         }
         val bodyString = body.toString()
-        val charRange = bodyString.replace(CharRange.dotPlaceholder, '.').run { first()..last() }
-        predicate = Pattern(bodyString) { s, i -> s[i] in charRange }
+        val charRange = bodyString.replace(CharRange.DOT_PLACEHOLDER, '.').run { first()..last() }
+        predicate = CacheablePredicate(bodyString) { s, i -> s[i] in charRange }
     }
 
-    /* ------------------------------ predicate parsers ------------------------------ */
-
-    private fun parsePredicate(startIndex: Int, endIndex: Int): Predicate {
-        return PredicateBuilder(def.substring(startIndex, endIndex)).build()
-    }
+    /* ------------------------------ helpers ------------------------------ */
 
     /**
      * Parses characters and character escapes in a predicate used as
@@ -310,12 +348,13 @@ private class PredicateBuilder(private val def: String) {
         var cur = start
         val body = StringBuilder()
         val endChars = mutableSetOf<Int>() // '^' before these indices in character sequence without '^'
-        while (cur != index) {
+        while (cur < index) {
             val c = def[cur]
             when {
                 c == '%' -> {
-                    val escape = def.getOrNull(cur + 1) ?: raise("Incomplete escape at index $cur")
-                    body.append(type.escapes[escape] ?: raise("Illegal escape '$escape' at index $cur"))
+                    val escape = def.getOrElse(cur + 1) { raise("Incomplete escape at index $cur") }
+                    body.append(type.escapes.getOrElse(escape) { raise("Illegal escape '$escape' at index $cur") })
+                    ++cur
                 }
                 c == '^' && type !== CharRange -> endChars += cur
                 else -> body.append(c)
@@ -323,49 +362,6 @@ private class PredicateBuilder(private val def: String) {
             ++cur
         }
         return Triple(body, endChars, start)
-    }
-
-    /* ------------------------------ primary parser ------------------------------ */
-
-    /**
-     * For each substring in the [pattern definition][def], parses the next [predicate].
-     *
-     * The final value of [predicate], therefore, becomes the pattern contained by the definition.
-     *
-     * The algorithm used to parse each predicate is as follows.
-     * ```txt
-     * Until all text has been parsed:
-     *     If atomic predicate is found:
-     *         Parse predicate and set as current.
-     *     If compound predicate delimiter is found:
-     *         Parse predicate up to next delimiter.
-     *         Instantiate compound predicate with current and parsed predicate.
-     *         Flatten compound predicate and set as current.
-     *     Set cursor to one after current predicate.
-     * ```
-     * **API Note:** Conveniences like leading/trailing delimiters are allowed,
-     * but must give a warning.
-     */
-    fun build(): Predicate {
-        if (predicate != Pattern.placeholder) {
-            throw IllegalStateException("Starting predicate must be placeholder")
-        }
-        while (index < def.length) {    // 'index' modified by predicate builders
-            when (def[index]) {
-                '|' -> buildUnion()
-                ',' -> buildIntersection()
-                '(' -> buildGrouping()
-                '[' -> buildCharSet()
-                '!' -> buildNegation()
-                '<' -> buildSuffix()
-                '>' -> buildPrefix()
-                else -> buildCharRange()
-            }
-        }
-        if (predicate === Pattern.placeholder) {
-            raise("Expected a predicate")
-        }
-        return predicate
     }
 
     private companion object {

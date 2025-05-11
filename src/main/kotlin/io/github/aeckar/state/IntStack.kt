@@ -7,8 +7,6 @@ package io.github.aeckar.state
  */
 public class IntStack(initialCapacity: Int) : AbstractStack<Int>(initialCapacity) {
     override var size: Int = initialCapacity
-        private set
-
     private var elements = IntArray(initialCapacity)
 
     override fun contains(element: Int): Boolean = element in elements

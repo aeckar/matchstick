@@ -34,9 +34,6 @@ public class Tape public constructor(
 
     /** Returns the original sequence, truncated and prepended with ellipses if the offset is greater than 0. */
     override fun toString(): String {
-        if (offset == 0) {
-            return original.toString()
-        }
         return (offset - 10..offset + 10).mapNotNull {
             if (it in original.indices) {
                 val c = original[it]

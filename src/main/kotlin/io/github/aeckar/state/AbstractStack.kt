@@ -9,7 +9,7 @@ package io.github.aeckar.state
 public abstract class AbstractStack<E>(initialCapacity: Int) : AbstractList<E>(), Stack<E> {
     protected var modCount: Int = 0
 
-    override val size: Int = initialCapacity
+    override var size: Int = initialCapacity
         protected set
 
     override fun iterator(): Iterator<E> = object : Iterator<E> {

@@ -12,8 +12,8 @@ import kotlin.reflect.KProperty
  * @param builder provides a scope, evaluated on invocation of the transform, to describe transformation logic
  * @see actionOn
  */
-public fun <R> map(builder: TransformBuilder<R>.() -> R): Transform<R> {
-    TODO()
+public fun <R> mapOn(builder: TransformBuilder<R>.() -> R): Transform<R> {
+
 }
 
 /**
@@ -21,7 +21,7 @@ public fun <R> map(builder: TransformBuilder<R>.() -> R): Transform<R> {
  * @param builder provides a scope, evaluated on invocation of the transform, to describe transformation logic
  * @see mapOn
  */
-public fun <R> action(builder: TransformBuilder<R>.() -> Unit): Transform<R> {
+public fun <R> actionOn(builder: TransformBuilder<R>.() -> Unit): Transform<R> {
     TODO()
 }
 
@@ -37,7 +37,7 @@ public fun <R> action(builder: TransformBuilder<R>.() -> Unit): Transform<R> {
  *     map { /* this: TransformBuilder<Output> */ }
  * ```
  */
-public fun <R> mapOn(): (builder: TransformBuilder<R>.() -> R) -> Transform<R> = ::map
+public fun <R> mapOn(): (builder: TransformBuilder<R>.() -> R) -> Transform<R> = ::mapOn
 
 /**
  * Returns an [actionOn] factory that conforms to the given output type.
@@ -51,7 +51,7 @@ public fun <R> mapOn(): (builder: TransformBuilder<R>.() -> R) -> Transform<R> =
  *     action { /* this: TransformBuilder<Output> */ }
  * ```
  */
-public fun <R> actionOn(): (builder: TransformBuilder<R>.() -> Unit) -> Transform<R> = ::action
+public fun <R> actionOn(): (builder: TransformBuilder<R>.() -> Unit) -> Transform<R> = ::actionOn
 
 /* ------------------------------ transform operations ------------------------------ */
 

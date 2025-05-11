@@ -26,11 +26,8 @@ public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = Matcher.em
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  * @throws DerivationException the sequence does not match the matcher with the given delimiter
  */
-public fun Matcher.matchToTree(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): Derivation {
-    val matches = Stack.empty<Match>()
-    val input = Tape(sequence)
-    collectMatches(Funnel(input, delimiter, matches))
-    return Derivation(input.original, matches)
+public fun Matcher.matchToTree(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): SyntaxTreeNode {
+    return SyntaxTreeNode(sequence, match(sequence, delimiter))
 }
 
 /** Returns an equivalent matcher whose string representation is the name of the property. */
@@ -46,9 +43,9 @@ public operator fun Matcher.provideDelegate(
 internal fun Matcher.collectMatches(funnel: Funnel) = (this as MatcherImpl).collectMatches(funnel)
 internal fun Matcher.ignoreMatches(funnel: Funnel): Int {
     funnel.isMatchingEnabled = false
-    val matchLength = (this as MatcherImpl).collectMatches(funnel)
+    val length = (this as MatcherImpl).collectMatches(funnel)
     funnel.isMatchingEnabled = true
-    return matchLength
+    return length
 }
 
 /* ------------------------------ matcher classes ------------------------------ */
@@ -104,8 +101,8 @@ internal open class NamedMatcher(name: String, override val original: MatcherImp
     constructor(name: String, original: Matcher) : this(name, original as MatcherImpl)
 
     override fun collectMatches(funnel: Funnel): Int {
-        val matchLength = original.collectMatches(funnel)
+        val length = original.collectMatches(funnel)
         funnel.registerMatcher(this)
-        return matchLength
+        return length
     }
 }

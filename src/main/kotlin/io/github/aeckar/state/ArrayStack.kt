@@ -2,7 +2,9 @@ package io.github.aeckar.state
 
 /** A stack backed by an array. */
 public class ArrayStack<E>(initialCapacity: Int = 0) : AbstractStack<E>(initialCapacity) {
-    override val size: Int get() = elements.size
+    override var size: Int = 0
+        get() = elements.size
+
     internal val elements = ArrayList<E>(initialCapacity)
 
     override fun get(index: Int): E = elements[index]
