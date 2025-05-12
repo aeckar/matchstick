@@ -209,4 +209,10 @@ public open class RuleBuilder internal constructor(private val scope: RuleContex
 
     /** Returns a rule matching the given rule zero or one time. */
     public fun maybe(subRule: Matcher): Matcher = Option(subRule)
+
+    /* ---------------------------------------------------------------------------- */
+
+    internal companion object {
+        val dummyScope: RuleContext = { Matcher.emptyString }
+    }
 }

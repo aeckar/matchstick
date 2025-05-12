@@ -57,7 +57,9 @@ public fun <R> actionOn(): (builder: ActionContext<R>) -> Transform<R> = ::actio
 /* ------------------------------ transform builder ------------------------------ */
 
 /**
- * Assembles a [Transform].
+ * Configures and returns a transform.
+ * @see mapOn
+ * @see actionOn
  * @see TransformImpl.consumeMatches
  */
 public class TransformBuilder<R> internal constructor(public val output: R, public val localBounds: List<IntRange>) {

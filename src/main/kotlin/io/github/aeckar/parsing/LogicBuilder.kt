@@ -31,18 +31,18 @@ public fun logic(scope: LogicContext): Matcher = object : MatcherImpl {
 
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
- * whose logic is provided by a user-defined function.
+ * whose behavior is described by a user-defined function.
  *
- * by an invocation of [yield][LogicBuilder.yield]
- *      * or successive invocations of [include][LogicBuilder.include]
+ * Matches captured by an invocation of [yield][LogicBuilder.yield]
+ * or successive invocations of [include][LogicBuilder.include] are considered *explicit*.
  *
- * As a [CharSequence], represents the current sub-sequence where all matching is performed.
+ * As a [CharSequence], represents the remaining characters in the input.
  * @see logic
  * @see MatcherImpl.collectMatches
  */
 public class LogicBuilder internal constructor(
     private val funnel: Funnel
-) : RuleBuilder(), CharSequence by funnel.tape {
+) : RuleBuilder(dummyScope), CharSequence by funnel.tape {
     internal var includeBegin = -1
         private set
 
