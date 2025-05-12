@@ -1,7 +1,6 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.state.Named
-import io.github.aeckar.state.Stack
 import io.github.aeckar.state.Tape
 import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
@@ -14,10 +13,10 @@ public infix fun <R> Matcher.feeds(transform: Transform<R>): Parser<R> {
 
 /**
  * Transforms the output according to the syntax tree produced from the input.
- * @throws DerivationException a match cannot be made to the input
+ * @throws SyntaxTreeNode.MismatchException a match cannot be made to the input
  */
 public fun <R> Parser<R>.parse(input: CharSequence, output: R, delimiter: Matcher = Matcher.emptyString): R {
-    val funnel = Funnel(Tape(input), delimiter, Stack.empty())
+    val funnel = Funnel(Tape(input), delimiter, mutableListOf())
     (this as ParserImpl<R>).collectMatches(funnel)
     return consumeMatches(funnel, output)
 }

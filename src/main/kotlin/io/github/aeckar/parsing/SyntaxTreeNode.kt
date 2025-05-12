@@ -1,6 +1,5 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.Stack
 import io.github.aeckar.state.TreeNode
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -10,7 +9,7 @@ import kotlinx.collections.immutable.toImmutableList
  * @param input the original input
  * @param matches the matches made on the input, in reverse breadth-first notation
  */
-public class SyntaxTreeNode(input: CharSequence, matches: Stack<Match>): TreeNode() {
+public class SyntaxTreeNode(input: CharSequence, matches: MutableList<Match>): TreeNode() {
     /** The captured substring. */
     public val substring: String
 
@@ -23,23 +22,23 @@ public class SyntaxTreeNode(input: CharSequence, matches: Stack<Match>): TreeNod
     init {
         /* 1. Initialize root */
         val match = try {
-            matches.pop()
-        } catch (_: Stack.UnderflowException) {
-            throw EmptyTreeException("Expected a match")
+            matches.last()
+        } catch (_: NoSuchElementException) {
+            throw MismatchException("Expected a match")
         }
         substring = input.substring(match.begin, match.endExclusive)
         this.matcher = match.matcher
 
         /* 2. Recursively initialize subtree */
         children = buildList {
-            while (matches.top().depth < match.depth) {
+            while (matches.last().depth < match.depth) {
                 this += SyntaxTreeNode(input, matches)
             }
         }.toImmutableList()
     }
 
     /** Thrown when there exists no matches from which to derive a syntax tree from. */
-    public class EmptyTreeException internal constructor(message: String) : RuntimeException(message)
+    public class MismatchException internal constructor(message: String) : RuntimeException(message)
 
     /**
      * Returns true if [matcher] is not null.

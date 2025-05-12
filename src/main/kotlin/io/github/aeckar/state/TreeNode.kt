@@ -1,12 +1,12 @@
 package io.github.aeckar.state
 
+import gnu.trove.list.array.TByteArrayList
 import kotlinx.collections.immutable.ImmutableList
-import kotlin.sequences.forEach
 
 /**
  * A node in some larger tree, whose children are other nodes in the same tree.
  *
- * 
+ * Instances of this class perform no checks to prevent cycles.
  */
 public abstract class TreeNode {
     /** The child nodes of this one, if any exist. */
@@ -43,7 +43,7 @@ public abstract class TreeNode {
         private val rootNode: TreeNode
     ) : SingleUseBuilder<String>() {
         private val builder = StringBuilder()
-        private val branches = Stack.empty<Boolean>()
+        private val branches = TByteArrayList()
 
         override fun buildLogic(): String {
             appendNode(style, lineSeparator, rootNode)
@@ -60,19 +60,19 @@ public abstract class TreeNode {
                     .take(children.size.coerceAtLeast(1) - 1)
                     .forEach {
                         appendBranches(style.turnstile)
-                        branches += true
+                        branches.add(1)
                         appendNode(style, lineSeparator, it)
-                        branches.pop()
+                        branches.removeLast()
                     }
                 appendBranches(style.corner)
-                branches += false
+                branches.add(0)
                 appendNode(style, lineSeparator, children.last())
-                branches.pop()
+                branches.removeLast()
             }
         }
 
         private fun appendBranches(corner: Char) {
-            branches.forEach { builder += if (it) "${style.vertical}   " else "    " }
+            branches.onEach { builder += if (it == 1.toByte()) "${style.vertical}   " else "    " }
             builder.append(corner, style.horizontal, style.horizontal, ' ')
         }
     }
@@ -88,7 +88,7 @@ public abstract class TreeNode {
     }
 
     /**
-     * Returns a string representation of this node **only**.
+     * Returns a string representation of this node.
      * @see treeString
      */
     abstract override fun toString(): String

@@ -11,9 +11,34 @@ public typealias RuleContext = RuleBuilder.() -> Matcher
  */
 public fun rule(builder: RuleContext): Matcher = RuleBuilder().run(builder)
 
+/* ------------------------------ functional helpers ------------------------------ */
+
+private fun Sequence<Matcher>.mapMatches(funnel: Funnel, rule: MaybeContiguous): Sequence<Int> {
+    var lengths = map { it.collectMatches(funnel) }
+    if (rule.isContiguous) {
+        lengths = lengths.mapIndexed { i, l ->
+            if (lengths.iterator().hasNext()) listOf(l) else listOf(l, funnel.delimiter.ignoreMatches(funnel))
+        }.flatten()
+    }
+    return lengths
+}
+
+private inline fun <T> Sequence<T>.abortMatchIf(
+    crossinline predicate: (index: Int, element: T) -> Boolean
+): Sequence<T> {
+    return onEachIndexed { i, m -> if (predicate(i, m)) Funnel.abortMatch() }
+}
+
+/** Returns -1 if there exist no valid match lengths. */
+private fun Sequence<Int>.firstMatchLength(): Int {
+    return this
+        .filter { it != -1 }
+        .firstOrNull() ?: -1
+}
+
 /* ------------------------------ rule classes ------------------------------ */
 
-private interface Concatenable {
+private interface MaybeContiguous {
     val isContiguous: Boolean
 }
 
@@ -29,30 +54,25 @@ private sealed class ModifierRule(protected val subRule: Matcher) : Rule()
 
 private sealed class CompoundRule(protected val subRules: List<Matcher>) : Rule()
 
-private class Sequence(
+private class Concatenation(
     subRules: List<Matcher>,
     override val isContiguous: Boolean
-) : CompoundRule(flatten(subRules)), Concatenable {
+) : CompoundRule(flatten(subRules)), MaybeContiguous {
     override fun applyRule(funnel: Funnel): Int {
-        var lengths = subRules.asSequence()
-            .map { it.collectMatches(funnel) }
-        if (isContiguous) {
-            lengths = lengths.weave { funnel.delimiter.ignoreMatches(funnel) }
-        }
-        return lengths
-            .requireAll { i, n -> n != -1 || i % 2 == 1 }
-            .orSingle { -1 }
+        return subRules.asSequence()
+            .mapMatches(funnel, this)
+            .abortMatchIf { i, n -> n == -1 && i % 2 != 1 }
             .sum()
     }
 
     private companion object {
         private fun flatten(subRules: List<Matcher>): List<Matcher> {
             return subRules
-                .splitByInstance<Sequence, _>()
-                .mapFirst { sequences ->
-                    sequences.splitBy { it.isContiguous }
+                .splitByInstance<Concatenation, _>()
+                .mapFirst { c ->
+                    c.splitBy { it.isContiguous }
                         .associate(true, false)
-                        .map { (d, s) -> s.ifNotEmpty { listOf(Sequence(s, d)) } }
+                        .map { (d, s) -> s.ifNotEmpty { listOf(Concatenation(s, d)) } }
                         .flatten()
                 }
                 .flatten()
@@ -64,8 +84,7 @@ private class Junction(subRules: List<Matcher>) : CompoundRule(flatten(subRules)
     override fun applyRule(funnel: Funnel): Int {
         return subRules.asSequence()
             .map { it.collectMatches(funnel) }
-            .filter { it != -1 }
-            .firstOrNull() ?: -1
+            .firstMatchLength()
     }
 
     private companion object {
@@ -82,19 +101,14 @@ private class Repetition(
     subRule: Matcher,
     acceptsZero: Boolean,
     override val isContiguous: Boolean
-) : ModifierRule(subRule), Concatenable {
+) : ModifierRule(subRule), MaybeContiguous {
     private val minMatchCount = if (acceptsZero) 0 else 1
 
     override fun applyRule(funnel: Funnel): Int {
-        var lengths = subRule.repeating()
-            .map { it.collectMatches(funnel) }
-        if (isContiguous) {
-            lengths = lengths.weave { funnel.delimiter.ignoreMatches(funnel) }
-        }
-        return lengths
+        return generateSequence { subRule }
+            .mapMatches(funnel, this)
+            .abortMatchIf { i, n -> n == -1 && i < minMatchCount }
             .takeWhile { it != -1 }
-            .require(minMatchCount)
-            .orSingle { -1 }
             .sum()
     }
 }
@@ -122,6 +136,14 @@ public open class RuleBuilder {
 
     /** Returns a rule matching the given substring. */
     public fun match(substring: CharSequence): Matcher = logic { yield(lengthOf(substring)) }
+
+    /** Returns a rule matching the first acceptable substring. */
+    public fun matchIn(substrings: Collection<CharSequence>): Matcher = logic {
+        val length = substrings.asSequence()
+            .map { lengthOf(it) }
+            .firstMatchLength()
+        yield(length)
+    }
 
     /**
      * Returns a rule matching a single character satisfying the predicate.
@@ -154,10 +176,10 @@ public open class RuleBuilder {
     public fun matchBy(compoundPredicate: CharSequence): Matcher = logic { yield(lengthBy(compoundPredicate)) }
 
     /** Returns a rule matching this rule, then the [delimiter][Matcher.match], then the other. */
-    public operator fun Matcher.plus(other: Matcher): Matcher = Sequence(listOf(this, other), true)
+    public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(listOf(this, other), true)
 
     /** Returns a rule matching this rule, then the other directly after. */
-    public operator fun Matcher.times(other: Matcher): Matcher = Sequence(listOf(this, other), false)
+    public operator fun Matcher.times(other: Matcher): Matcher = Concatenation(listOf(this, other), false)
 
     public infix fun Matcher.or(other: Matcher): Matcher = Junction(listOf(this, other))
 

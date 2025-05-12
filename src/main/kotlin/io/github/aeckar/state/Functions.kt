@@ -1,5 +1,8 @@
 package io.github.aeckar.state
 
+import gnu.trove.list.TByteList
+import gnu.trove.list.array.TByteArrayList
+import gnu.trove.map.TIntObjectMap
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -49,67 +52,6 @@ public operator fun Appendable.plusAssign(obj: Any?) {
     append(obj.toString())
 }
 
-/* ------------------------------ sequence operations ------------------------------ */
-
-/** Returns a sequence that perpetually returns this value. */
-public fun <T> T.repeating(): Sequence<T> = sequence { yield(this@repeating) }
-
-/** Returns this sequence if it contains more than [count] elements, otherwise returns an empty sequence. */
-public fun <T> Sequence<T>.require(count: Int): Sequence<T> = sequence {
-    val buffer: MutableList<T> = ArrayList(count)
-    val remaining = iterator()
-    repeat(count) {
-        if (!remaining.hasNext()) {
-            return@sequence
-        }
-        buffer += remaining.next()
-    }
-    yieldAll(buffer)
-    yieldAll(remaining)
-}
-
-/**
- * Returns the elements in this sequence, or an empty sequence if any elements are null.
- *
- * This operation is *intermediate* and *stateful*.
- */
-public inline fun <T> Sequence<T>.requireAll(
-    crossinline predicate: (index: Int, element: T) -> Boolean
-): Sequence<T> = sequence {
-    val yield = mutableListOf<T>()
-    for ((index, element) in withIndex()) {
-        if (predicate(index, element)) {
-            yield += element
-            continue
-
-        }
-        return@sequence
-    }
-    yieldAll(yield)
-}
-
-/**
- * Returns a sequence containing the elements of the previous sequence,
- * with a separator at every odd index.
- */
-public inline fun <T> Sequence<T>.weave(crossinline separator: () -> T): Sequence<T> = sequence {
-    val elements = iterator()
-    for (element in elements) {
-        yield(element)
-        if (elements.hasNext()) {
-            yield(separator())
-        }
-    }
-}
-
-/** Returns this sequence, or a sequence containing the single default value if empty. */
-public inline fun <T> Sequence<T>.orSingle(defaultValue: () -> T): Sequence<T> {
-    if (iterator().hasNext()) {
-        return this
-    }
-    return sequenceOf(defaultValue())
-}
-
 /* ------------------------------ collection operations ------------------------------ */
 
 /** Returns this list, or the default value if the size of this collection is not empty. */
@@ -117,25 +59,43 @@ public inline fun <C : R, R : Collection<*>> C.ifNotEmpty(defaultValue: () -> R)
     return if (isEmpty()) this else defaultValue()
 }
 
-/** Pushes the element to the top of the stack. */
-public operator fun <E> Stack<E>.plusAssign(element: E) {
-    push(element)
-}
-
 /** Inserts the given value into the set given by the specified key, creating a new one if one does not exist. */
-public fun <K, E> MutableMap<K, MutableSet<E>>.putInSet(key: K, setValue: E) {
-    getOrPut(key) { mutableSetOf() } += setValue
+public fun <E> TIntObjectMap<MutableSet<E>>.putInSet(key: Int, setValue: E) {
+    if (!this.containsKey(key)) {
+        this.put(key, mutableSetOf())
+    }
+    this[key] += setValue
 }
 
 /**
  * Returns the value in the set given by the specified key that satisfies the given predicate.
  * @return the found element, or null if the set does not exist or no element in the set satisfies the predicate
  */
-public inline fun <K, E> Map<K, Set<E>>.findInSet(key: K, predicate: (E) -> Boolean): E? {
+public inline fun <E> TIntObjectMap<out Set<E>>.findInSet(key: Int, predicate: (E) -> Boolean): E? {
     return this[key]?.find(predicate)
 }
 
-/* ------------------------------ functional programming on pairs ------------------------------ */
+/**
+ * Removes and returns the last element in this list.
+ * @throws NoSuchElementException the list is empty
+ */
+public fun TByteList.removeLast(): Byte = removeAt(size() - 1)
+
+/** Loops over the elements in this list. */
+public inline fun TByteList.onEach(block: (Byte) -> Unit): TByteList {
+    if (this is TByteArrayList) {
+        repeat(size()) {
+            block(getQuick(it))
+        }
+    } else {
+        repeat(size()) {
+            block(get(it))
+        }
+    }
+    return this
+}
+
+/* ------------------------------ functional operations on pairs ------------------------------ */
 
 /** Pairs all elements satisfying the predicate to all other elements */
 public inline fun <T> Iterable<T>.splitBy(predicate: (T) -> Boolean): Pair<List<T>, List<T>> {

@@ -13,8 +13,8 @@ import kotlin.reflect.KProperty
  *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  */
-public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): Stack<Match> {
-    val matches = Stack.empty<Match>()
+public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): MutableList<Match> {
+    val matches = mutableListOf<Match>()
     val input = Tape(sequence)
     collectMatches(Funnel(input, delimiter, matches))
     return matches
@@ -24,9 +24,9 @@ public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = Matcher.em
  * Returns the syntax tree created by applying the matcher to this character sequence, in tree form.
  *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
- * @throws DerivationException the sequence does not match the matcher with the given delimiter
+ * @throws SyntaxTreeNode.MismatchException the sequence does not match the matcher with the given delimiter
  */
-public fun Matcher.matchToTree(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): SyntaxTreeNode {
+public fun Matcher.treeify(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): SyntaxTreeNode {
     return SyntaxTreeNode(sequence, match(sequence, delimiter))
 }
 

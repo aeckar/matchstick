@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import gnu.trove.map.hash.TIntObjectHashMap
 import io.github.aeckar.state.*
 import kotlinx.collections.immutable.toImmutableSet
 import java.io.Serial
@@ -17,14 +18,14 @@ import java.io.Serial
 internal class Funnel private constructor(
     var tape: Tape,
     val delimiter: Matcher,
-    val matches: Stack<Match>,
+    val matches: MutableList<Match>,
     depth: Int
 ) {
-    private val matchers = Stack.empty<Matcher>()
+    private val matchers = mutableListOf<Matcher>()
     private val engine = LogicBuilder(this)
     private val dependencies = mutableSetOf<Rule>()
-    private val successCache = mutableMapOf<Int, MutableSet<Match>>()
-    private val failCache = mutableMapOf<Int, MutableSet<Rule>>()
+    private val successCache = TIntObjectHashMap<MutableSet<Match>>()
+    private val failCache = TIntObjectHashMap<MutableSet<Matcher>>()
     internal var isMatchingEnabled = true
 
     var depth = depth
@@ -38,7 +39,7 @@ internal class Funnel private constructor(
     constructor(
         remaining: Tape,
         delimiter: Matcher = Matcher.emptyString,
-        matches: Stack<Match>
+        matches: MutableList<Match>
     ) : this(remaining, delimiter, matches, 0)
 
     /** Returns the derivation of the first matched substring. */
@@ -46,14 +47,14 @@ internal class Funnel private constructor(
 
     /* ------------------------------ top-down parsing ------------------------------ */
 
-    /** @throws Stack.UnderflowException this funnel is not in use */
-    fun currentMatcher() = matchers.top()
+    /** @throws NoSuchElementException this funnel is not in use */
+    fun currentMatcher() = matchers.last()
 
     fun registerDependency(rule: Rule) { dependencies += rule }
 
     /** Assigns the matcher to the most recent match. */
     fun registerMatcher(matcher: Matcher) {
-        matches.top().matcher = matcher
+        matches.last().matcher = matcher
     }
 
     /** Pushes a match at the current depth and ending at the current offset. */
@@ -61,7 +62,7 @@ internal class Funnel private constructor(
         val match = Match(matcher, depth, begin, tape.offset, dependencies.toImmutableSet())
         matches += match
         if (matcher is Rule) {
-            successCache.getOrPut(begin) { mutableSetOf() } += match
+            successCache.putInSet(begin, match)
         }
     }
 
@@ -74,7 +75,7 @@ internal class Funnel private constructor(
                 tape.offset += it.length
                 return
             }
-            failCache.findInSet(begin) { it === matcher}?.let {
+            failCache.findInSet(begin) { it === matcher }?.let {
                 abortMatch()
             }
         }
@@ -91,17 +92,17 @@ internal class Funnel private constructor(
         return try {
             val length = matchLength()
             if (matcher is Rule) {
-                successCache.putInSet(begin, matches.top())
+                successCache.putInSet(begin, matches.last())
             }
             length
-        } catch (_: Failure) {  // todo consider making IntMap
+        } catch (_: Failure) {
             if (matcher is Rule) {
                 failCache.putInSet(begin, matcher)
             }
             tape.offset -= tape.offset - begin
             -1
         } finally {
-            matchers.pop()
+            matchers.removeLast()
             --depth
         }
     }
