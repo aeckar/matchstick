@@ -1,7 +1,5 @@
 package io.github.aeckar.parsing
 
-import kotlinx.collections.immutable.ImmutableSet
-
 /**
  * A slice of input satisfying a matcher.
  *
@@ -16,7 +14,7 @@ public class Match internal constructor(
     public val depth: Int,
     public val begin: Int,
     public val endExclusive: Int,
-    internal val dependencies: ImmutableSet<Rule>
+    internal val dependencies: Set<Rule>
 ) {
     public val length: Int get() = endExclusive - begin
 

@@ -39,14 +39,7 @@ public operator fun Matcher.provideDelegate(
     return NamedMatcher(property.name, this).toReadOnlyProperty()
 }
 
-
 internal fun Matcher.collectMatches(funnel: Funnel) = (this as MatcherImpl).collectMatches(funnel)
-internal fun Matcher.ignoreMatches(funnel: Funnel): Int {
-    funnel.isMatchingEnabled = false
-    val length = (this as MatcherImpl).collectMatches(funnel)
-    funnel.isMatchingEnabled = true
-    return length
-}
 
 /* ------------------------------ matcher classes ------------------------------ */
 

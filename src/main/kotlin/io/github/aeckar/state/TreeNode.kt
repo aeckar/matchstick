@@ -1,7 +1,6 @@
 package io.github.aeckar.state
 
 import gnu.trove.list.array.TByteArrayList
-import kotlinx.collections.immutable.ImmutableList
 
 /**
  * A node in some larger tree, whose children are other nodes in the same tree.
@@ -10,7 +9,7 @@ import kotlinx.collections.immutable.ImmutableList
  */
 public abstract class TreeNode {
     /** The child nodes of this one, if any exist. */
-    public abstract val children: ImmutableList<TreeNode>
+    public abstract val children: List<TreeNode>
 
     private val treeString: String? = null
 

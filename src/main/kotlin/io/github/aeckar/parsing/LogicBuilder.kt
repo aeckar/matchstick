@@ -4,26 +4,30 @@ import io.github.aeckar.state.remaining
 
 // todo greedy/repeated parsing
 
+/* ------------------------------ logic API ------------------------------ */
+
+/** Provides a scope, evaluated at runtime, to explicitly describe [Matcher] behavior. */
 public typealias LogicContext = LogicBuilder.() -> Unit
 
 /**
- * Configures and returns a logic-based matcher.
- * @param builder provides a scope, evaluated on invocation of the matcher, to describe matcher behavior
+ * Configures and returns a matcher whose behavior is explicitly defined.
  * @see rule
  */
-public fun logic(builder: LogicContext): Matcher = object : MatcherImpl {
+public fun logic(scope: LogicContext): Matcher = object : MatcherImpl {
     override fun equals(other: Any?): Boolean = other === this || other is NamedMatcher && other.original == this
     override fun toString() = "<unnamed>"
 
     override fun collectMatches(funnel: Funnel): Int {
         val begin = funnel.tape.offset
         return funnel.withMatcher(this) {
-            funnel.applyLogic(builder)
+            funnel.applyLogic(scope)
             funnel.registerMatch(this, begin)
             funnel.tape.offset - begin
         }
     }
 }
+
+/* ------------------------------ logic builder ------------------------------ */
 
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,

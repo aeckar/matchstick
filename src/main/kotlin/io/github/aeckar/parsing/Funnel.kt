@@ -1,9 +1,11 @@
 package io.github.aeckar.parsing
 
 import gnu.trove.map.hash.TIntObjectHashMap
-import io.github.aeckar.state.*
-import kotlinx.collections.immutable.toImmutableSet
+import io.github.aeckar.state.Tape
+import io.github.aeckar.state.findInSet
+import io.github.aeckar.state.putInSet
 import java.io.Serial
+import java.util.Collections.unmodifiableSet
 
 /**
  * Collects matches in an input using a matcher.
@@ -26,7 +28,6 @@ internal class Funnel private constructor(
     private val dependencies = mutableSetOf<Rule>()
     private val successCache = TIntObjectHashMap<MutableSet<Match>>()
     private val failCache = TIntObjectHashMap<MutableSet<Matcher>>()
-    internal var isMatchingEnabled = true
 
     var depth = depth
         private set
@@ -59,7 +60,7 @@ internal class Funnel private constructor(
 
     /** Pushes a match at the current depth and ending at the current offset. */
     fun registerMatch(matcher: Matcher?, begin: Int) {
-        val match = Match(matcher, depth, begin, tape.offset, dependencies.toImmutableSet())
+        val match = Match(matcher, depth, begin, tape.offset, unmodifiableSet(dependencies))
         matches += match
         if (matcher is Rule) {
             successCache.putInSet(begin, match)

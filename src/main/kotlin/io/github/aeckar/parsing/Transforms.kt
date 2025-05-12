@@ -5,54 +5,6 @@ import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-/* ------------------------------ transform factories ------------------------------ */
-
-/**
- * Configures and returns a transform whose next value is the one returned by the given scope.
- * @param builder provides a scope, evaluated on invocation of the transform, to describe transformation logic
- * @see actionOn
- */
-public fun <R> mapOn(builder: TransformBuilder<R>.() -> R): Transform<R> {
-
-}
-
-/**
- * Configures and returns a transform whose next value is the previous.
- * @param builder provides a scope, evaluated on invocation of the transform, to describe transformation logic
- * @see mapOn
- */
-public fun <R> actionOn(builder: TransformBuilder<R>.() -> Unit): Transform<R> {
-    TODO()
-}
-
-/**
- * Returns a [mapOn] factory that conforms to the given output type.
- *
- * Storing the return value of this function improves readability for
- * related parsers being fed the same output.
- * ```kotlin
- * val map = map<Output>()
- * val parser by
- *     rule { /* ... */ } feeds
- *     map { /* this: TransformBuilder<Output> */ }
- * ```
- */
-public fun <R> mapOn(): (builder: TransformBuilder<R>.() -> R) -> Transform<R> = ::mapOn
-
-/**
- * Returns an [actionOn] factory that conforms to the given output type.
- *
- * Storing the return value of this function improves readability for
- * related parsers being fed the same output.
- * ```kotlin
- * val action = action<Output>()
- * val parser by
- *     rule { /* ... */ } feeds
- *     action { /* this: TransformBuilder<Output> */ }
- * ```
- */
-public fun <R> actionOn(): (builder: TransformBuilder<R>.() -> Unit) -> Transform<R> = ::actionOn
-
 /* ------------------------------ transform operations ------------------------------ */
 
 /** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */

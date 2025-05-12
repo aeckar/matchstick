@@ -1,8 +1,6 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.state.TreeNode
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
@@ -17,7 +15,7 @@ public class SyntaxTreeNode(input: CharSequence, matches: MutableList<Match>): T
     public val matcher: Matcher?
 
     /** Contains nodes for each section of the [substring] captured by any sub-matchers. */
-    override val children: ImmutableList<SyntaxTreeNode>
+    override val children: List<SyntaxTreeNode>
 
     init {
         /* 1. Initialize root */
@@ -34,7 +32,7 @@ public class SyntaxTreeNode(input: CharSequence, matches: MutableList<Match>): T
             while (matches.last().depth < match.depth) {
                 this += SyntaxTreeNode(input, matches)
             }
-        }.toImmutableList()
+        }
     }
 
     /** Thrown when there exists no matches from which to derive a syntax tree from. */

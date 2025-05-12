@@ -2,14 +2,16 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.state.*
 
+/* ------------------------------ rule API ------------------------------ */
+
+/** Provides a scope, evaluated once, to describe the behavior of a [Rule]. */
 public typealias RuleContext = RuleBuilder.() -> Matcher
 
 /**
  * Configures and returns a rule-based matcher.
- * @param builder provides a scope, evaluated once, to describe matcher behavior
  * @see logic
  */
-public fun rule(builder: RuleContext): Matcher = RuleBuilder().run(builder)
+public fun rule(scope: RuleContext): Matcher = RuleBuilder(scope).build()
 
 /* ------------------------------ functional helpers ------------------------------ */
 
@@ -17,7 +19,7 @@ private fun Sequence<Matcher>.mapMatches(funnel: Funnel, rule: MaybeContiguous):
     var lengths = map { it.collectMatches(funnel) }
     if (rule.isContiguous) {
         lengths = lengths.mapIndexed { i, l ->
-            if (lengths.iterator().hasNext()) listOf(l) else listOf(l, funnel.delimiter.ignoreMatches(funnel))
+            if (lengths.iterator().hasNext()) listOf(l) else listOf(l, funnel.delimiter.collectMatches(funnel))
         }.flatten()
     }
     return lengths
@@ -130,7 +132,11 @@ private class Option(subRule: Matcher) : ModifierRule(subRule) {
  * @see LogicBuilder
  * @see MatcherImpl.collectMatches
  */
-public open class RuleBuilder {
+public open class RuleBuilder internal constructor(private val scope: RuleContext) : SingleUseBuilder<Matcher>() {
+    override fun buildLogic(): Matcher = run(scope)
+
+    /* ------------------------------ rule factories ------------------------------ */
+
     /** Returns a rule matching the substring containing the single character. */
     public fun match(char: Char): Matcher = logic { yield(lengthOf(char)) }
 
