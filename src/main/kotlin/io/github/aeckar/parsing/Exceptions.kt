@@ -1,0 +1,13 @@
+package io.github.aeckar.parsing
+
+/** Thrown when a [Predicate] definition is malformed. */
+public class MalformedPredicateException internal constructor(message: String) : RuntimeException(message)
+
+/** Thrown when [TransformContext.descend] is called more than once in the same scope. */
+public class TransformTraversalException internal constructor(message: String) : RuntimeException(message)
+
+/** Thrown when the type of states between two [transforms][Transform] are incompatible. */
+public class TransformMismatchException internal constructor(
+    message: String,
+    e: TypeCastException
+) : RuntimeException(message, e)

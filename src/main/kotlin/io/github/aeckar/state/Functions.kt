@@ -1,12 +1,10 @@
 package io.github.aeckar.state
 
-import gnu.trove.list.TByteList
-import gnu.trove.list.array.TByteArrayList
 import gnu.trove.map.TIntObjectMap
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-/* ------------------------------ character lookup ------------------------------ */
+/* ------------------------------ text operations ------------------------------ */
 
 /**
  * Finds the first occurrence of the character, starting from the given index.
@@ -55,8 +53,8 @@ public operator fun Appendable.plusAssign(obj: Any?) {
 /* ------------------------------ collection operations ------------------------------ */
 
 /** Returns this list, or the default value if the size of this collection is not empty. */
-public inline fun <C : R, R : Collection<*>> C.ifNotEmpty(defaultValue: () -> R): R {
-    return if (isEmpty()) this else defaultValue()
+public inline fun <C : R, R : Collection<*>> C.ifNotEmpty(defaultValue: (C) -> R): R {
+    return if (isEmpty()) this else defaultValue(this)
 }
 
 /** Inserts the given value into the set given by the specified key, creating a new one if one does not exist. */
@@ -73,72 +71,6 @@ public fun <E> TIntObjectMap<MutableSet<E>>.putInSet(key: Int, setValue: E) {
  */
 public inline fun <E> TIntObjectMap<out Set<E>>.findInSet(key: Int, predicate: (E) -> Boolean): E? {
     return this[key]?.find(predicate)
-}
-
-/**
- * Removes and returns the last element in this list.
- * @throws NoSuchElementException the list is empty
- */
-public fun TByteList.removeLast(): Byte = removeAt(size() - 1)
-
-/** Loops over the elements in this list. */
-public inline fun TByteList.onEach(block: (Byte) -> Unit): TByteList {
-    if (this is TByteArrayList) {
-        repeat(size()) {
-            block(getQuick(it))
-        }
-    } else {
-        repeat(size()) {
-            block(get(it))
-        }
-    }
-    return this
-}
-
-/* ------------------------------ functional operations on pairs ------------------------------ */
-
-/** Pairs all elements satisfying the predicate to all other elements */
-public inline fun <T> Iterable<T>.splitBy(predicate: (T) -> Boolean): Pair<List<T>, List<T>> {
-    val truthy = mutableListOf<T>()
-    val falsy = mutableListOf<T>()
-    forEach {
-        if (predicate(it)) {
-            truthy += it
-        } else {
-            falsy += it
-        }
-    }
-    return truthy to falsy
-}
-
-/** Pairs all elements of type [U] to all other elements */
-@Suppress("UNCHECKED_CAST")
-public inline fun <reified U, T> Iterable<T>.splitByInstance(): Pair<List<U>, List<T>> {
-    return splitBy { it is U } as Pair<List<U>, List<T>>
-}
-
-/** Returns the transformed first value paired to the second value. */
-public inline fun <T,U,R> Pair<T,U>.mapFirst(transform: (T) -> R): Pair<R, U> {
-    return transform(first) to second
-}
-
-/** Returns the first value paired to the transformed second value. */
-public inline fun <T,U,R> Pair<T,U>.mapSecond(transform: (U) -> R): Pair<T,R> {
-    return first to transform(second)
-}
-
-/** Concatenates the second list to the first. */
-public fun <E> Pair<List<E>, List<E>>.flatten() = first + second
-
-
-/** Maps each value in this pair to a pair containing the appropriate key and that value. */
-public fun <T, U, V, W> Pair<T, U>.associate(firstKey: V, secondKey: W): Pair<Pair<V, T>, Pair<W, U>> {
-    return (firstKey to first) to (secondKey to second)
-}
-
-/** Returns a pair containing the transformed values. */
-public inline fun <T, R> Pair<T, T>.map(transform: (T) -> R): Pair<R, R> {
-    return transform(first) to transform(second)
 }
 
 /* ------------------------------ misc. ------------------------------ */

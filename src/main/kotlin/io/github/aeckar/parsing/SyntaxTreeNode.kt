@@ -7,12 +7,21 @@ import io.github.aeckar.state.TreeNode
  * @param input the original input
  * @param matches the matches made on the input, in reverse breadth-first notation
  */
-public class SyntaxTreeNode(input: CharSequence, matches: MutableList<Match>): TreeNode() {
+public class SyntaxTreeNode internal constructor(
+    input: CharSequence,
+    matches: MutableList<Match>
+): TreeNode() {
     /** The captured substring. */
     public val substring: String
 
     /** The matcher that captured the [substring], if present. */
     public val matcher: Matcher?
+
+    /**
+     * The index of the sub-matcher that the [substring] satisfies.
+     * @see Match.choice
+     */
+    public val choice: Int
 
     /** Contains nodes for each section of the [substring] captured by any sub-matchers. */
     override val children: List<SyntaxTreeNode>
@@ -20,18 +29,20 @@ public class SyntaxTreeNode(input: CharSequence, matches: MutableList<Match>): T
     init {
         /* 1. Initialize root */
         val match = try {
-            matches.last()
+            matches.removeLast()
         } catch (_: NoSuchElementException) {
             throw MismatchException("Expected a match")
         }
         substring = input.substring(match.begin, match.endExclusive)
-        this.matcher = match.matcher
+        matcher = match.matcher
+        choice = match.choice
 
         /* 2. Recursively initialize subtree */
         children = buildList {
-            while (matches.last().depth < match.depth) {
+            while (matches.isNotEmpty() && matches.last().depth < match.depth) {
                 this += SyntaxTreeNode(input, matches)
             }
+            reverse()
         }
     }
 
@@ -41,13 +52,13 @@ public class SyntaxTreeNode(input: CharSequence, matches: MutableList<Match>): T
     /**
      * Returns true if [matcher] is not null.
      *
-     * If false is returned, this node holds an [explicitly][LogicBuilder] captured substring.
+     * If false is returned, this node holds an [explicitly][LogicContext] captured substring.
      */
     public fun isYield(): Boolean = matcher != null
 
     /**
      * Returns the [matcher] attributed to this node.
-     * @throws NoSuchElementException this node contains an [explicitly][LogicBuilder] captured substring
+     * @throws NoSuchElementException this node contains an [explicitly][LogicContext] captured substring
      * @see isYield
      */
     public fun matcher(): Matcher {
@@ -58,7 +69,14 @@ public class SyntaxTreeNode(input: CharSequence, matches: MutableList<Match>): T
         if (matcher == null) {
             return "\"$substring\""
         }
-        return "\"$substring\" @ $matcher"
+        return "\"$substring\" @ ${matcher.name}"
+    }
+
+    public companion object {
+        /** Returns a new syntax tree node. */
+        public fun of(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
+            return SyntaxTreeNode(input, matches.toMutableList())
+        }
     }
 }
 

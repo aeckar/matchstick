@@ -3,7 +3,7 @@ package io.github.aeckar.parsing
 import io.github.aeckar.state.SingleUseBuilder
 import io.github.aeckar.state.indexOfAnyOrLength
 import io.github.aeckar.state.indexOfOrLength
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import java.util.concurrent.ConcurrentHashMap
 
 /* ------------------------------ predicate API ------------------------------ */
@@ -13,8 +13,6 @@ import java.util.concurrent.ConcurrentHashMap
  * returns true if the character and its position in the sequence satisfies some condition.
  */
 public fun interface Predicate {
-    /** Thrown when a [Predicate] definition is malformed. */
-    public class MalformedException internal constructor(message: String) : RuntimeException(message)
 
     /** Attempts a match to the specified character. */
     public operator fun invoke(sequence: CharSequence, index: Int): Boolean
@@ -23,7 +21,7 @@ public fun interface Predicate {
         /**
          * Returns the pre-compiled predicate specified by the definition,
          * or a new one if the predicate has not been cached.
-         * @see RuleBuilder.matchBy
+         * @see RuleContext.matchBy
          */
         internal fun instanceOf(def: CharSequence): Predicate {
             val defString = def.toString()  // Use immutable keys
@@ -175,7 +173,7 @@ private class PredicateBuilder(private val def: String) : SingleUseBuilder<Predi
     private fun raise(message: String): Nothing {
         val richMessage = "$message in predicate '$def'"
         logger.error { richMessage }
-        throw Predicate.MalformedException(richMessage)
+        throw MalformedPredicateException(richMessage)
     }
 
     private fun warn(lazyMessage: () -> String) {
@@ -365,6 +363,6 @@ private class PredicateBuilder(private val def: String) : SingleUseBuilder<Predi
     }
 
     private companion object {
-        val logger = KotlinLogging.logger("PredicateBuilder")
+        val logger = logger("PredicateBuilder")
     }
 }

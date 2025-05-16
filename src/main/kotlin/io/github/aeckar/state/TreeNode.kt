@@ -1,6 +1,7 @@
 package io.github.aeckar.state
 
 import gnu.trove.list.array.TByteArrayList
+import gnu.trove.stack.array.TByteArrayStack
 
 /**
  * A node in some larger tree, whose children are other nodes in the same tree.
@@ -42,7 +43,7 @@ public abstract class TreeNode {
         private val rootNode: TreeNode
     ) : SingleUseBuilder<String>() {
         private val builder = StringBuilder()
-        private val branches = TByteArrayList()
+        private val branches = TByteArrayStack()
 
         override fun buildLogic(): String {
             appendNode(style, lineSeparator, rootNode)
@@ -59,19 +60,19 @@ public abstract class TreeNode {
                     .take(children.size.coerceAtLeast(1) - 1)
                     .forEach {
                         appendBranches(style.turnstile)
-                        branches.add(1)
+                        branches.push(1)
                         appendNode(style, lineSeparator, it)
-                        branches.removeLast()
+                        branches.pop()
                     }
                 appendBranches(style.corner)
-                branches.add(0)
+                branches.push(0)
                 appendNode(style, lineSeparator, children.last())
-                branches.removeLast()
+                branches.pop()
             }
         }
 
         private fun appendBranches(corner: Char) {
-            branches.onEach { builder += if (it == 1.toByte()) "${style.vertical}   " else "    " }
+            branches.toArray().forEach { builder += if (it == 1.toByte()) "${style.vertical}   " else "    " }
             builder.append(corner, style.horizontal, style.horizontal, ' ')
         }
     }

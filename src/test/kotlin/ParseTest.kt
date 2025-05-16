@@ -1,3 +1,5 @@
+import io.github.aeckar.parsing.actionOn
+import io.github.aeckar.parsing.feeds
 import io.github.aeckar.parsing.logic
 import io.github.aeckar.parsing.treeify
 import kotlin.test.Test
@@ -21,6 +23,13 @@ class ParseTest {
                 include(1)
             }
             fail()
+        } feeds (actionOn<String>()) {
+            substring
+
+            descend()
+
+            children
+
         }
         println(blockComment.treeify("/** hello */").treeString())
     }

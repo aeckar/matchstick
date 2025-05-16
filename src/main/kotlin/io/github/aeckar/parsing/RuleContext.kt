@@ -5,38 +5,13 @@ import io.github.aeckar.state.*
 /* ------------------------------ rule API ------------------------------ */
 
 /** Provides a scope, evaluated once, to describe the behavior of a [Rule]. */
-public typealias RuleContext = RuleBuilder.() -> Matcher
+public typealias RuleScope = RuleContext.() -> Matcher
 
 /**
  * Configures and returns a rule-based matcher.
  * @see logic
  */
-public fun rule(scope: RuleContext): Matcher = RuleBuilder(scope).build()
-
-/* ------------------------------ functional helpers ------------------------------ */
-
-private fun Sequence<Matcher>.mapMatches(funnel: Funnel, rule: MaybeContiguous): Sequence<Int> {
-    var lengths = map { it.collectMatches(funnel) }
-    if (rule.isContiguous) {
-        lengths = lengths.mapIndexed { i, l ->
-            if (lengths.iterator().hasNext()) listOf(l) else listOf(l, funnel.delimiter.collectMatches(funnel))
-        }.flatten()
-    }
-    return lengths
-}
-
-private inline fun <T> Sequence<T>.abortMatchIf(
-    crossinline predicate: (index: Int, element: T) -> Boolean
-): Sequence<T> {
-    return onEachIndexed { i, m -> if (predicate(i, m)) Funnel.abortMatch() }
-}
-
-/** Returns -1 if there exist no valid match lengths. */
-private fun Sequence<Int>.firstMatchLength(): Int {
-    return this
-        .filter { it != -1 }
-        .firstOrNull() ?: -1
-}
+public fun rule(scope: RuleScope): Matcher = RuleContext(scope).ruleBuilder.build()
 
 /* ------------------------------ rule classes ------------------------------ */
 
@@ -44,11 +19,11 @@ private interface MaybeContiguous {
     val isContiguous: Boolean
 }
 
-internal sealed class Rule() : MatcherImpl {
-    abstract fun applyRule(funnel: Funnel): Int
+internal sealed class Rule() : SubstringMatcher {
+    abstract fun ruleLogic(funnel: Funnel)
 
     final override fun collectMatches(funnel: Funnel): Int {
-        return logic { if (applyRule(funnel) == -1) Funnel.abortMatch() }.collectMatches(funnel)
+        return matcherOf(this) { ruleLogic(funnel) }.collectMatches(funnel)
     }
 }
 
@@ -60,41 +35,64 @@ private class Concatenation(
     subRules: List<Matcher>,
     override val isContiguous: Boolean
 ) : CompoundRule(flatten(subRules)), MaybeContiguous {
-    override fun applyRule(funnel: Funnel): Int {
-        return subRules.asSequence()
-            .mapMatches(funnel, this)
-            .abortMatchIf { i, n -> n == -1 && i % 2 != 1 }
-            .sum()
+    override fun ruleLogic(funnel: Funnel) {
+        for ((index, subRule) in subRules.withIndex()) {
+            if (subRule.collectMatches(funnel) == -1) {
+                Funnel.abortMatch()
+            }
+            if (index == subRules.lastIndex) {
+                break
+            }
+            funnel.collectDelimiterMatches()
+        }
     }
 
     private companion object {
         private fun flatten(subRules: List<Matcher>): List<Matcher> {
-            return subRules
-                .splitByInstance<Concatenation, _>()
-                .mapFirst { c ->
-                    c.splitBy { it.isContiguous }
-                        .associate(true, false)
-                        .map { (d, s) -> s.ifNotEmpty { listOf(Concatenation(s, d)) } }
-                        .flatten()
+            val contiguous = mutableListOf<Concatenation>()
+            val spread = mutableListOf<Concatenation>()
+            val others = mutableListOf<Matcher>()
+            subRules.forEach {
+                when {
+                    it is Concatenation && it.isContiguous -> contiguous += it
+                    it is Concatenation -> spread += it
+                    else -> others += it
                 }
-                .flatten()
+            }
+            val flatContiguous = contiguous.flatMap { it.subRules }.ifNotEmpty { listOf(Concatenation(it, true)) }
+            val flatSpread = spread.flatMap { it.subRules }.ifNotEmpty { listOf(Concatenation(it, false)) }
+            return others + flatContiguous + flatSpread
         }
     }
 }
 
 private class Junction(subRules: List<Matcher>) : CompoundRule(flatten(subRules)) {
-    override fun applyRule(funnel: Funnel): Int {
-        return subRules.asSequence()
-            .map { it.collectMatches(funnel) }
-            .firstMatchLength()
+    override fun ruleLogic(funnel: Funnel) {
+        for (it in subRules) {
+            if (it in funnel) {
+                funnel.addDependency(it)
+                continue
+            }
+            if (it.collectMatches(funnel) != -1) {
+                return
+            }
+            funnel.incChoice()
+        }
+        Funnel.abortMatch()
     }
 
     private companion object {
         private fun flatten(subRules: List<Matcher>): List<Matcher> {
-            return subRules
-                .splitBy { it is Junction }
-                .mapFirst { it.ifNotEmpty { listOf(Junction(it)) } }
-                .flatten()
+            val junctions = mutableListOf<Junction>()
+            val others = mutableListOf<Matcher>()
+            subRules.forEach {
+                if (it is Junction) {
+                    junctions += it
+                } else {
+                    others += it
+                }
+            }
+            return others + junctions.flatMap { it.subRules }.ifNotEmpty { listOf(Junction(it)) }
         }
     }
 }
@@ -106,20 +104,20 @@ private class Repetition(
 ) : ModifierRule(subRule), MaybeContiguous {
     private val minMatchCount = if (acceptsZero) 0 else 1
 
-    override fun applyRule(funnel: Funnel): Int {
-        return generateSequence { subRule }
-            .mapMatches(funnel, this)
-            .abortMatchIf { i, n -> n == -1 && i < minMatchCount }
-            .takeWhile { it != -1 }
-            .sum()
+    override fun ruleLogic(funnel: Funnel) {
+        var matchCount = 0
+        while (subRule.collectMatches(funnel) != -1) {
+            funnel.collectDelimiterMatches()
+            ++matchCount
+        }
+        if (matchCount < minMatchCount) {
+            Funnel.abortMatch()
+        }
     }
 }
 
 private class Option(subRule: Matcher) : ModifierRule(subRule) {
-    override fun applyRule(funnel: Funnel): Int {
-        val length = subRule.collectMatches(funnel)
-        return if (length != -1) length else 0
-    }
+    override fun ruleLogic(funnel: Funnel) { subRule.collectMatches(funnel) }
 }
 
 /* ------------------------------ rule builder ------------------------------ */
@@ -129,11 +127,13 @@ private class Option(subRule: Matcher) : ModifierRule(subRule) {
  *
  * The resulting matcher is analogous to a *rule* in a context-free grammar.
  * @see rule
- * @see LogicBuilder
- * @see MatcherImpl.collectMatches
+ * @see LogicContext
+ * @see SubstringMatcher.collectMatches
  */
-public open class RuleBuilder internal constructor(private val scope: RuleContext) : SingleUseBuilder<Matcher>() {
-    override fun buildLogic(): Matcher = run(scope)
+public open class RuleContext internal constructor(private val scope: RuleScope) {
+    internal val ruleBuilder = object : SingleUseBuilder<Matcher>() {
+        override fun buildLogic() = run(scope)
+    }
 
     /* ------------------------------ rule factories ------------------------------ */
 
@@ -147,7 +147,8 @@ public open class RuleBuilder internal constructor(private val scope: RuleContex
     public fun matchIn(substrings: Collection<CharSequence>): Matcher = logic {
         val length = substrings.asSequence()
             .map { lengthOf(it) }
-            .firstMatchLength()
+            .filter { it != -1 }
+            .firstOrNull() ?: -1
         yield(length)
     }
 
@@ -213,6 +214,6 @@ public open class RuleBuilder internal constructor(private val scope: RuleContex
     /* ---------------------------------------------------------------------------- */
 
     internal companion object {
-        val dummyScope: RuleContext = { Matcher.emptyString }
+        val dummyScope: RuleScope = { Matcher.emptyString }
     }
 }

@@ -1,11 +1,16 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.state.NamedProperty
 import io.github.aeckar.state.Named
 import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 /* ------------------------------ transform operations ------------------------------ */
+
+internal fun <R> Transform<R>.consumeMatches(context: TransformContext<R>): R {
+    return (this as StateTransform<R>).consumeMatches(context)
+}
 
 /** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */
 @Suppress("unused") // thisRef
@@ -23,25 +28,24 @@ public operator fun <R> Transform<R>.provideDelegate(
  * @param R the type of the input value
  * @see mapOn
  * @see actionOn
- * @see TransformBuilder
+ * @see TransformContext
  * @see Matcher
  */
-public sealed interface Transform<R>
+public sealed interface Transform<R> : Named
 
-/** Provides internal transform functions. */
-internal fun interface TransformImpl<R> : Transform<R> {
+/** Provides internal API. */
+internal fun interface StateTransform<R> : Transform<R> {
     /**
-     * Returns an output according to an input and the matched collected in the funnel.
-     * @param funnel contains a match to the symbol using this transform,
-     * recursively followed by matches to any sub-symbol
-     * @param input the input, which the output is dependent on
+     * todo
      */
-    fun consumeMatches(funnel: Funnel, input: R): R
+    fun consumeMatches(context: TransformContext<R>): R
 }
 
 private class NamedTransform<R>(
     name: String,
-    override val original: TransformImpl<R>
-) : Named(name, original), TransformImpl<R> by original {
-    constructor(name: String, original: Transform<R>) : this(name, original as TransformImpl<R>)
+    override val original: StateTransform<R>
+) : NamedProperty(original), StateTransform<R> by original {
+    override val name: String = name
+
+    constructor(name: String, original: Transform<R>) : this(name, original as StateTransform<R>)
 }

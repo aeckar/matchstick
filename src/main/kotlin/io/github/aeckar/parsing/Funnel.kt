@@ -1,97 +1,104 @@
 package io.github.aeckar.parsing
 
 import gnu.trove.map.hash.TIntObjectHashMap
+import gnu.trove.stack.array.TIntArrayStack
 import io.github.aeckar.state.Tape
 import io.github.aeckar.state.findInSet
 import io.github.aeckar.state.putInSet
 import java.io.Serial
-import java.util.Collections.unmodifiableSet
 
 /**
  * Collects matches in an input using a matcher.
  *
- * Instances of this class may be reused between top-level invocations of [MatcherImpl.collectMatches].
+ * Instances of this class may be reused between top-level invocations of [SubstringMatcher.collectMatches].
  * @param tape the remaining portion of the original input
  * @param matches collects all matches in the input derived from this matcher, in list form
  * @param delimiter the matcher used to skip between
  * @param depth the starting depth, typically 0. In other words,
  * the number of predicates currently being matched to the input
  */
-internal class Funnel private constructor(
-    var tape: Tape,
-    val delimiter: Matcher,
-    val matches: MutableList<Match>,
-    depth: Int
-) {
+internal class Funnel(val tape: Tape, private val delimiter: Matcher, private val matches: MutableList<Match>) {
+    private val logicContext = LogicContext(this)
     private val matchers = mutableListOf<Matcher>()
-    private val engine = LogicBuilder(this)
-    private val dependencies = mutableSetOf<Rule>()
+    private val dependencies = mutableSetOf<Matcher>()
     private val successCache = TIntObjectHashMap<MutableSet<Match>>()
     private val failCache = TIntObjectHashMap<MutableSet<Matcher>>()
-
-    var depth = depth
-        private set
+    private var choices = TIntArrayStack()
+    private var isRecordingMatches = true
+    private var depth = 0
 
     private data object Failure : Throwable() {
         @Serial
         private fun readResolve(): Any = Failure
     }
 
-    constructor(
-        remaining: Tape,
-        delimiter: Matcher = Matcher.emptyString,
-        matches: MutableList<Match>
-    ) : this(remaining, delimiter, matches, 0)
 
-    /** Returns the derivation of the first matched substring. */
-    fun toTree() = SyntaxTreeNode(tape.original, matches)
+    /** Returns true if the matcher is currently in use. */
+    operator fun contains(matcher: Matcher) = (matchers.lastIndex..0).any { matcher === matchers[it] }
 
-    /* ------------------------------ top-down parsing ------------------------------ */
+    /** Collects matches to the [delimiter][Matcher.match]. */
+    fun collectDelimiterMatches() {
+        delimiter.collectMatches(this)
+    }
 
-    /** @throws NoSuchElementException this funnel is not in use */
-    fun currentMatcher() = matchers.last()
+    /**
+     * Adds the given rule as a dependency.
+     *
+     * To retrieve a previously captured substring from cache,
+     * the dependencies between the cached match and the current funnel state must match.
+     */
+    fun addDependency(rule: Matcher) { dependencies += rule }
 
-    fun registerDependency(rule: Rule) { dependencies += rule }
+    /**
+     * Increments the current choice.
+     *
+     * This operation should be performed when matching to [Junction] to record which sub-rule was matched.
+     */
+    fun incChoice() {
+        choices.push(choices.pop() + 1)
+    }
 
     /** Assigns the matcher to the most recent match. */
-    fun registerMatcher(matcher: Matcher) {
+    fun setMatcher(matcher: Matcher) {
         matches.last().matcher = matcher
     }
 
     /** Pushes a match at the current depth and ending at the current offset. */
-    fun registerMatch(matcher: Matcher?, begin: Int) {
-        val match = Match(matcher, depth, begin, tape.offset, unmodifiableSet(dependencies))
-        matches += match
+    fun addMatch(matcher: Matcher?, begin: Int) {
+        val match = Match(matcher, depth, begin, tape.offset, choices.peek(), dependencies.toList())
+        if (isRecordingMatches) {
+            matches += match
+        }
         if (matcher is Rule) {
             successCache.putInSet(begin, match)
         }
     }
 
-    /** While the block is executed, descends with the given matcher. */
-    inline fun applyLogic(logic: LogicContext) {
-        val matcher = currentMatcher()
-        if (matcher is Rule) {
-            val begin = tape.offset
-            successCache.findInSet(begin) { it.matcher == matcher && matchers.containsAll(it.dependencies) }?.let {
-                tape.offset += it.length
-                return
-            }
-            failCache.findInSet(begin) { it === matcher }?.let {
-                abortMatch()
-            }
-        }
-        engine.apply(logic)
-        engine.yieldRemaining()
-    }
-
-    /* ------------------------------ scope functions ------------------------------ */
-
-    inline fun withMatcher(matcher: Matcher, matchLength: () -> Int): Int {
+    /**
+     * Attempts to capture a substring using the given matcher, whose logic is given by [scope].
+     * Searches for viable cached results beforehand, and caches the result if possible.
+     */
+    fun captureSubstring(matcher: Matcher, scope: LogicScope): Int {
         val begin = tape.offset
+        val matchesBegin = matches.size
         matchers += matcher
         ++depth
+        choices.push(0)
         return try {
-            val length = matchLength()
+            val matcher = matchers.last()
+            if (matcher is Rule) {
+                val begin = tape.offset
+                successCache
+                    .findInSet(begin) { it.matcher == matcher && matchers.containsAll(it.dependencies) }
+                    ?.let { tape.offset += it.length } ?:
+                failCache
+                    .findInSet(begin) { it === matcher }
+                    ?.let { abortMatch() }
+            }
+            logicContext.apply(scope)
+            logicContext.yieldRemaining()
+            addMatch(matcher, begin)
+            val length = tape.offset - begin
             if (matcher is Rule) {
                 successCache.putInSet(begin, matches.last())
             }
@@ -101,30 +108,32 @@ internal class Funnel private constructor(
                 failCache.putInSet(begin, matcher)
             }
             tape.offset -= tape.offset - begin
+            matches.subList(matchesBegin, matches.size).clear()
             -1
         } finally {
             matchers.removeLast()
             --depth
+            choices.pop()
         }
     }
 
-    /** After the block is executed, restores the tape to its original offset. */
-    inline fun withRestore(matchLength: () -> Int): Int {
+    /**
+     * After collecting the matches within the block,
+     * the resulting matches are not recorded and
+     * the [tape] is returned to its original offset before this function was invoked.
+     */
+    inline fun withoutRecording(matchLength: () -> Int): Int {
+        isRecordingMatches = false
         val length = matchLength()
+        isRecordingMatches = true
         if (length != -1) {
             tape.offset -= length
         }
         return length
     }
 
-    /* ----------------------------------------------------------------------------- */
-
-    override fun toString(): String {
-        return "Funnel(remaining=$tape,delimiter=$delimiter,depth=$depth,matches=$matches)"
-    }
-
     companion object {
-        /** When called, signals that -1 should be returned from [collect][MatcherImpl.collectMatches]. */
+        /** When called, signals that -1 should be returned from [collect][SubstringMatcher.collectMatches]. */
         fun abortMatch(): Nothing { throw Failure }
     }
 }

@@ -7,25 +7,13 @@ import io.github.aeckar.state.remaining
 /* ------------------------------ logic API ------------------------------ */
 
 /** Provides a scope, evaluated at runtime, to explicitly describe [Matcher] behavior. */
-public typealias LogicContext = LogicBuilder.() -> Unit
+public typealias LogicScope = LogicContext.() -> Unit
 
 /**
  * Configures and returns a matcher whose behavior is explicitly defined.
  * @see rule
  */
-public fun logic(scope: LogicContext): Matcher = object : MatcherImpl {
-    override fun equals(other: Any?): Boolean = other === this || other is NamedMatcher && other.original == this
-    override fun toString() = "<unnamed>"
-
-    override fun collectMatches(funnel: Funnel): Int {
-        val begin = funnel.tape.offset
-        return funnel.withMatcher(this) {
-            funnel.applyLogic(scope)
-            funnel.registerMatch(this, begin)
-            funnel.tape.offset - begin
-        }
-    }
-}
+public fun logic(scope: LogicScope): Matcher = matcherOf(null, scope)
 
 /* ------------------------------ logic builder ------------------------------ */
 
@@ -33,23 +21,26 @@ public fun logic(scope: LogicContext): Matcher = object : MatcherImpl {
  * Configures a [Matcher] that is evaluated each time it is invoked,
  * whose behavior is described by a user-defined function.
  *
- * Matches captured by an invocation of [yield][LogicBuilder.yield]
- * or successive invocations of [include][LogicBuilder.include] are considered *explicit*.
+ * Matches captured by an invocation of [yield][LogicContext.yield]
+ * or successive invocations of [include][LogicContext.include] are considered *explicit*.
  *
  * As a [CharSequence], represents the remaining characters in the input.
+ *
+ * It is the user's responsibility to ensure that operations on instances of this class are pure.
+ * This ensures correct caching of matched substrings.
  * @see logic
- * @see MatcherImpl.collectMatches
+ * @see SubstringMatcher.collectMatches
  */
-public class LogicBuilder internal constructor(
+public class LogicContext internal constructor(
     private val funnel: Funnel
-) : RuleBuilder(dummyScope), CharSequence by funnel.tape {
+) : RuleContext(dummyScope), CharSequence by funnel.tape {
     internal var includeBegin = -1
         private set
 
     /* ------------------------------ match queries ------------------------------ */
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
-    public fun lengthOf(matcher: Matcher): Int = funnel.withRestore { matcher.collectMatches(funnel) }
+    public fun lengthOf(matcher: Matcher): Int = funnel.withoutRecording { matcher.collectMatches(funnel) }
 
     /** Returns 1 if the character prefixes the offset input, or -1 if one is not found. */
     public fun lengthOf(char: Char): Int = if (startsWith(char)) 1 else -1
@@ -85,7 +76,7 @@ public class LogicBuilder internal constructor(
         }
         yieldRemaining()
         consume(length)
-        funnel.registerMatch(null, funnel.tape.offset - length)
+        funnel.addMatch(null, funnel.tape.offset - length)
     }
 
     /**
@@ -110,7 +101,7 @@ public class LogicBuilder internal constructor(
         if (includeBegin == -1) {
             return
         }
-        funnel.registerMatch(null, includeBegin)
+        funnel.addMatch(null, includeBegin)
         includeBegin = -1
     }
 
