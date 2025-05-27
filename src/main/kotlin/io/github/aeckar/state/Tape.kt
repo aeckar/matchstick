@@ -29,6 +29,14 @@ public class Tape public constructor(
         require (offset >= 0) { "Offset $offset is negative" }
     }
 
+    /** Returns an iterator returning the remaining characters in this tape, regardless of its current length. */
+    public fun remaining(): CharIterator = object : CharIterator() {
+        var index = offset
+
+        override fun nextChar() = original[index++]
+        override fun hasNext() = index < original.length
+    }
+
     override fun get(index: Int): Char = original[index + offset]
     override fun hashCode(): Int = 31 * original.hashCode() + offset
 

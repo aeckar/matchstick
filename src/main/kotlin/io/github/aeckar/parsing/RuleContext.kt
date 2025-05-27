@@ -142,6 +142,11 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
      */
     public operator fun String.not(): String = "!($this)"
 
+    /** Maps each integer to the receiver repeated that number of times. */
+    public operator fun String.times(counts: Iterable<Int>): List<String> {
+        return counts.map { repeat(it) }
+    }
+
     /* ------------------------------ rule factories ------------------------------ */
 
     public fun char(): Matcher = nextChar

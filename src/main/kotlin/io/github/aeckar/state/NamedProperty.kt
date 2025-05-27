@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.provideDelegate
  * @param original the original object, which may be named
  * @see provideDelegate
  */
-public abstract class NamedProperty internal constructor(public open val original: Any?) : Named {
+internal abstract class NamedProperty internal constructor(open val original: Any?) : Named {
     final override fun hashCode(): Int = original.hashCode()
 
     /** Returns the name given to this object. */

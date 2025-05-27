@@ -364,5 +364,27 @@ private class PredicateBuilder(private val def: String) : SingleUseBuilder<Predi
 
     private companion object {
         val logger = logger("PredicateBuilder")
+
+        fun CharSequence.indexOfOrLength(c: Char, index: Int): Int {
+            var curIndex = index
+            while (curIndex < length) {
+                if (this[curIndex] == c) {
+                    return curIndex
+                }
+                ++curIndex
+            }
+            return length
+        }
+
+        fun CharSequence.indexOfAnyOrLength(sequence: CharSequence, index: Int): Int {
+            var curIndex = index
+            while (curIndex < length) {
+                if (this[curIndex] in sequence) {
+                    return curIndex
+                }
+                ++curIndex
+            }
+            return length
+        }
     }
 }

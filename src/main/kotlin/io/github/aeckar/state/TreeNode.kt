@@ -53,8 +53,8 @@ public abstract class TreeNode {
 
         private fun appendNode(style: Style, lineSeparator: String, node: TreeNode) {
             val children = node.children
-            builder += node.toString()
-            builder += lineSeparator
+            builder.append(node.toString())
+            builder.append(lineSeparator)
             if (children.isNotEmpty()) {
                 children.asSequence()
                     .take(children.size.coerceAtLeast(1) - 1)
@@ -72,7 +72,7 @@ public abstract class TreeNode {
         }
 
         private fun appendBranches(corner: Char) {
-            branches.toArray().forEach { builder += if (it == 1.toByte()) "${style.vertical}   " else "    " }
+            branches.toArray().forEach { builder.append(if (it == 1.toByte()) "${style.vertical}   " else "    ") }
             builder.append(corner, style.horizontal, style.horizontal, ' ')
         }
     }
