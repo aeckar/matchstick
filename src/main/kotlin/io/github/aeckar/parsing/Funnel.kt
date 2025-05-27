@@ -1,11 +1,27 @@
 package io.github.aeckar.parsing
 
+import gnu.trove.map.TIntObjectMap
 import gnu.trove.map.hash.TIntObjectHashMap
 import gnu.trove.stack.array.TIntArrayStack
+import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.state.Tape
-import io.github.aeckar.state.findInSet
-import io.github.aeckar.state.putInSet
 import java.io.Serial
+
+/** Inserts the given value into the set given by the specified key, creating a new one if one does not exist. */
+private fun <E> TIntObjectMap<MutableSet<E>>.putInSet(key: Int, setValue: E) {
+    if (!this.containsKey(key)) {
+        this.put(key, mutableSetOf())
+    }
+    this[key] += setValue
+}
+
+/**
+ * Returns the value in the set given by the specified key that satisfies the given predicate.
+ * @return the found element, or null if the set does not exist or no element in the set satisfies the predicate
+ */
+private inline fun <E> TIntObjectMap<out Set<E>>.findInSet(key: Int, predicate: (E) -> Boolean): E? {
+    return this[key]?.find(predicate)
+}
 
 /**
  * Collects matches in an input using a matcher.

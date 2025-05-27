@@ -1,17 +1,9 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.RuleScope
+import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.state.*
-
-/* ------------------------------ rule API ------------------------------ */
-
-/** Provides a scope, evaluated once, to describe the behavior of a [Rule]. */
-public typealias RuleScope = RuleContext.() -> Matcher
-
-/**
- * Configures and returns a rule-based matcher.
- * @see logic
- */
-public fun rule(scope: RuleScope): Matcher = RuleContext(scope).ruleBuilder.build()
 
 /* ------------------------------ rule classes ------------------------------ */
 
@@ -125,8 +117,9 @@ private class Option(subRule: Matcher) : ModifierRule(subRule) {
 /**
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.
  *
- * The resulting matcher is analogous to a *rule* in a context-free grammar.
- * @see rule
+ * The resulting matcher is analogous to a *rule* in a context-free grammar,
+ * and is thus referred to as one within this context.
+ * @see io.github.aeckar.parsing.dsl.rule
  * @see LogicContext
  * @see MatchCollector.collectMatches
  */
@@ -136,10 +129,7 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
         override fun buildLogic() = run(scope)
     }
 
-    /**
-     * Wraps this compound predicate in a negation.
-     * @see charBy
-     */
+    /** Wraps this [character query][charBy] in a negation. */
     public operator fun String.not(): String = "!($this)"
 
     /** Maps each integer to the receiver repeated that number of times. */
@@ -149,52 +139,36 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
 
     /* ------------------------------ rule factories ------------------------------ */
 
+    /** Returns a rule matching the next character, including the end-of-input character. */
     public fun char(): Matcher = nextChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(char: Char): Matcher = logic { yield(lengthOf(char)) }
+    public fun char(c: Char): Matcher = matcher { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
-    public fun text(substring: CharSequence): Matcher = logic { yield(lengthOf(substring)) }
+    public fun text(substring: String): Matcher = matcher { yield(lengthOf(substring)) }
+
+    /** Returns a rule matching the first acceptable character. */
+    public fun firstOf(chars: String): Matcher = matcher { yield(lengthOfFirst(chars)) }
+
+    /** Returns a rule matching the first acceptable character. */
+    @JvmName("firstCharOf")
+    public fun firstOf(chars: Collection<Char>): Matcher = matcher { yield(lengthOfFirst(chars)) }
 
     /** Returns a rule matching the first acceptable substring. */
-    public fun firstOf(substrings: Collection<CharSequence>): Matcher = logic {
-        val length = substrings.asSequence()
-            .map { lengthOf(it) }
-            .filter { it != -1 }
-            .firstOrNull() ?: -1
-        yield(length)
-    }
+    public fun firstOf(substrings: Collection<String>): Matcher = matcher { yield(lengthOfFirst(substrings)) }
 
     /**
-     * Returns a rule matching a single character satisfying the predicate.
-     *
-     * The general syntax of predicates is as follows.
-     *
-     * | Sub-Predicate   | Syntax             | Escapes                | Note                                   |
-     * |-----------------|--------------------|------------------------|----------------------------------------|
-     * | Union           | {rule}&#124;{rule} |                        |                                        |
-     * | Intersection    | {rule},{rule}      |                        |                                        |
-     * | Negation        | !{rule}            |                        |                                        |
-     * | Grouping        | ({rule})           |                        |                                        |
-     * | Prefix          | <{string}          | %^, %%                 | If present, `^` must be last character |
-     * | Suffix          | >{string}          | %^, %%                 | Cannot contain `^`                     |
-     * | Character Set   | [{string}]         | %a, %A, %d, %], %^, %% |                                        |
-     * | Character Range | {char}..{char}     | %., %%                 | Cannot contain `^`                     |
-     *
-     * | Sequence | Meaning                |
-     * |----------|------------------------|
-     * | ^        | End of input           |
-     * | %%       | Percent sign literal   |
-     * | %^       | Caret literal          |
-     * | %.       | Dot literal            |
-     * | %]       | Closed bracket literal |
-     * | %a       | Lowercase letters      |
-     * | %A       | Uppercase letters      |
-     *
-     * Leading and trailing delimiters are allowed, but will produce a warning if logging is enabled.
+     * Returns a rule matching a single character satisfying the query.
+     * todo syntax
      */
-    public fun charBy(compoundPredicate: CharSequence): Matcher = logic { yield(lengthBy(compoundPredicate)) }
+    public fun charBy(query: String): Matcher = matcher { yield(lengthByChar(query)) }
+
+    /**
+     * Returns a rule matching text satisfying the query.
+     * todo syntax
+     */
+    public fun textBy(query: String): Matcher = matcher { yield(lengthByText(query)) }
 
     /** Returns a rule matching this rule, then the [delimiter][Matcher.match], then the other. */
     public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(listOf(this, other), true)
@@ -229,6 +203,6 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
 
     internal companion object {
         val dummyScope: RuleScope = { Matcher.emptyString }
-        private val nextChar = logic { yield(1) }
+        private val nextChar = matcher { yield(1) }
     }
 }

@@ -1,21 +1,8 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.remaining
+import io.github.aeckar.parsing.dsl.ParserComponentDSL
 
 // todo greedy/repeated parsing
-
-/* ------------------------------ logic API ------------------------------ */
-
-/** Provides a scope, evaluated at runtime, to explicitly describe [Matcher] behavior. */
-public typealias LogicScope = LogicContext.() -> Unit
-
-/**
- * Configures and returns a matcher whose behavior is explicitly defined.
- * @see rule
- */
-public fun logic(scope: LogicScope): Matcher = matcherOf(null, scope)
-
-/* ------------------------------ logic builder ------------------------------ */
 
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
@@ -28,7 +15,7 @@ public fun logic(scope: LogicScope): Matcher = matcherOf(null, scope)
  *
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
- * @see logic
+ * @see io.github.aeckar.parsing.dsl.matcher
  * @see MatchCollector.collectMatches
  */
 @ParserComponentDSL
@@ -43,23 +30,69 @@ public class LogicContext internal constructor(
     /** Returns the length of the matched substring, or -1 if one is not found. */
     public fun lengthOf(matcher: Matcher): Int = funnel.withoutRecording { matcher.collectMatches(funnel) }
 
-    /** Returns 1 if the character prefixes the offset input, or -1 if one is not found. */
-    public fun lengthOf(char: Char): Int = if (startsWith(char)) 1 else -1
-
-    /** Returns the length of the substring if it prefixes the offset input, or -1 if one is not found. */
-    public fun lengthOf(substring: CharSequence): Int = if (startsWith(substring)) substring.length else -1
+    /**
+     * Returns 1 if the character prefixes the offset input, or -1 if one is not found.
+     * @see char
+     */
+    public fun lengthOf(c: Char): Int = if (startsWith(c)) 1 else -1
 
     /**
-     * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
+     * Returns the length of the substring if it prefixes the offset input, or -1 if one is not found.
+     * @see text
+     */
+    public fun lengthOf(substring: String): Int = if (startsWith(substring)) substring.length else -1
+
+    /**
+     * Returns 1 if any character prefixes the offset input, or -1 of none are found.
+     * @see firstOf
+     */
+    public fun lengthOfFirst(chars: String): Int = lengthOfFirst(chars.toList())
+
+    /**
+     * Returns 1 if any character prefixes the offset input, or -1 of none are found.
+     * @see firstOf
+     */
+    @JvmName("lengthOfFirstChar")
+    public fun lengthOfFirst(chars: Collection<Char>): Int {
+        return chars.asSequence()
+            .map { lengthOf(it) }
+            .filter { it != -1 }
+            .firstOrNull() ?: -1
+    }
+
+    /**
+     * Returns the length of the first substring prefixing the offset input, or -1 if none are found.
+     * @see firstOf
+     */
+    public fun lengthOfFirst(substrings: Collection<String>): Int {
+        return substrings.asSequence()
+            .map { lengthOf(it) }
+            .filter { it != -1 }
+            .firstOrNull() ?: -1
+    }
+
+    /**
+     * Returns 1 if a character satisfying the query prefixes the offset input, or -1 if one is not found.
      * @see charBy
      */
-    public fun lengthBy(pattern: CharSequence): Int {
-        return with (funnel.tape) { if (Predicate.instanceOf(pattern)(original, offset)) 1 else -1 }
+    public fun lengthByChar(query: String): Int {
+        return with (funnel.tape) { if (charQueryOf(query)(original, offset)) 1 else -1 }
+    }
+
+    /**
+     * Returns 1 if a string satisfying the query prefixes the offset input, or -1 if one is not found.
+     * @see textBy
+     */
+    public fun lengthByText(query: String): Int {
+        return with (funnel.tape) { if (textQueryOf(query)(original, offset)) 1 else -1 }
     }
 
     /* ------------------------------ offset modification ------------------------------ */
 
-    /** Offsets the current input by the given amount, if non-negative. */
+    /**
+     * Offsets the current input by the given amount, if non-negative.
+     * @see lengthOf
+     */
     public fun consume(length: Int) {
         yieldRemaining()
         applyOffset(length)
@@ -70,6 +103,7 @@ public class LogicContext internal constructor(
      * recording the bounded substring as a match.
      *
      * Fails if [length] is negative.
+     * @see lengthOf
      */
     public fun yield(length: Int) {
         if (length < 0) {

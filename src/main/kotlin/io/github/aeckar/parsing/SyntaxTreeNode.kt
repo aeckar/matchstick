@@ -10,9 +10,9 @@ import io.github.aeckar.state.TreeNode
 public class SyntaxTreeNode internal constructor(
     input: CharSequence,
     matches: MutableList<Match>
-): TreeNode() {
+): TreeNode(), Substring {
     /** The captured substring. */
-    public val substring: String
+    public override val substring: String
 
     /** The matcher that captured the [substring], if present. */
     public val matcher: Matcher?

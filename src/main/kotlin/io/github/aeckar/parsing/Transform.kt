@@ -26,8 +26,8 @@ public operator fun <R> Transform<R>.provideDelegate(
 /**
  * Transforms an input value according to a syntax tree in list form.
  * @param R the type of the input value
- * @see mapOn
- * @see actionOn
+ * @see io.github.aeckar.parsing.dsl.mapOn
+ * @see io.github.aeckar.parsing.dsl.actionOn
  * @see TransformContext
  * @see Matcher
  */

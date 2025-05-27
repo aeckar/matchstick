@@ -1,5 +1,7 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.dsl.LogicScope
+import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.state.NamedProperty
 import io.github.aeckar.state.Named
 import io.github.aeckar.state.Tape
@@ -71,8 +73,8 @@ public operator fun Matcher.provideDelegate(
  *
  * This function is called whenever this matcher
  * [queries][LogicContext.lengthOf] or [matches][RuleContext.char] a substring in an input.
- * @see logic
- * @see rule
+ * @see io.github.aeckar.parsing.dsl.matcher
+ * @see io.github.aeckar.parsing.dsl.rule
  * @see RuleContext
  * @see LogicContext
  * @see Transform
@@ -80,7 +82,7 @@ public operator fun Matcher.provideDelegate(
 public sealed interface Matcher : Named {
     public companion object {
         /** A matcher accepting a zero-length substring. */
-        public val emptyString: Matcher = NamedMatcher("''", logic {})
+        public val emptyString: Matcher = NamedMatcher("''", matcher {})
     }
 }
 
