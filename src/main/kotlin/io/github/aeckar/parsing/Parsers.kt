@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.state.Named
 import io.github.aeckar.state.NamedProperty
 import io.github.aeckar.state.Tape
 import io.github.aeckar.state.toReadOnlyProperty
@@ -7,8 +8,10 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 /** Returns a parser with the given matcher and transform. */
-public infix fun <R> Matcher.feeds(transform: Transform<R>): Parser<R> {
-    return object : ParserImpl<R>, SubstringMatcher by this, StateTransform<R> by transform {}
+public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
+    return object : MatchParser<R>, MatchCollector by this, MatchConsumer<R> by transform {
+        override val name = Named.DEFAULT_NAME
+    }
 }
 
 /**
@@ -34,14 +37,14 @@ public operator fun <R> Parser<R>.provideDelegate(
 /**
  * Evaluates the bounds produced by this same symbol after parsing a sub-sequence of some input.
  * @param T the type of the output state
- * @see feeds
+ * @see with
  */
 public sealed interface Parser<T> : Matcher, Transform<T>
 
-/** Provides internal matcher and transform functions. */
-internal interface ParserImpl<T> : Parser<T>, SubstringMatcher, StateTransform<T>
+/** Provides the [Parser] interface with the [collectMatches] and [consumeMatches] functions. */
+internal interface MatchParser<T> : Parser<T>, MatchCollector, MatchConsumer<T>
 
 private class NamedParser<R>(
-    name: String,
+    override val name: String,
     override val original: Parser<R>
-) : NamedProperty(name, original), Parser<R> by original
+) : NamedProperty(original), Parser<R> by original

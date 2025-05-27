@@ -21,7 +21,7 @@ public fun interface Predicate {
         /**
          * Returns the pre-compiled predicate specified by the definition,
          * or a new one if the predicate has not been cached.
-         * @see RuleContext.matchBy
+         * @see RuleContext.charBy
          */
         internal fun instanceOf(def: CharSequence): Predicate {
             val defString = def.toString()  // Use immutable keys

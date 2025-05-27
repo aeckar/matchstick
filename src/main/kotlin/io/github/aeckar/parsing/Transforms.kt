@@ -9,7 +9,7 @@ import kotlin.reflect.KProperty
 /* ------------------------------ transform operations ------------------------------ */
 
 internal fun <R> Transform<R>.consumeMatches(context: TransformContext<R>): R {
-    return (this as StateTransform<R>).consumeMatches(context)
+    return (this as MatchConsumer<R>).consumeMatches(context)
 }
 
 /** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */
@@ -33,8 +33,8 @@ public operator fun <R> Transform<R>.provideDelegate(
  */
 public sealed interface Transform<R> : Named
 
-/** Provides internal API. */
-internal fun interface StateTransform<R> : Transform<R> {
+/** Provides the [Transform] interface with the [consumeMatches] function. */
+internal fun interface MatchConsumer<R> : Transform<R> {
     /**
      * todo
      */
@@ -43,9 +43,9 @@ internal fun interface StateTransform<R> : Transform<R> {
 
 private class NamedTransform<R>(
     name: String,
-    override val original: StateTransform<R>
-) : NamedProperty(original), StateTransform<R> by original {
+    override val original: MatchConsumer<R>
+) : NamedProperty(original), MatchConsumer<R> by original {
     override val name: String = name
 
-    constructor(name: String, original: Transform<R>) : this(name, original as StateTransform<R>)
+    constructor(name: String, original: Transform<R>) : this(name, original as MatchConsumer<R>)
 }

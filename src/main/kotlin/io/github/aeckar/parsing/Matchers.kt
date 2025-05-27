@@ -7,7 +7,7 @@ import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-internal fun matcherOf(rule: Rule?, scope: LogicScope): Matcher = object : SubstringMatcher {
+internal fun matcherOf(rule: Rule?, scope: LogicScope): Matcher = object : MatchCollector {
     override fun collectMatches(funnel: Funnel): Int {
         return funnel.captureSubstring(rule ?: this, scope)
     }
@@ -15,7 +15,7 @@ internal fun matcherOf(rule: Rule?, scope: LogicScope): Matcher = object : Subst
 
 /* ------------------------------ matcher operations  ------------------------------ */
 
-internal fun Matcher.collectMatches(funnel: Funnel) = (this as SubstringMatcher).collectMatches(funnel)
+internal fun Matcher.collectMatches(funnel: Funnel) = (this as MatchCollector).collectMatches(funnel)
 
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
@@ -70,7 +70,7 @@ public operator fun Matcher.provideDelegate(
  * from this matcher.
  *
  * This function is called whenever this matcher
- * [queries][LogicContext.lengthOf] or [matches][RuleContext.match] a substring in an input.
+ * [queries][LogicContext.lengthOf] or [matches][RuleContext.char] a substring in an input.
  * @see logic
  * @see rule
  * @see RuleContext
@@ -84,8 +84,8 @@ public sealed interface Matcher : Named {
     }
 }
 
-/** Provides internal API. */
-internal fun interface SubstringMatcher : Matcher {
+/** Provides the [Matcher] interface with the [collectMatches] function. */
+internal fun interface MatchCollector : Matcher {
     /**
      * Returns the size of the matching substring at the beginning of the remaining input,
      * or -1 if one was not found
@@ -93,13 +93,11 @@ internal fun interface SubstringMatcher : Matcher {
     fun collectMatches(funnel: Funnel): Int
 }
 
-internal open class NamedMatcher(
-    name: String,
-    override val original: SubstringMatcher
-) : NamedProperty(original), SubstringMatcher {
-    override val name: String = name
-
-    constructor(name: String, original: Matcher) : this(name, original as SubstringMatcher)
+internal class NamedMatcher(
+    override val name: String,
+    override val original: MatchCollector
+) : NamedProperty(original), MatchCollector {
+    constructor(name: String, original: Matcher) : this(name, original as MatchCollector)
 
     override fun collectMatches(funnel: Funnel): Int {
         val length = original.collectMatches(funnel)

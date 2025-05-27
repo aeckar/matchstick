@@ -4,7 +4,6 @@ import io.github.aeckar.parsing.provideDelegate
 
 /**
  * An object named using delegation.
- * @param name the name of the property that was delegated to
  * @param original the original object, which may be named
  * @see provideDelegate
  */

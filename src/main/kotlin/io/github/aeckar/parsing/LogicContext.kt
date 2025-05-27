@@ -29,8 +29,9 @@ public fun logic(scope: LogicScope): Matcher = matcherOf(null, scope)
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
  * @see logic
- * @see SubstringMatcher.collectMatches
+ * @see MatchCollector.collectMatches
  */
+@ParserComponentDSL
 public class LogicContext internal constructor(
     private val funnel: Funnel
 ) : RuleContext(dummyScope), CharSequence by funnel.tape {
@@ -50,7 +51,7 @@ public class LogicContext internal constructor(
 
     /**
      * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
-     * @see matchBy
+     * @see charBy
      */
     public fun lengthBy(pattern: CharSequence): Int {
         return with (funnel.tape) { if (Predicate.instanceOf(pattern)(original, offset)) 1 else -1 }

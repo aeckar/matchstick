@@ -14,6 +14,7 @@ dependencies {
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.3")
     implementation("net.sf.trove4j:core:3.1.0")
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.12.0")
     testImplementation("org.slf4j:slf4j-simple:2.0.17")
 }
 

@@ -29,7 +29,7 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  */
 @Suppress("UNCHECKED_CAST")
 public fun <R> mapOn(): (scope: MapScope<R>) -> Transform<R> = { scope ->
-    StateTransform { context ->
+    MatchConsumer { context ->
         context.state = context.run(scope)
         context.finalState()
     }
@@ -49,7 +49,7 @@ public fun <R> mapOn(): (scope: MapScope<R>) -> Transform<R> = { scope ->
  * @see mapOn
  */
 public fun <R> actionOn(): (scope: ActionScope<R>) -> Transform<R> = { scope ->
-    StateTransform { context ->
+    MatchConsumer { context ->
         context.run(scope)
         context.finalState()
     }
@@ -61,8 +61,9 @@ public fun <R> actionOn(): (scope: ActionScope<R>) -> Transform<R> = { scope ->
  * Configures and returns a transform.
  * @see mapOn
  * @see actionOn
- * @see StateTransform.consumeMatches
+ * @see MatchConsumer.consumeMatches
  */
+@ParserComponentDSL
 public class TransformContext<R> internal constructor(root: SyntaxTreeNode, state: R) {
     private var isChildrenVisited = false
 

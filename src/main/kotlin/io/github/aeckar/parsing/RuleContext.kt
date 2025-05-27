@@ -19,7 +19,7 @@ private interface MaybeContiguous {
     val isContiguous: Boolean
 }
 
-internal sealed class Rule() : SubstringMatcher {
+internal sealed class Rule() : MatchCollector {
     abstract fun ruleLogic(funnel: Funnel)
 
     final override fun collectMatches(funnel: Funnel): Int {
@@ -128,23 +128,32 @@ private class Option(subRule: Matcher) : ModifierRule(subRule) {
  * The resulting matcher is analogous to a *rule* in a context-free grammar.
  * @see rule
  * @see LogicContext
- * @see SubstringMatcher.collectMatches
+ * @see MatchCollector.collectMatches
  */
+@ParserComponentDSL
 public open class RuleContext internal constructor(private val scope: RuleScope) {
     internal val ruleBuilder = object : SingleUseBuilder<Matcher>() {
         override fun buildLogic() = run(scope)
     }
 
+    /**
+     * Wraps this compound predicate in a negation.
+     * @see charBy
+     */
+    public operator fun String.not(): String = "!($this)"
+
     /* ------------------------------ rule factories ------------------------------ */
 
+    public fun char(): Matcher = nextChar
+
     /** Returns a rule matching the substring containing the single character. */
-    public fun match(char: Char): Matcher = logic { yield(lengthOf(char)) }
+    public fun char(char: Char): Matcher = logic { yield(lengthOf(char)) }
 
     /** Returns a rule matching the given substring. */
-    public fun match(substring: CharSequence): Matcher = logic { yield(lengthOf(substring)) }
+    public fun text(substring: CharSequence): Matcher = logic { yield(lengthOf(substring)) }
 
     /** Returns a rule matching the first acceptable substring. */
-    public fun matchIn(substrings: Collection<CharSequence>): Matcher = logic {
+    public fun firstOf(substrings: Collection<CharSequence>): Matcher = logic {
         val length = substrings.asSequence()
             .map { lengthOf(it) }
             .filter { it != -1 }
@@ -180,7 +189,7 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
      *
      * Leading and trailing delimiters are allowed, but will produce a warning if logging is enabled.
      */
-    public fun matchBy(compoundPredicate: CharSequence): Matcher = logic { yield(lengthBy(compoundPredicate)) }
+    public fun charBy(compoundPredicate: CharSequence): Matcher = logic { yield(lengthBy(compoundPredicate)) }
 
     /** Returns a rule matching this rule, then the [delimiter][Matcher.match], then the other. */
     public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(listOf(this, other), true)
@@ -215,5 +224,6 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
 
     internal companion object {
         val dummyScope: RuleScope = { Matcher.emptyString }
+        private val nextChar = logic { yield(1) }
     }
 }

@@ -10,7 +10,7 @@ import java.io.Serial
 /**
  * Collects matches in an input using a matcher.
  *
- * Instances of this class may be reused between top-level invocations of [SubstringMatcher.collectMatches].
+ * Instances of this class may be reused between top-level invocations of [MatchCollector.collectMatches].
  * @param tape the remaining portion of the original input
  * @param matches collects all matches in the input derived from this matcher, in list form
  * @param delimiter the matcher used to skip between
@@ -133,7 +133,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
     }
 
     companion object {
-        /** When called, signals that -1 should be returned from [collect][SubstringMatcher.collectMatches]. */
+        /** When called, signals that -1 should be returned from [collect][MatchCollector.collectMatches]. */
         fun abortMatch(): Nothing { throw Failure }
     }
 }

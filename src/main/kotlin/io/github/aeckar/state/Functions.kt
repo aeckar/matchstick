@@ -50,6 +50,11 @@ public operator fun Appendable.plusAssign(obj: Any?) {
     append(obj.toString())
 }
 
+/** Maps each integer to the receiver repeated that number of times. */
+public operator fun String.times(counts: Iterable<Int>): List<String> {
+    return counts.map { repeat(it) }
+}
+
 /* ------------------------------ collection operations ------------------------------ */
 
 /** Returns this list, or the default value if the size of this collection is not empty. */
