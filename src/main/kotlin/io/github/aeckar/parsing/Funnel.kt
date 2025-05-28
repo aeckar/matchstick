@@ -5,7 +5,7 @@ import gnu.trove.map.hash.TIntObjectHashMap
 import gnu.trove.stack.array.TIntArrayStack
 import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.parsing.rules.Rule
-import io.github.aeckar.state.Tape
+import io.github.aeckar.parsing.state.Tape
 import java.io.Serial
 
 // todo track farthest position/error location

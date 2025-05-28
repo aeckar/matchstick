@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.rules.Concatenation
 import io.github.aeckar.parsing.rules.Junction
 import io.github.aeckar.parsing.rules.Option
 import io.github.aeckar.parsing.rules.Repetition
-import io.github.aeckar.state.SingleUseBuilder
+import io.github.aeckar.parsing.state.SingleUseBuilder
 
 /**
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.

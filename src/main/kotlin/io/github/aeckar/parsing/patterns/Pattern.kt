@@ -1,8 +1,7 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.parse
-import io.github.aeckar.state.Unique
+import io.github.aeckar.parsing.state.Unique
 import java.util.concurrent.ConcurrentHashMap
 
 /* ------------------------------  pattern lookup ------------------------------ */
@@ -15,11 +14,9 @@ private val textPatternCache: MutableMap<String, TextPattern> = ConcurrentHashMa
  * or a new one if the pattern has not yet been cached.
  * @see io.github.aeckar.parsing.RuleContext.charBy
  */
-@Suppress("UNCHECKED_CAST")
 internal fun charPatternOf(expr: String): CharPattern {
     if (expr !in charPatternCache) {
-        val charPattern = CharExpression.Grammar.charPattern as Parser<CharExpression>
-        charPatternCache[expr] = charPattern.parse(expr, CharExpression()).rootPattern()
+        charPatternCache[expr] = CharExpression.Grammar.start.parse(expr, CharExpression()).rootPattern()
     }
     return charPatternCache.getValue(expr)
 }
@@ -29,11 +26,9 @@ internal fun charPatternOf(expr: String): CharPattern {
  * or a new one if the pattern has not yet been cached.
  * @see io.github.aeckar.parsing.RuleContext.charBy
  */
-@Suppress("UNCHECKED_CAST")
 internal fun textPatternOf(expr: String): TextPattern {
     if (expr !in textPatternCache) {
-        val textPattern = TextExpression.Grammar.textPattern as Parser<TextExpression>
-        textPatternCache[expr] = textPattern.parse(expr, TextExpression()).rootPattern()
+        textPatternCache[expr] = TextExpression.Grammar.start.parse(expr, TextExpression()).rootPattern()
     }
     return textPatternCache.getValue(expr)
 }

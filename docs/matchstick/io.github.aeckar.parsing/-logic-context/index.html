@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>LogicContext</title>
+    <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer="defer"></script>
+<link href="../../../styles/no-platform.css" rel="Stylesheet">
+</head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+            <a class="library-name--link" href="../../../index.html">
+                    matchstick
+            </a>
+        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle"
+                type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+1.0.0        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active=""
+                        data-filter=":/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox"
+                        data-role="dropdown-toggle"
+                        aria-controls="platform-tags-listbox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-label="Toggle source sets"
+                ></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":/main"
+                                       data-filter=":/main"/>
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button"
+                    type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list"
+                        data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    matchstick
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="classlike" id="content" pageIds="matchstick::io.github.aeckar.parsing/LogicContext///PointingToDeclaration//-251573632">
+  <div class="breadcrumbs"><a href="../../../index.html">matchstick</a><span class="delimiter">/</span><a href="../index.html">io.github.aeckar.parsing</a><span class="delimiter">/</span><span class="current">LogicContext</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Logic</span><wbr></wbr><span><span>Context</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">LogicContext</a> : <a href="../-rule-context/index.html">RuleContext</a>, <a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char-sequence/index.html">CharSequence</a><span class="clearfix"><span class="floating-right">(<a href="https://github.com/aeckar/docsite/tree/1.0.0/lib/src/main/kotlin/io/github/aeckar/parsing/LogicContext.kt#L25">source</a>)</span></span></div><p class="paragraph">Configures a <a href="../-matcher/index.html">Matcher</a> that is evaluated each time it is invoked, whose behavior is described by a user-defined function.</p><p class="paragraph">Matches captured by an invocation of <a href="yield.html">yield</a> or successive invocations of <a href="include.html">include</a> are considered <i>explicit</i>.</p><p class="paragraph">As a <a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char-sequence/index.html">CharSequence</a>, represents the remaining characters in the input.</p><p class="paragraph">It is the user's responsibility to ensure that operations on instances of this class are pure. This ensures correct caching of matched substrings.</p><h4 class="">See also</h4><div class="table"><div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../../io.github.aeckar.parsing.dsl/matcher.html"><span><span>matcher</span></span></a></div></span></div><div></div></div></div><div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><span data-unresolved-link="io.github.aeckar.parsing/MatchCollector/collectMatches/#io.github.aeckar.parsing.Funnel/PointingToDeclaration/"><span>Match</span><wbr></wbr><span>Collector.</span><wbr></wbr><span>collect</span><wbr></wbr><span><span>Matches</span></span></span></div></span></div><div></div></div></div></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="">Inherited properties</h2>
+        <div class="table"><a data-name="-1310864083%2FProperties%2F-251573632" anchor-label="length" id="-1310864083%2FProperties%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1310864083%2FProperties%2F-251573632"><span><span>length</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1310864083%2FProperties%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#-1310864083%2FProperties%2F-251573632">length</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Functions</h2>
+        <div class="table"><a data-name="456251888%2FFunctions%2F-251573632" anchor-label="consume" id="456251888%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="consume.html"><span><span>consume</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="456251888%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="consume.html"><span class="token function">consume</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">length<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Offsets the current input by the given amount, if non-negative.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1070045294%2FFunctions%2F-251573632" anchor-label="fail" id="1070045294%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="fail.html"><span><span>fail</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1070045294%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="fail.html"><span class="token function">fail</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-nothing/index.html">Nothing</a></div><div class="brief "><p class="paragraph">Fails the current match unconditionally.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-860200508%2FFunctions%2F-251573632" anchor-label="include" id="-860200508%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="include.html"><span><span>include</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-860200508%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="include.html"><span class="token function">include</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">length<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Offsets the current input by the given amount, recording the substring bounded by the current offset and the one before successive invocations of this function as a match.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1544755637%2FFunctions%2F-251573632" anchor-label="lengthByChar" id="-1544755637%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="length-by-char.html"><span>length</span><wbr></wbr><span>By</span><wbr></wbr><span><span>Char</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1544755637%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="length-by-char.html"><span class="token function">lengthByChar</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expr<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-512262430%2FFunctions%2F-251573632" anchor-label="lengthByText" id="-512262430%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="length-by-text.html"><span>length</span><wbr></wbr><span>By</span><wbr></wbr><span><span>Text</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-512262430%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="length-by-text.html"><span class="token function">lengthByText</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expr<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Returns 1 if a string satisfying the pattern prefixes the offset input, or -1 if one is not found.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-434542538%2FFunctions%2F-251573632" anchor-label="lengthOf" id="-434542538%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="length-of.html"><span>length</span><wbr></wbr><span><span>Of</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-434542538%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="length-of.html"><span class="token function">lengthOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">matcher<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Returns the length of the matched substring, or -1 if one is not found.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="length-of.html"><span class="token function">lengthOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">c<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char/index.html">Char</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Returns 1 if the character prefixes the offset input, or -1 if one is not found.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="length-of.html"><span class="token function">lengthOf</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">substring<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Returns the length of the substring if it prefixes the offset input, or -1 if one is not found.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-968227072%2FFunctions%2F-251573632" anchor-label="lengthOfFirst" id="-968227072%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="length-of-first.html"><span>length</span><wbr></wbr><span>Of</span><wbr></wbr><span><span>First</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-968227072%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="length-of-first.html"><span class="token function">lengthOfFirst</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">chars<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.jvm/-jvm-name/index.html"><span class="token annotation builtin">JvmName</span></a><span class="token punctuation">(</span><span>name<span class="token operator"> = </span><span class="breakable-word"><span class="token string">&quot;lengthOfFirstChar&quot;</span></span></span><wbr></wbr><span class="token punctuation">)</span></div></div><span class="token keyword">fun </span><a href="length-of-first.html"><span class="token function">lengthOfFirst</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">chars<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char/index.html">Char</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Returns 1 if any character prefixes the offset input, or -1 of none are found.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="length-of-first.html"><span class="token function">lengthOfFirst</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">substrings<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><p class="paragraph">Returns the length of the first substring prefixing the offset input, or -1 if none are found.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1450264104%2FFunctions%2F-251573632" anchor-label="remaining" id="-1450264104%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="remaining.html"><span><span>remaining</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1450264104%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="remaining.html"><span class="token function">remaining</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-char-iterator/index.html">CharIterator</a></div><div class="brief "><p class="paragraph">Returns an iterator returning the remaining characters in the input, regardless of the current offset.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="934339839%2FFunctions%2F-251573632" anchor-label="yield" id="934339839%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="yield.html"><span><span>yield</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="934339839%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="yield.html"><span class="token function">yield</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">length<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Offsets the current input by the given amount, recording the bounded substring as a match.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="">Inherited functions</h2>
+        <div class="table"><a data-name="-80345873%2FFunctions%2F-251573632" anchor-label="char" id="-80345873%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/char.html"><span><span>char</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-80345873%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/char.html"><span class="token function">char</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the next character, including the end-of-input character.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/char.html"><span class="token function">char</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">c<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char/index.html">Char</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the substring containing the single character.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1167796515%2FFunctions%2F-251573632" anchor-label="charBy" id="-1167796515%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/char-by.html"><span>char</span><wbr></wbr><span><span>By</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1167796515%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/char-by.html"><span class="token function">charBy</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expr<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching a single character satisfying the pattern.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="493471335%2FFunctions%2F-251573632" anchor-label="charIn" id="493471335%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/char-in.html"><span>char</span><wbr></wbr><span><span>In</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="493471335%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/char-in.html"><span class="token function">charIn</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">chars<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/char-in.html"><span class="token function">charIn</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">chars<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char/index.html">Char</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the first acceptable character.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2013824799%2FFunctions%2F-251573632" anchor-label="charNotIn" id="2013824799%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/char-not-in.html"><span>char</span><wbr></wbr><span>Not</span><wbr></wbr><span><span>In</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2013824799%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/char-not-in.html"><span class="token function">charNotIn</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">chars<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching any character not in the given string.</p></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/char-not-in.html"><span class="token function">charNotIn</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">chars<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char/index.html">Char</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching any character not in the given collection.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1785924527%2FFunctions%2F-251573632" anchor-label="get" id="1785924527%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#1785924527%2FFunctions%2F-251573632"><span><span>get</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1785924527%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator override </span><span class="token keyword">fun </span><a href="index.html#1785924527%2FFunctions%2F-251573632"><span class="token function">get</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">index<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char/index.html">Char</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1798621448%2FFunctions%2F-251573632" anchor-label="maybe" id="-1798621448%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/maybe.html"><span><span>maybe</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1798621448%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/maybe.html"><span class="token function">maybe</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">subRule<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the given rule zero or one time.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1711603513%2FFunctions%2F-251573632" anchor-label="not" id="-1711603513%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/not.html"><span><span>not</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1711603513%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">.</span><a href="../-rule-context/not.html"><span class="token function">not</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">Wraps this <a href="../-rule-context/char-by.html">character query</a> in a negation.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1911334338%2FFunctions%2F-251573632" anchor-label="oneOrMore" id="1911334338%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/one-or-more.html"><span>one</span><wbr></wbr><span>Or</span><wbr></wbr><span><span>More</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1911334338%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/one-or-more.html"><span class="token function">oneOrMore</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">subRule<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the given rule one or more times, with the <a href="../match.html">delimiter</a> between each match.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1792521572%2FFunctions%2F-251573632" anchor-label="oneOrSpread" id="1792521572%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/one-or-spread.html"><span>one</span><wbr></wbr><span>Or</span><wbr></wbr><span><span>Spread</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1792521572%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/one-or-spread.html"><span class="token function">oneOrSpread</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">subRule<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the given rule one or more times successively.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1371824497%2FFunctions%2F-251573632" anchor-label="or" id="1371824497%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/or.html"><span><span>or</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1371824497%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">infix </span><span class="token keyword">fun </span><a href="../-matcher/index.html">Matcher</a><span class="token punctuation">.</span><a href="../-rule-context/or.html"><span class="token function">or</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching this one or the other.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-480476198%2FFunctions%2F-251573632" anchor-label="plus" id="-480476198%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/plus.html"><span><span>plus</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-480476198%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="../-matcher/index.html">Matcher</a><span class="token punctuation">.</span><a href="../-rule-context/plus.html"><span class="token function">plus</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching this one, then the <a href="../match.html">delimiter</a>, then the other.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="382592985%2FFunctions%2F-251573632" anchor-label="subSequence" id="382592985%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#382592985%2FFunctions%2F-251573632"><span>sub</span><wbr></wbr><span><span>Sequence</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="382592985%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#382592985%2FFunctions%2F-251573632"><span class="token function">subSequence</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">startIndex<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token punctuation">, </span></span><span class="parameter ">endIndex<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-char-sequence/index.html">CharSequence</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-55231491%2FFunctions%2F-251573632" anchor-label="text" id="-55231491%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/text.html"><span><span>text</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-55231491%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/text.html"><span class="token function">text</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">substring<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the given substring.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1079269964%2FFunctions%2F-251573632" anchor-label="textBy" id="-1079269964%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/text-by.html"><span>text</span><wbr></wbr><span><span>By</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1079269964%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/text-by.html"><span class="token function">textBy</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">expr<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching text satisfying the pattern.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1750760268%2FFunctions%2F-251573632" anchor-label="textIn" id="1750760268%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/text-in.html"><span>text</span><wbr></wbr><span><span>In</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1750760268%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/text-in.html"><span class="token function">textIn</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">substrings<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-collection/index.html">Collection</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the first acceptable substring.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-727221220%2FFunctions%2F-251573632" anchor-label="times" id="-727221220%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/times.html"><span><span>times</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-727221220%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="../-matcher/index.html">Matcher</a><span class="token punctuation">.</span><a href="../-rule-context/times.html"><span class="token function">times</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching this one, then the other directly after.</p></div><div class="symbol monospace"><span class="token keyword">operator </span><span class="token keyword">fun </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">.</span><a href="../-rule-context/times.html"><span class="token function">times</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">counts<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-iterable/index.html">Iterable</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Maps each integer to the receiver repeated that number of times.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-967106546%2FFunctions%2F-251573632" anchor-label="zeroOrMore" id="-967106546%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/zero-or-more.html"><span>zero</span><wbr></wbr><span>Or</span><wbr></wbr><span><span>More</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-967106546%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/zero-or-more.html"><span class="token function">zeroOrMore</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">subRule<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the given rule zero or more times, with the <a href="../match.html">delimiter</a> between each match.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1569770672%2FFunctions%2F-251573632" anchor-label="zeroOrSpread" id="1569770672%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-rule-context/zero-or-spread.html"><span>zero</span><wbr></wbr><span>Or</span><wbr></wbr><span><span>Spread</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1569770672%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-rule-context/zero-or-spread.html"><span class="token function">zeroOrSpread</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">subRule<span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-matcher/index.html">Matcher</a></div><div class="brief "><p class="paragraph">Returns a rule matching the given rule zero or more times successively.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>© Angel Eckardt 2025</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

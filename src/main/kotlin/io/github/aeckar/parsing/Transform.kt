@@ -1,8 +1,8 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.UniqueProperty
-import io.github.aeckar.state.Unique
-import io.github.aeckar.state.toReadOnlyProperty
+import io.github.aeckar.parsing.state.UniqueProperty
+import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -13,7 +13,6 @@ internal fun <R> Transform<R>.consumeMatches(context: TransformContext<R>): R {
 }
 
 /** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */
-@Suppress("unused") // thisRef
 public operator fun <R> Transform<R>.provideDelegate(
     thisRef: Any?,
     property: KProperty<*>
@@ -41,10 +40,10 @@ internal fun interface MatchConsumer<R> : Transform<R> {
     fun consumeMatches(context: TransformContext<R>): R
 }
 
-private class TransformProperty<R>(
+internal class TransformProperty<R>(
     id: String,
-    override val original: MatchConsumer<R>
-) : UniqueProperty(original), MatchConsumer<R> by original {
+    override val value: MatchConsumer<R>
+) : UniqueProperty(), MatchConsumer<R> by value {
     override val id: String = id
 
     constructor(name: String, original: Transform<R>) : this(name, original as MatchConsumer<R>)

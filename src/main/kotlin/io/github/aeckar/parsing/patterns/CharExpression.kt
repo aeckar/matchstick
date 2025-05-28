@@ -6,7 +6,7 @@ import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.provideDelegate
-import io.github.aeckar.parsing.with
+import io.github.aeckar.parsing.dsl.with
 
 /**
  * Contains data pertaining to character expressions.
@@ -173,6 +173,8 @@ public class CharExpression internal constructor() {
                     suffix or
                     prefix or
                     singleChar
-        } with action {}
+        }
+
+        internal val start = charPattern with action {}
     }
 }

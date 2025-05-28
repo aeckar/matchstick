@@ -1,6 +1,7 @@
 import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.rule
+import io.github.aeckar.parsing.dsl.with
 import kotlin.test.Test
 
 // auto-download (cache) image links -- if bad status code, get from archived (mangle by URL)

@@ -5,7 +5,7 @@ import io.github.aeckar.parsing.MatchCollector
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.collectMatches
 import io.github.aeckar.parsing.matcherOf
-import io.github.aeckar.state.ifNotEmpty
+import io.github.aeckar.parsing.state.ifNotEmpty
 
 internal sealed class Rule() : MatchCollector {
     abstract fun ruleLogic(funnel: Funnel)

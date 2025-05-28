@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.TreeNode
+import io.github.aeckar.parsing.state.TreeNode
 
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.

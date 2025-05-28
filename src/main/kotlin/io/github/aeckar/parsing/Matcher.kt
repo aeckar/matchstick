@@ -2,11 +2,12 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.parsing.dsl.matcher
+import io.github.aeckar.parsing.dsl.named
 import io.github.aeckar.parsing.rules.Rule
-import io.github.aeckar.state.UniqueProperty
-import io.github.aeckar.state.Unique
-import io.github.aeckar.state.Tape
-import io.github.aeckar.state.toReadOnlyProperty
+import io.github.aeckar.parsing.state.UniqueProperty
+import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -16,7 +17,7 @@ internal fun matcherOf(rule: Rule?, scope: LogicScope): Matcher = object : Match
     }
 }
 
-/* ------------------------------ matcher operations  ------------------------------ */
+/* ------------------------------ matcher operations ------------------------------ */
 
 internal fun Matcher.collectMatches(funnel: Funnel) = (this as MatchCollector).collectMatches(funnel)
 
@@ -47,16 +48,9 @@ public fun Matcher.treeify(sequence: CharSequence, delimiter: Matcher = Matcher.
 }
 
 /** Returns an equivalent matcher whose [ID][Unique.ID] is the name of the property. */
-@Suppress("unused") // thisRef
-public operator fun Matcher.provideDelegate(
-    thisRef: Any?,
-    property: KProperty<*>
-): ReadOnlyProperty<Any?, Matcher> {
+public operator fun Matcher.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Matcher> {
     return named(property.name).toReadOnlyProperty()
 }
-
-/** Returns an equivalent matcher whose [ID][Unique.ID] is as given. */
-public infix fun Matcher.named(id: String): Matcher = MatcherProperty(id, this)
 
 /* ------------------------------ matcher classes ------------------------------ */
 
@@ -101,12 +95,12 @@ internal fun interface MatchCollector : Matcher {
 
 internal class MatcherProperty(
     override val id: String,
-    override val original: MatchCollector
-) : UniqueProperty(original), MatchCollector {
+    override val value: MatchCollector
+) : UniqueProperty(), MatchCollector {
     constructor(id: String, original: Matcher) : this(id, original as MatchCollector)
 
     override fun collectMatches(funnel: Funnel): Int {
-        val length = original.collectMatches(funnel)
+        val length = value.collectMatches(funnel)
         funnel.setMatcher(this)
         return length
     }
