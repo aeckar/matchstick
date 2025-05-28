@@ -69,7 +69,7 @@ public class SyntaxTreeNode internal constructor(
         if (matcher == null) {
             return "\"$substring\""
         }
-        return "\"$substring\" @ ${matcher.name}"
+        return "\"$substring\" @ ${matcher.id}"
     }
 
     public companion object {

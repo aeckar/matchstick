@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-/** Thrown when a [CharMatcher] definition is malformed. */
+/** Thrown when a [io.github.aeckar.parsing.patterns.CharQuery] definition is malformed. */
 public class MalformedPredicateException internal constructor(message: String) : RuntimeException(message)
 
 /** Thrown when [TransformContext.descend] is called more than once in the same scope. */

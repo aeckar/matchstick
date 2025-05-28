@@ -3,7 +3,7 @@ package io.github.aeckar.parsing.dsl
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RuleContext
 
-/** Provides a scope, evaluated once, to describe the behavior of a [io.github.aeckar.parsing.Rule]. */
+/** Provides a scope, evaluated once, to describe the behavior of a [io.github.aeckar.parsing.rules.Rule]. */
 public typealias RuleScope = RuleContext.() -> Matcher
 
 /**

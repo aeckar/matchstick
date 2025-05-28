@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.state.NamedProperty
-import io.github.aeckar.state.Named
+import io.github.aeckar.state.UniqueProperty
+import io.github.aeckar.state.Unique
 import io.github.aeckar.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -18,7 +18,7 @@ public operator fun <R> Transform<R>.provideDelegate(
     thisRef: Any?,
     property: KProperty<*>
 ): ReadOnlyProperty<Any?, Transform<R>> {
-    return NamedTransform(property.name, this).toReadOnlyProperty()
+    return TransformProperty(property.name, this).toReadOnlyProperty()
 }
 
 /* ------------------------------ transform classes ------------------------------ */
@@ -31,7 +31,7 @@ public operator fun <R> Transform<R>.provideDelegate(
  * @see TransformContext
  * @see Matcher
  */
-public sealed interface Transform<R> : Named
+public sealed interface Transform<R> : Unique
 
 /** Provides the [Transform] interface with the [consumeMatches] function. */
 internal fun interface MatchConsumer<R> : Transform<R> {
@@ -41,11 +41,11 @@ internal fun interface MatchConsumer<R> : Transform<R> {
     fun consumeMatches(context: TransformContext<R>): R
 }
 
-private class NamedTransform<R>(
-    name: String,
+private class TransformProperty<R>(
+    id: String,
     override val original: MatchConsumer<R>
-) : NamedProperty(original), MatchConsumer<R> by original {
-    override val name: String = name
+) : UniqueProperty(original), MatchConsumer<R> by original {
+    override val id: String = id
 
     constructor(name: String, original: Transform<R>) : this(name, original as MatchConsumer<R>)
 }

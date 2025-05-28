@@ -53,7 +53,7 @@ public class TransformContext<R> internal constructor(root: SyntaxTreeNode, stat
                     (it.matcher as Transform<R>).consumeMatches(context)
                 } catch (e: TypeCastException) {
                     throw TransformMismatchException(
-                        "State $state cannot be cast to type accepted by transform ${it.matcher.name}", e)
+                        "State $state cannot be cast to type accepted by transform ${it.matcher.id}", e)
                 }
             } else {
                 context.finalState()

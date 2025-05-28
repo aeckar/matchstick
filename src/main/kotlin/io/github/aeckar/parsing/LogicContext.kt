@@ -1,6 +1,9 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.RuleScope
+import io.github.aeckar.parsing.patterns.charPatternOf
+import io.github.aeckar.parsing.patterns.textPatternOf
 
 // todo greedy/repeated parsing
 
@@ -44,13 +47,13 @@ public class LogicContext internal constructor(
 
     /**
      * Returns 1 if any character prefixes the offset input, or -1 of none are found.
-     * @see firstOf
+     * @see charIn
      */
     public fun lengthOfFirst(chars: String): Int = lengthOfFirst(chars.toList())
 
     /**
      * Returns 1 if any character prefixes the offset input, or -1 of none are found.
-     * @see firstOf
+     * @see charIn
      */
     @JvmName("lengthOfFirstChar")
     public fun lengthOfFirst(chars: Collection<Char>): Int {
@@ -62,7 +65,7 @@ public class LogicContext internal constructor(
 
     /**
      * Returns the length of the first substring prefixing the offset input, or -1 if none are found.
-     * @see firstOf
+     * @see charIn
      */
     public fun lengthOfFirst(substrings: Collection<String>): Int {
         return substrings.asSequence()
@@ -72,19 +75,21 @@ public class LogicContext internal constructor(
     }
 
     /**
-     * Returns 1 if a character satisfying the query prefixes the offset input, or -1 if one is not found.
+     * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see charBy
+     * @see io.github.aeckar.parsing.patterns.CharExpression.Grammar
      */
-    public fun lengthByChar(query: String): Int {
-        return with (funnel.tape) { if (charQueryOf(query)(original, offset)) 1 else -1 }
+    public fun lengthByChar(expr: String): Int {
+        return with (funnel.tape) { if (charPatternOf(expr)(original, offset)) 1 else -1 }
     }
 
     /**
-     * Returns 1 if a string satisfying the query prefixes the offset input, or -1 if one is not found.
+     * Returns 1 if a string satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see textBy
+     * @see io.github.aeckar.parsing.patterns.TextExpression.Grammar
      */
-    public fun lengthByText(query: String): Int {
-        return with (funnel.tape) { if (textQueryOf(query)(original, offset)) 1 else -1 }
+    public fun lengthByText(expr: String): Int {
+        return with (funnel.tape) { if (textPatternOf(expr)(original, offset)) 1 else -1 }
     }
 
     /* ------------------------------ offset modification ------------------------------ */
@@ -159,4 +164,10 @@ public class LogicContext internal constructor(
 
     /** Fails the current match unconditionally. */
     public fun fail(): Nothing = Funnel.abortMatch()
+
+    /* ------------------------------------------------------------------- */
+
+    private companion object {
+        private val dummyScope: RuleScope = { Matcher.emptyString }
+    }
 }

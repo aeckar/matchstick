@@ -4,8 +4,11 @@ import gnu.trove.map.TIntObjectMap
 import gnu.trove.map.hash.TIntObjectHashMap
 import gnu.trove.stack.array.TIntArrayStack
 import io.github.aeckar.parsing.dsl.LogicScope
+import io.github.aeckar.parsing.rules.Rule
 import io.github.aeckar.state.Tape
 import java.io.Serial
+
+// todo track farthest position/error location
 
 /** Inserts the given value into the set given by the specified key, creating a new one if one does not exist. */
 private fun <E> TIntObjectMap<MutableSet<E>>.putInSet(key: Int, setValue: E) {
@@ -68,7 +71,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
     /**
      * Increments the current choice.
      *
-     * This operation should be performed when matching to [Junction] to record which sub-rule was matched.
+     * This operation should be performed when matching to [io.github.aeckar.parsing.rules.Junction] to record which sub-rule was matched.
      */
     fun incChoice() {
         choices.push(choices.pop() + 1)

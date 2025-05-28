@@ -65,7 +65,7 @@ internal class DoubleDown {
         /* ------------------------------ top-level elements ------------------------------ */
 
         val heading by rule {
-            firstOf("#" * (1..6)) + enumerableLine
+            textIn("#" * (1..6)) + enumerableLine
         } with action {
             val headerType = children[0].length
             descendWithTag("h$headerType", "dt-heading", "dt-h$headerType")
