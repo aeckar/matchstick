@@ -37,6 +37,12 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
     internal abstract class Rule() : MatchCollector {
         abstract fun ruleLogic(funnel: Funnel)
 
+        /*
+        fun toGrammarElement(): GrammarElement {
+
+        }
+         */
+
         final override fun collectMatches(funnel: Funnel): Int {
             return matcherOf(this) { ruleLogic(funnel) }.collectMatches(funnel)
         }

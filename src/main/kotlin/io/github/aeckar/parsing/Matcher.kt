@@ -3,6 +3,7 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.named
+import io.github.aeckar.parsing.state.Grammar
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.UniqueProperty
@@ -49,6 +50,16 @@ public fun Matcher.treeify(sequence: CharSequence, delimiter: Matcher = Matcher.
 /** Returns an equivalent matcher whose [ID][Unique.UNKNOWN_ID] is the name of the property. */
 public operator fun Matcher.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Matcher> {
     return named(property.name).toReadOnlyProperty()
+}
+
+/** . */
+public fun Matcher.toTextMate(): String {
+    TODO()
+}
+
+/** . */
+public fun Matcher.toBrackusNaur(): String {
+    TODO()
 }
 
 /* ------------------------------ matcher classes ------------------------------ */

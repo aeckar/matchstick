@@ -15,13 +15,8 @@ public typealias RuleScope = RuleContext.() -> Matcher
  */
 public fun rule(scope: RuleScope): Matcher = RuleContext(scope).ruleBuilder.build()
 
-/**
- *
- */
-public fun ruleIn(grammarName: String): (RuleScope) -> Matcher {
-
-}
-
 // todo val rule = ruleIn("MyGrammar")  // holds state -- map names to matchers, ensure no naming conflicts, lazy load metadata
 // todo Matcher.grammar(): Grammar, Matcher.grammarOrNull(): Grammar?
 // todo Grammar.toTextMate(): String, Grammar.toBrackusNaur(): String
+
+// todo handle if matcher {} used, cannot convert to static schema
