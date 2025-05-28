@@ -20,7 +20,7 @@ public fun <R> Parser<R>.parse(input: CharSequence, state: R, delimiter: Matcher
     return consumeMatches(TransformContext(SyntaxTreeNode(input, matches), state))
 }
 
-/** Returns an equivalent parser whose [ID][io.github.aeckar.parsing.state.Unique.ID] is the name of the property. */
+/** Returns an equivalent parser whose [ID][io.github.aeckar.parsing.state.Unique.UNKNOWN_ID] is the name of the property. */
 public operator fun <R> Parser<R>.provideDelegate(
     thisRef: Any?,
     property: KProperty<*>

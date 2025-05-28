@@ -5,8 +5,17 @@ import gnu.trove.set.hash.TCharHashSet
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.rule
-import io.github.aeckar.parsing.provideDelegate
 import io.github.aeckar.parsing.dsl.with
+import io.github.aeckar.parsing.provideDelegate
+import io.github.aeckar.parsing.state.Unique
+
+// todo grammar to collect matchers, convert to ebnf, textmate
+
+/**
+ * When [matched][invoke] to a character in a sequence,
+ * returns true if the character and its position in the sequence satisfies some condition.
+ */
+internal typealias CharPattern = (sequence: CharSequence, index: Int) -> Boolean
 
 /**
  * Contains data pertaining to character expressions.
@@ -24,6 +33,8 @@ public class CharExpression internal constructor() {
         acceptable.clear()
         isEndAcceptable = false
     }
+
+    private class UniqueCharPattern(override val id: String, matcher: CharPattern) : CharPattern by matcher, Unique
 
     /** Holds the matchers used to parse character expressions. */
     public object Grammar {

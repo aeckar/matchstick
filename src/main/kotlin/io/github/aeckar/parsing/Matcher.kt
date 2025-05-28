@@ -3,15 +3,14 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.named
-import io.github.aeckar.parsing.rules.Rule
-import io.github.aeckar.parsing.state.UniqueProperty
-import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.aeckar.parsing.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-internal fun matcherOf(rule: Rule?, scope: LogicScope): Matcher = object : MatchCollector {
+internal fun matcherOf(rule: RuleContext.Rule?, scope: LogicScope): Matcher = object : MatchCollector {
     override fun collectMatches(funnel: Funnel): Int {
         return funnel.captureSubstring(rule ?: this, scope)
     }
@@ -47,7 +46,7 @@ public fun Matcher.treeify(sequence: CharSequence, delimiter: Matcher = Matcher.
     return SyntaxTreeNode(sequence, match(sequence, delimiter))
 }
 
-/** Returns an equivalent matcher whose [ID][Unique.ID] is the name of the property. */
+/** Returns an equivalent matcher whose [ID][Unique.UNKNOWN_ID] is the name of the property. */
 public operator fun Matcher.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Matcher> {
     return named(property.name).toReadOnlyProperty()
 }

@@ -1,10 +1,7 @@
 package io.github.aeckar.parsing.patterns
 
 import io.github.aeckar.parsing.parse
-import io.github.aeckar.parsing.state.Unique
 import java.util.concurrent.ConcurrentHashMap
-
-/* ------------------------------  pattern lookup ------------------------------ */
 
 private val charPatternCache: MutableMap<String, CharPattern> = ConcurrentHashMap()
 private val textPatternCache: MutableMap<String, TextPattern> = ConcurrentHashMap()
@@ -32,21 +29,3 @@ internal fun textPatternOf(expr: String): TextPattern {
     }
     return textPatternCache.getValue(expr)
 }
-
-/* ------------------------------  pattern classes ------------------------------ */
-
-/**
- * When [matched][invoke] to a character in a sequence,
- * returns true if the character and its position in the sequence satisfies some condition.
- */
-internal typealias CharPattern = (sequence: CharSequence, index: Int) -> Boolean
-
-
-/**
- * When [matched][invoke] to a character in a sequence,
- * returns true if the character and its position in the sequence satisfies some condition.
- */
-internal typealias TextPattern = (sequence: CharSequence, index: Int) -> Boolean
-
-internal class UniqueCharPattern(override val id: String, matcher: CharPattern) : CharPattern by matcher, Unique
-internal class UniqueTextPattern(override val id: String, matcher: TextPattern) : TextPattern by matcher, Unique

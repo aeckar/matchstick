@@ -4,7 +4,6 @@ import gnu.trove.map.TIntObjectMap
 import gnu.trove.map.hash.TIntObjectHashMap
 import gnu.trove.stack.array.TIntArrayStack
 import io.github.aeckar.parsing.dsl.LogicScope
-import io.github.aeckar.parsing.rules.Rule
 import io.github.aeckar.parsing.state.Tape
 import java.io.Serial
 
@@ -71,7 +70,8 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
     /**
      * Increments the current choice.
      *
-     * This operation should be performed when matching to [io.github.aeckar.parsing.rules.Junction] to record which sub-rule was matched.
+     * This operation should be performed when matching to [junctions][RuleContext.Junction]
+     * to record which sub-rule was matched.
      */
     fun incChoice() {
         choices.push(choices.pop() + 1)
@@ -88,7 +88,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
         if (isRecordingMatches) {
             matches += match
         }
-        if (matcher is Rule) {
+        if (matcher is RuleContext.Rule) {
             successCache.putInSet(begin, match)
         }
     }
@@ -105,7 +105,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
         choices.push(0)
         return try {
             val matcher = matchers.last()
-            if (matcher is Rule) {
+            if (matcher is RuleContext.Rule) {
                 val begin = tape.offset
                 successCache
                     .findInSet(begin) { it.matcher == matcher && matchers.containsAll(it.dependencies) }
@@ -118,12 +118,12 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
             logicContext.yieldRemaining()
             addMatch(matcher, begin)
             val length = tape.offset - begin
-            if (matcher is Rule) {
+            if (matcher is RuleContext.Rule) {
                 successCache.putInSet(begin, matches.last())
             }
             length
         } catch (_: Failure) {
-            if (matcher is Rule) {
+            if (matcher is RuleContext.Rule) {
                 failCache.putInSet(begin, matcher)
             }
             tape.offset -= tape.offset - begin

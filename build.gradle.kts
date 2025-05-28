@@ -27,7 +27,6 @@ kotlin {
 }
 
 dokka {
-    this@dokka.
     moduleName = rootProject.name
     dokkaPublications.html {
         moduleVersion = version.toString()
