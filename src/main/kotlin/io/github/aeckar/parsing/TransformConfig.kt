@@ -3,6 +3,8 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.with
 
+/* ------------------------------ context class ------------------------------ */
+
 /**
  * Configures and returns a transform.
  *

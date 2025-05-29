@@ -1,10 +1,8 @@
 package io.github.aeckar.parsing.dsl
 
-import io.github.aeckar.parsing.RichTransform
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
 import io.github.aeckar.parsing.transformOf
-import kotlin.reflect.typeOf
 
 /**
  * When provided with an [MapScope], returns an action conforming to the given output type.

@@ -12,10 +12,10 @@ import kotlin.reflect.typeOf
  * @throws NoSuchMatchException a match cannot be made to the input
  * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
  */
-public fun <R> Parser<R>.parse(input: CharSequence, initialState: R, delimiter: Matcher = Matcher.emptyString): R {
+public fun <R> Parser<R>.parse(input: CharSequence, initialState: R): R {
     val matches = mutableListOf<Match>()
-    val funnel = Funnel(Tape(input), delimiter, matches)
-    collectMatches(funnel)
+    val matchState = MatchState(Tape(input), matches)
+    collectMatches(matchState)
     return SyntaxTreeNode(input, matches).walk(initialState)
 }
 
@@ -28,8 +28,8 @@ public fun <R> Parser<R>.parse(input: CharSequence, initialState: R, delimiter: 
  * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
  * @throws StateInitializerException the nullary constructor of [R] is inaccessible
  */
-public inline fun <reified R> Parser<R>.parse(input: CharSequence, delimiter: Matcher = Matcher.emptyString): R {
-    return parse(input, initialStateOf(typeOf<R>()), delimiter)
+public inline fun <reified R> Parser<R>.parse(input: CharSequence): R {
+    return parse(input, initialStateOf(typeOf<R>()))
 }
 
 /* ------------------------------ parser classes ------------------------------ */

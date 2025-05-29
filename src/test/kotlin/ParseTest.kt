@@ -1,6 +1,8 @@
 import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.actionOn
+import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule
+import io.github.aeckar.parsing.dsl.ruleIgnoring
 import io.github.aeckar.parsing.dsl.with
 import kotlin.test.Test
 
@@ -20,6 +22,11 @@ internal class DoubleDown {
 
     companion object Grammar {
         private val action = actionOn<DoubleDown>()
+        private val rule = ruleIgnoring(::whitespace)
+
+        val whitespace by rule {
+            charIn(" ")
+        }//todo
 
         private fun TransformContext<DoubleDown>.descendWithTag(tagName: String, vararg classes: String) {
             val classString = classes.joinToString(separator = " ", prefix = "class='", postfix = "'")

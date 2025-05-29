@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.LogicContext
 import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.MatcherContext
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
@@ -12,7 +12,7 @@ import io.github.aeckar.parsing.state.Unique
 /**
  * Contains data pertaining to text expressions.
  * @see RuleContext.textBy
- * @see LogicContext.lengthByText
+ * @see MatcherContext.lengthByText
  */
 public class TextExpression internal constructor() : Expression() {
     override fun clearAcceptable() {

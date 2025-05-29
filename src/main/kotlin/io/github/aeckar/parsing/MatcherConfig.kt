@@ -1,16 +1,33 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
-import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.patterns.charPatternOf
 import io.github.aeckar.parsing.patterns.textPatternOf
+
+/* ------------------------------ factory ------------------------------ */
+
+@PublishedApi
+internal fun matcherOf(
+    rule: RuleContext.Rule?,
+    separator: Matcher = emptySeparator,
+    scope: MatcherScope
+): Matcher = object : RichMatcher {
+    override val separator: Matcher = separator
+
+    override fun collectMatches(matchState: MatchState): Int {
+        return matchState.captureSubstring(rule ?: this, scope)
+    }
+}
+
+/* ------------------------------ context class ------------------------------ */
 
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
  * whose behavior is described by a user-defined function.
  *
- * Matches captured by an invocation of [yield][LogicContext.yield]
- * or successive invocations of [include][LogicContext.include] are considered *explicit*.
+ * Matches captured by an invocation of [yield][MatcherContext.yield]
+ * or successive invocations of [include][MatcherContext.include] are considered *explicit*.
  *
  * As a [CharSequence], represents the remaining characters in the input.
  *
@@ -20,16 +37,16 @@ import io.github.aeckar.parsing.patterns.textPatternOf
  * @see RichMatcher.collectMatches
  */
 @ParserComponentDSL
-public class LogicContext internal constructor(
-    private val funnel: Funnel
-) : RuleContext(), CharSequence by funnel.tape {
+public class MatcherContext internal constructor(
+    private val matchState: MatchState
+) : RuleContext(), CharSequence by matchState.tape {
     internal var includeBegin = -1
         private set
 
     /* ------------------------------ match queries ------------------------------ */
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
-    public fun lengthOf(matcher: Matcher): Int = funnel.withoutRecording { matcher.collectMatches(funnel) }
+    public fun lengthOf(matcher: Matcher): Int = matchState.ignoringMatches { matcher.collectMatches(matchState) }
 
     /**
      * Returns 1 if the character prefixes the offset input, or -1 if one is not found.
@@ -78,7 +95,7 @@ public class LogicContext internal constructor(
      * @see io.github.aeckar.parsing.patterns.CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
-        return with(funnel.tape) { if (charPatternOf(expr)(original, offset)) 1 else -1 }
+        return with(matchState.tape) { if (charPatternOf(expr)(original, offset)) 1 else -1 }
     }
 
     /**
@@ -87,7 +104,7 @@ public class LogicContext internal constructor(
      * @see io.github.aeckar.parsing.patterns.TextExpression.Grammar
      */
     public fun lengthByText(expr: String): Int {
-        return with(funnel.tape) { if (textPatternOf(expr)(original, offset)) 1 else -1 }
+        return with(matchState.tape) { if (textPatternOf(expr)(original, offset)) 1 else -1 }
     }
 
     /* ------------------------------ offset modification ------------------------------ */
@@ -110,11 +127,11 @@ public class LogicContext internal constructor(
      */
     public fun yield(length: Int) {
         if (length < 0) {
-            Funnel.abortMatch()
+            matchState.abortMatch()
         }
         yieldRemaining()
         consume(length)
-        funnel.addMatch(null, funnel.tape.offset - length)
+        matchState.addMatch(null, matchState.tape.offset - length)
     }
 
     /**
@@ -126,10 +143,10 @@ public class LogicContext internal constructor(
      */
     public fun include(length: Int) {
         if (length < 0) {
-            Funnel.abortMatch()
+            matchState.abortMatch()
         }
         if (includeBegin == -1) {
-            includeBegin = funnel.tape.offset
+            includeBegin = matchState.tape.offset
         }
         applyOffset(length)
     }
@@ -139,7 +156,7 @@ public class LogicContext internal constructor(
         if (includeBegin == -1) {
             return
         }
-        funnel.addMatch(null, includeBegin)
+        matchState.addMatch(null, includeBegin)
         includeBegin = -1
     }
 
@@ -147,25 +164,19 @@ public class LogicContext internal constructor(
         if (length < 0) {
             return
         }
-        with(funnel.tape) {
+        with(matchState.tape) {
             if (offset + length > original.length) {
-                Funnel.abortMatch()
+                matchState.abortMatch()
             }
         }
-        funnel.tape.offset += length
+        matchState.tape.offset += length
     }
 
     /* ------------------------------ misc. ------------------------------ */
 
     /** Returns an iterator returning the remaining characters in the input, regardless of the current offset. */
-    public fun remaining(): CharIterator = funnel.tape.remaining()
+    public fun remaining(): CharIterator = matchState.tape.remaining()
 
     /** Fails the current match unconditionally. */
-    public fun fail(): Nothing = Funnel.abortMatch()
-
-    /* ------------------------------------------------------------------- */
-
-    private companion object {
-        private val dummyScope: RuleScope = { Matcher.emptyString }
-    }
+    public fun fail(): Nothing = matchState.abortMatch()
 }

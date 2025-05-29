@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.LogicContext
+import io.github.aeckar.parsing.MatcherContext
 import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.dsl.actionOn
@@ -20,8 +20,8 @@ internal fun charOrEscape(forbiddenChars: String): Parser<Expression> {
  * Contains data pertaining to character or text expressions.
  * @see RuleContext.charBy
  * @see RuleContext.textBy
- * @see LogicContext.lengthByChar
- * @see LogicContext.lengthByText
+ * @see MatcherContext.lengthByChar
+ * @see MatcherContext.lengthByText
  */
 public sealed class Expression {
     protected val patterns: MutableList<Pattern> = mutableListOf()

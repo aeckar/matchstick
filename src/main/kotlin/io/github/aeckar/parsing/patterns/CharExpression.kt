@@ -1,8 +1,8 @@
 package io.github.aeckar.parsing.patterns
 
 import gnu.trove.set.hash.TCharHashSet
-import io.github.aeckar.parsing.LogicContext
 import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.MatcherContext
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
@@ -14,7 +14,7 @@ import io.github.aeckar.parsing.state.plusAssign
 /**
  * Contains data pertaining to character expressions.
  * @see RuleContext.charBy
- * @see LogicContext.lengthByChar
+ * @see MatcherContext.lengthByChar
  */
 public class CharExpression internal constructor() : Expression() {
     private var isEndAcceptable = false

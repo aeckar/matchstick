@@ -1,10 +1,17 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
-import io.github.aeckar.parsing.state.ifNotEmpty
+
+/* ------------------------------ factory ------------------------------ */
+
+@PublishedApi
+internal fun ruleOf(separator: Matcher = emptySeparator, scope: RuleScope) = RuleContext(separator).run(scope)
+
+/* ------------------------------ context class ------------------------------ */
 
 /**
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.
@@ -12,11 +19,11 @@ import io.github.aeckar.parsing.state.ifNotEmpty
  * The resulting matcher is analogous to a *rule* in a context-free grammar,
  * and is thus referred to as one within this context.
  * @see io.github.aeckar.parsing.dsl.rule
- * @see LogicContext
+ * @see MatcherContext
  * @see RichMatcher.collectMatches
  */
 @ParserComponentDSL
-public open class RuleContext internal constructor() {
+public open class RuleContext @PublishedApi internal constructor(private val separator: Matcher = zeroChars) {
     /** Wraps this [character query][charBy] in a negation. */
     public operator fun String.not(): String = "!($this)"
 
@@ -27,21 +34,14 @@ public open class RuleContext internal constructor() {
 
     /* ------------------------------ rule classes ------------------------------ */
 
-    private sealed class ModifierRule(protected val subRule: Matcher) : Rule()
-    private sealed class CompoundRule(protected val subRules: List<Matcher>) : Rule()
+    private sealed class ModifierRule(separator: Matcher, protected val member: Matcher) : Rule(separator)
+    private sealed class CompoundRule(separator: Matcher, val members: List<Matcher>) : Rule(separator)
 
-    internal abstract class Rule() : RichMatcher {
-        abstract fun ruleLogic(funnel: Funnel)
+    internal abstract class Rule(final override val separator: Matcher) : RichMatcher {
+        abstract fun ruleLogic(matchState: MatchState)
 
-        /*
-        todo
-        fun toGrammarElement(): GrammarElement {
-
-        }
-         */
-
-        final override fun collectMatches(funnel: Funnel): Int {
-            return matcherOf(this) { ruleLogic(funnel) }.collectMatches(funnel)
+        final override fun collectMatches(matchState: MatchState): Int {
+            return matcherOf(this) { ruleLogic(matchState) }.collectMatches(matchState)
         }
     }
 
@@ -49,107 +49,83 @@ public open class RuleContext internal constructor() {
         val isContiguous: Boolean
     }
 
-    private class Concatenation(
-        subRules: List<Matcher>,
+    // Using 'separator'
+    private inner class Concatenation(
+        rule1: Matcher,
+        rule2: Matcher,
         override val isContiguous: Boolean
-    ) : CompoundRule(flatten(subRules)), MaybeContiguous {
-        override fun ruleLogic(funnel: Funnel) {
-            for ((index, subRule) in subRules.withIndex()) {
-                if (subRule.collectMatches(funnel) == -1) {
-                    Funnel.Companion.abortMatch()
+    ) : CompoundRule(this@RuleContext.separator, rule1.membersTo<Concatenation>() + rule2.membersTo<Concatenation>()),
+        MaybeContiguous {
+        override fun ruleLogic(matchState: MatchState) {
+            for ((index, subRule) in members.withIndex()) {
+                if (subRule.collectMatches(matchState) == -1) {
+                    matchState.abortMatch()
                 }
-                if (index == subRules.lastIndex) {
+                if (index == members.lastIndex) {
                     break
                 }
-                funnel.collectDelimiterMatches()
-            }
-        }
-
-        private companion object {
-            private fun flatten(subRules: List<Matcher>): List<Matcher> {
-                val contiguous = mutableListOf<Concatenation>()
-                val spread = mutableListOf<Concatenation>()
-                val others = mutableListOf<Matcher>()
-                subRules.forEach {
-                    when {
-                        it is Concatenation && it.isContiguous -> contiguous += it
-                        it is Concatenation -> spread += it
-                        else -> others += it
-                    }
-                }
-                val flatContiguous = contiguous.flatMap { it.subRules }.ifNotEmpty { listOf(Concatenation(it, true)) }
-                val flatSpread = spread.flatMap { it.subRules }.ifNotEmpty { listOf(Concatenation(it, false)) }
-                return others + flatContiguous + flatSpread
+                separator.collectMatches(matchState)
             }
         }
     }
 
-    private class Alternation(subRules: List<Matcher>) : CompoundRule(flatten(subRules)) {
-        override fun ruleLogic(funnel: Funnel) {
-            for (it in subRules) {
-                if (it in funnel) {
-                    funnel.addDependency(it)
+    private class Alternation(
+        rule1: Matcher,
+        rule2: Matcher
+    ) : CompoundRule(zeroChars, rule1.membersTo<Alternation>() + rule2.membersTo<Alternation>()) {
+        override fun ruleLogic(matchState: MatchState) {
+            for (it in members) {
+                if (it in matchState) {
+                    matchState.addDependency(it)
                     continue
                 }
-                if (it.collectMatches(funnel) != -1) {
+                if (it.collectMatches(matchState) != -1) {
                     return
                 }
-                funnel.incChoice()
+                matchState.addChoice()
             }
-            Funnel.Companion.abortMatch()
-        }
-
-        private companion object {
-            private fun flatten(subRules: List<Matcher>): List<Matcher> {
-                val alternations = mutableListOf<Alternation>()
-                val others = mutableListOf<Matcher>()
-                subRules.forEach {
-                    if (it is Alternation) {
-                        alternations += it
-                    } else {
-                        others += it
-                    }
-                }
-                return others + alternations.flatMap { it.subRules }.ifNotEmpty { listOf(Alternation(it)) }
-            }
+            matchState.abortMatch()
         }
     }
 
-    private class Repetition(
+    // Using 'separator'
+    private inner class Repetition(
         subRule: Matcher,
         acceptsZero: Boolean,
         override val isContiguous: Boolean
-    ) : ModifierRule(subRule), MaybeContiguous {
+    ) : ModifierRule(this@RuleContext.separator, subRule), MaybeContiguous {
         private val minMatchCount = if (acceptsZero) 0 else 1
 
-        override fun ruleLogic(funnel: Funnel) {
+        override fun ruleLogic(matchState: MatchState) {
             var matchCount = 0
-            while (subRule.collectMatches(funnel) != -1) {
-                funnel.collectDelimiterMatches()
+            while (member.collectMatches(matchState) != -1) {
+                separator.collectMatches(matchState)
                 ++matchCount
             }
             if (matchCount < minMatchCount) {
-                Funnel.Companion.abortMatch()
+                matchState.abortMatch()
             }
         }
     }
 
-    private class Option(subRule: Matcher) : ModifierRule(subRule) {
-        override fun ruleLogic(funnel: Funnel) {
-            subRule.collectMatches(funnel)
+    private class Option(subRule: Matcher) : ModifierRule(zeroChars, subRule) {
+        override fun ruleLogic(matchState: MatchState) {
+            member.collectMatches(matchState)
         }
     }
 
-    private class LocalRule(private val options: List<Matcher>) : Rule() {
-        override fun ruleLogic(funnel: Funnel) {
-            TODO("Not yet implemented")
+    private class NearbyRule(private val options: List<Matcher>) : Rule(zeroChars) {
+        override fun ruleLogic(matchState: MatchState) {
+            if (options.minBy { matchState.distanceTo(it) }.collectMatches(matchState) == -1) {
+                matchState.abortMatch()
+            }
         }
     }
 
     /* ------------------------------ rule factories ------------------------------ */
 
     /** Returns a rule matching the next character, including the end-of-input character. */
-    public fun char(): Matcher = nextChar
+    public fun char(): Matcher = oneChar
 
     /** Returns a rule matching the substring containing the single character. */
     public fun char(c: Char): Matcher = matcher { yield(lengthOf(c)) }
@@ -180,7 +156,7 @@ public open class RuleContext internal constructor() {
     /**
      * Returns a rule matching a single character satisfying the pattern given by the expression.
      * @throws MalformedExpressionException the character expression is malformed
-     * @see LogicContext.lengthByChar
+     * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
     public fun charBy(expr: String): Matcher = matcher { yield(lengthByChar(expr)) }
@@ -188,36 +164,36 @@ public open class RuleContext internal constructor() {
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
      * @throws MalformedExpressionException the text expression is malformed
-     * @see LogicContext.lengthByText
+     * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
     public fun textBy(expr: String): Matcher = matcher { yield(lengthByText(expr)) }
 
     /**
-     * Returns a rule matching this one, then the [delimiter][Matcher.match], then the other.
+     * Returns a rule matching this one, then the [separator][Matcher.match], then the other.
      * @see times
      */
-    public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(listOf(this, other), true)
+    public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(this, other, true)
 
     /**
      * Returns a rule matching this one, then the other directly after.
      * @see plus
      */
-    public operator fun Matcher.times(other: Matcher): Matcher = Concatenation(listOf(this, other), false)
+    public operator fun Matcher.times(other: Matcher): Matcher = Concatenation(this, other, false)
 
     /** Returns a rule matching this one or the other. */
-    public infix fun Matcher.or(other: Matcher): Matcher = Alternation(listOf(this, other))
+    public infix fun Matcher.or(other: Matcher): Matcher = Alternation(this, other)
 
     /**
      * Returns a rule matching the given rule one or more times,
-     * with the [delimiter][Matcher.match] between each match.
+     * with the [separator][Matcher.match] between each match.
      * @see oneOrSpread
      */
     public fun oneOrMore(subRule: Matcher): Matcher = Repetition(subRule, false, false)
 
     /**
      * Returns a rule matching the given rule zero or more times,
-     * with the [delimiter][Matcher.match] between each match.
+     * with the [separator][Matcher.match] between each match.
      * @see zeroOrSpread
      */
     public fun zeroOrMore(subRule: Matcher): Matcher = Repetition(subRule, true, false)
@@ -237,14 +213,21 @@ public open class RuleContext internal constructor() {
     /** Returns a rule matching the given rule zero or one time. */
     public fun maybe(subRule: Matcher): Matcher = Option(subRule)
 
-    /** todo. */
+    /**
+     * Returns a rule matching the rule among those given that was invoked most recently
+     * at the time the returned rule is invoked.
+     */
     public fun nearestIn(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
-        TODO()
+        return NearbyRule(listOf(subRule1, subRule2) + others)
     }
 
     /* ---------------------------------------------------------------------------- */
 
     private companion object {
-        private val nextChar = matcher { yield(1) }
+        private val oneChar = matcher { yield(1) }
+        private val zeroChars = matcher {}
+
+        /** Flattens [CompoundRule] members. */
+        private inline fun <reified T : CompoundRule> Matcher.membersTo() = if (this is T) members else listOf(this)
     }
 }

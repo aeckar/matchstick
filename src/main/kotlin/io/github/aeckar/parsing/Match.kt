@@ -15,8 +15,7 @@ public class Match internal constructor(
     public val depth: Int,
     public val begin: Int,
     public val endExclusive: Int,
-    public val choice: Int,
-    internal val dependencies: List<Matcher>
+    public val choice: Int
 ) {
     /** Returns the length of the substring present within the bounds of this match. */
     public val length: Int inline get() = endExclusive - begin
