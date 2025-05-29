@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing
 
 /** Provides operations on an immutable captured substring. */
-public sealed interface Substring : CharSequence {
+public interface Substring : CharSequence {
     /** The captured substring. */
     public val substring: String
 

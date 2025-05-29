@@ -1,31 +1,37 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.named
 import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.aeckar.parsing.state.Tape
-import io.github.aeckar.parsing.state.toReadOnlyProperty
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
 
 /* ------------------------------ parser operations ------------------------------ */
 
 /**
- * Generates an output using [state] according to the syntax tree produced from the input.
- * @throws SyntaxTreeNode.MismatchException a match cannot be made to the input
+ * Generates an output using [initialState] according to the syntax tree produced from the input.
+ * @throws NoSuchMatchException a match cannot be made to the input
+ * @throws TreeTraversalException todo
  */
-public fun <R> Parser<R>.parse(input: CharSequence, state: R, delimiter: Matcher = Matcher.emptyString): R {
+public fun <R> Parser<R>.parse(input: CharSequence, initialState: R, delimiter: Matcher = Matcher.emptyString): R {
     val matches = mutableListOf<Match>()
     val funnel = Funnel(Tape(input), delimiter, matches)
     collectMatches(funnel)
-    return consumeMatches(TransformContext(SyntaxTreeNode(input, matches), state))
+    return consumeMatches(TransformContext(SyntaxTreeNode(input, matches), initialState))
 }
 
-/** Returns an equivalent parser whose [ID][io.github.aeckar.parsing.state.Unique.UNKNOWN_ID] is the name of the property. */
-public operator fun <R> Parser<R>.provideDelegate(
-    thisRef: Any?,
-    property: KProperty<*>
-): ReadOnlyProperty<Any?, Parser<R>> {
-    return named(property.name).toReadOnlyProperty()
+/**
+ * Generates an output according to the syntax tree produced from the input.
+ *
+ * The initial state is given by the nullary constructor of the concrete class [R].
+ * @throws NoSuchMatchException a match cannot be made to the input
+ * @throws TreeTraversalException todo
+ * @throws StateInitializerException
+ */
+public inline fun <reified R> Parser<R>.parse(input: CharSequence, delimiter: Matcher = Matcher.emptyString): R {
+    val initialState: R = try {
+        R::class.java.getDeclaredConstructor().newInstance()
+    } catch (e: Exception) {
+        throw StateInitializerException("", e)
+    }
+    return parse(input, initialState, delimiter)
 }
 
 /* ------------------------------ parser classes ------------------------------ */

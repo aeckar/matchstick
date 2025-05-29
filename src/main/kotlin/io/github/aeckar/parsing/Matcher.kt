@@ -2,14 +2,9 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.parsing.dsl.matcher
-import io.github.aeckar.parsing.dsl.named
-import io.github.aeckar.parsing.state.Grammar
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.UniqueProperty
-import io.github.aeckar.parsing.state.toReadOnlyProperty
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
 
 internal fun matcherOf(rule: RuleContext.Rule?, scope: LogicScope): Matcher = object : MatchCollector {
     override fun collectMatches(funnel: Funnel): Int {
@@ -19,6 +14,7 @@ internal fun matcherOf(rule: RuleContext.Rule?, scope: LogicScope): Matcher = ob
 
 /* ------------------------------ matcher operations ------------------------------ */
 
+@PublishedApi
 internal fun Matcher.collectMatches(funnel: Funnel) = (this as MatchCollector).collectMatches(funnel)
 
 /**
@@ -41,24 +37,22 @@ public fun Matcher.match(sequence: CharSequence, delimiter: Matcher = Matcher.em
  * Returns the syntax tree created by applying the matcher to this character sequence, in tree form.
  *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
- * @throws SyntaxTreeNode.MismatchException the sequence does not match the matcher with the given delimiter
+ * @throws NoSuchMatchException the sequence does not match the matcher with the given delimiter
  */
 public fun Matcher.treeify(sequence: CharSequence, delimiter: Matcher = Matcher.emptyString): SyntaxTreeNode {
     return SyntaxTreeNode(sequence, match(sequence, delimiter))
 }
 
-/** Returns an equivalent matcher whose [ID][Unique.UNKNOWN_ID] is the name of the property. */
-public operator fun Matcher.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Matcher> {
-    return named(property.name).toReadOnlyProperty()
-}
+// todo handle if matcher {} used, cannot convert to static schema
+// todo for EBNF, give option for no left-recursion
 
 /** . */
-public fun Matcher.toTextMate(): String {
+public fun Matcher.toTextMate(): String {   // todo use kotlinx.ser JsonElement
     TODO()
 }
 
 /** . */
-public fun Matcher.toBrackusNaur(): String {
+public fun Matcher.toBrackusNaur(keepLeftRecursion: Boolean = true): String {
     TODO()
 }
 

@@ -35,6 +35,7 @@ private inline fun <E> TIntObjectMap<out Set<E>>.findInSet(key: Int, predicate: 
  * @param depth the starting depth, typically 0. In other words,
  * the number of predicates currently being matched to the input
  */
+@PublishedApi
 internal class Funnel(val tape: Tape, private val delimiter: Matcher, private val matches: MutableList<Match>) {
     private val logicContext = LogicContext(this)
     private val matchers = mutableListOf<Matcher>()
@@ -54,7 +55,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
     /** Returns true if the matcher is currently in use. */
     operator fun contains(matcher: Matcher) = (matchers.lastIndex..0).any { matcher === matchers[it] }
 
-    /** Collects matches to the [delimiter][Matcher.match]. */
+    /** Collects matches to the [delimiter][match]. */
     fun collectDelimiterMatches() {
         delimiter.collectMatches(this)
     }
@@ -70,7 +71,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
     /**
      * Increments the current choice.
      *
-     * This operation should be performed when matching to [junctions][RuleContext.Junction]
+     * This operation should be performed when matching to [alternations][RuleContext.Alternation]
      * to record which sub-rule was matched.
      */
     fun incChoice() {
@@ -141,7 +142,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
      * the resulting matches are not recorded and
      * the [tape] is returned to its original offset before this function was invoked.
      */
-    inline fun withoutRecording(matchLength: () -> Int): Int {
+    internal inline fun withoutRecording(matchLength: () -> Int): Int {
         isRecordingMatches = false
         val length = matchLength()
         isRecordingMatches = true

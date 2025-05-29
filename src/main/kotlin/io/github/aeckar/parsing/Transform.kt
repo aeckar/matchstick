@@ -8,6 +8,7 @@ import kotlin.reflect.KProperty
 
 /* ------------------------------ transform operations ------------------------------ */
 
+@PublishedApi
 internal fun <R> Transform<R>.consumeMatches(context: TransformContext<R>): R {
     return (this as MatchConsumer<R>).consumeMatches(context)
 }

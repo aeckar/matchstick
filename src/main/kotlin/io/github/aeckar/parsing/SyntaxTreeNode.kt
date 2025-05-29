@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.state.TreeNode
  * @param input the original input
  * @param matches the matches made on the input, in reverse breadth-first notation
  */
-public class SyntaxTreeNode internal constructor(
+public class SyntaxTreeNode @PublishedApi internal constructor(
     input: CharSequence,
     matches: MutableList<Match>
 ): TreeNode(), Substring {
@@ -31,7 +31,7 @@ public class SyntaxTreeNode internal constructor(
         val match = try {
             matches.removeLast()
         } catch (_: NoSuchElementException) {
-            throw MismatchException("Expected a match")
+            throw NoSuchMatchException("Expected a match")
         }
         substring = input.substring(match.begin, match.endExclusive)
         matcher = match.matcher
@@ -45,9 +45,6 @@ public class SyntaxTreeNode internal constructor(
             reverse()
         }
     }
-
-    /** Thrown when there exists no matches from which to derive a syntax tree from. */
-    public class MismatchException internal constructor(message: String) : RuntimeException(message)
 
     /**
      * Returns true if [matcher] is not null.

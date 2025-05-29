@@ -6,6 +6,7 @@ package io.github.aeckar.parsing.state
  * Offsets exceeding the length of the original sequence are allowed, however,
  * negative offsets are not.
  */
+@PublishedApi
 internal class Tape(
     val original: CharSequence,
     offset: Int = 0

@@ -8,10 +8,13 @@ package io.github.aeckar.parsing
 public class MalformedPatternException internal constructor(message: String) : RuntimeException(message)
 
 /** Thrown when [TransformContext.descend] is called more than once in the same scope. */
-public class TransformTraversalException internal constructor(message: String) : RuntimeException(message)
+public class TreeTraversalException internal constructor(message: String) : RuntimeException(message)
 
-/** Thrown when the type of states between two [transforms][Transform] are incompatible. */
-public class TransformMismatchException internal constructor(
+/** Thrown when there exists no matches from which to derive a syntax tree from. */
+public class NoSuchMatchException internal constructor(message: String) : RuntimeException(message)
+
+/** Thrown when an initial state cannot be created using the nullary constructor of a class. */
+public class StateInitializerException @PublishedApi internal constructor(
     message: String,
-    e: TypeCastException
-) : RuntimeException(message, e)
+    override val cause: Throwable?
+) : RuntimeException(message)

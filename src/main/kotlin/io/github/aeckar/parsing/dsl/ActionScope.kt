@@ -5,8 +5,15 @@ import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
 
 /**
+ * When provided with an [ActionScope], returns an action conforming to the given output type.
+ * @see actionOn
+ */
+public typealias ActionPrototype<R> = (scope: ActionScope<R>) -> Transform<R>
+
+/**
  * Provides a scope, evaluated at runtime, to describe how an input should be modified according to each match
- * and when the children of a syntax tree node should be visited
+ * and when the children of a syntax tree node should be visited.
+ * @see actionOn
  */
 public typealias ActionScope<R> = TransformContext<R>.() -> Unit
 
@@ -17,13 +24,16 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  * related parsers being fed the same output.
  * ```kotlin
  * val action = actionOn<Output>()
- * val parser by
- *     rule { /* ... */ } feeds
- *     action { /* this: TransformBuilder<Output> */ }
+ * val parser by rule {
+ *     /* ... */
+ * } with action { /* this: TransformContext<Output> */
+ *     /* ... */
+ * }
  * ```
  * @see mapOn
+ * @see with
  */
-public fun <R> actionOn(): (scope: ActionScope<R>) -> Transform<R> = { scope ->
+public fun <R> actionOn(): ActionPrototype<R> = { scope ->
     MatchConsumer { context ->
         context.run(scope)
         context.finalState()

@@ -3,6 +3,8 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.dsl.matcher
+import io.github.aeckar.parsing.patterns.CharExpression
+import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.state.SingleUseBuilder
 import io.github.aeckar.parsing.state.ifNotEmpty
 
@@ -87,7 +89,7 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
         }
     }
 
-    private class Junction(subRules: List<Matcher>) : CompoundRule(flatten(subRules)) {
+    private class Alternation(subRules: List<Matcher>) : CompoundRule(flatten(subRules)) {
         override fun ruleLogic(funnel: Funnel) {
             for (it in subRules) {
                 if (it in funnel) {
@@ -104,16 +106,16 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
 
         private companion object {
             private fun flatten(subRules: List<Matcher>): List<Matcher> {
-                val junctions = mutableListOf<Junction>()
+                val alternations = mutableListOf<Alternation>()
                 val others = mutableListOf<Matcher>()
                 subRules.forEach {
-                    if (it is Junction) {
-                        junctions += it
+                    if (it is Alternation) {
+                        alternations += it
                     } else {
                         others += it
                     }
                 }
-                return others + junctions.flatMap { it.subRules }.ifNotEmpty { listOf(Junction(it)) }
+                return others + alternations.flatMap { it.subRules }.ifNotEmpty { listOf(Alternation(it)) }
             }
         }
     }
@@ -180,15 +182,17 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
 
     /**
      * Returns a rule matching a single character satisfying the pattern.
+     * @throws MalformedPatternException todo
      * @see LogicContext.lengthByChar
-     * @see io.github.aeckar.parsing.patterns.CharExpression.Grammar
+     * @see CharExpression.Grammar
      */
     public fun charBy(expr: String): Matcher = matcher { yield(lengthByChar(expr)) }
 
     /**
      * Returns a rule matching text satisfying the pattern.
+     * @throws MalformedPatternException todo
      * @see LogicContext.lengthByText
-     * @see io.github.aeckar.parsing.patterns.TextExpression.Grammar
+     * @see TextExpression.Grammar
      */
     public fun textBy(expr: String): Matcher = matcher { yield(lengthByText(expr)) }
 
@@ -205,7 +209,7 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
     public operator fun Matcher.times(other: Matcher): Matcher = Concatenation(listOf(this, other), false)
 
     /** Returns a rule matching this one or the other. */
-    public infix fun Matcher.or(other: Matcher): Matcher = Junction(listOf(this, other))
+    public infix fun Matcher.or(other: Matcher): Matcher = Alternation(listOf(this, other))
 
     /**
      * Returns a rule matching the given rule one or more times,
@@ -236,9 +240,9 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
     /** Returns a rule matching the given rule zero or one time. */
     public fun maybe(subRule: Matcher): Matcher = Option(subRule)
 
-    /** */
+    /** todo. */
     public fun nearestIn(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
-
+        TODO()
     }
 
     /* ---------------------------------------------------------------------------- */

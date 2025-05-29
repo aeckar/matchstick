@@ -1,72 +1,64 @@
 package io.github.aeckar.parsing.patterns
 
-import gnu.trove.list.array.TCharArrayList
 import gnu.trove.set.hash.TCharHashSet
+import io.github.aeckar.parsing.LogicContext
 import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.dsl.actionOn
+import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
-import io.github.aeckar.parsing.provideDelegate
 import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.plusAssign
 
 // todo grammar to collect matchers, convert to ebnf, textmate
 
 /**
- * When [matched][invoke] to a character in a sequence,
- * returns true if the character and its position in the sequence satisfies some condition.
- */
-internal typealias CharPattern = (sequence: CharSequence, index: Int) -> Boolean
-
-/**
  * Contains data pertaining to character expressions.
- * @see io.github.aeckar.parsing.RuleContext.charBy
- * @see io.github.aeckar.parsing.LogicContext.lengthByChar
+ * @see RuleContext.charBy
+ * @see LogicContext.lengthByChar
  */
-public class CharExpression internal constructor() {
-    private val patterns = mutableListOf<CharPattern>()
-    private val acceptable = TCharArrayList()
+public class CharExpression internal constructor() : Expression() {
     private var isEndAcceptable = false
 
-    internal fun rootPattern() = patterns.single()
-
-    private fun clearAcceptable() {
+    override fun clearAcceptable() {
         acceptable.clear()
         isEndAcceptable = false
     }
 
-    private class UniqueCharPattern(override val id: String, matcher: CharPattern) : CharPattern by matcher, Unique
+    private class UniqueCharPattern(override val id: String, matcher: Pattern) : Pattern by matcher, Unique
 
     /** Holds the matchers used to parse character expressions. */
     public object Grammar {
         private val action = actionOn<CharExpression>()
-        private val textPattern = TextExpression.Grammar.textPattern
+        private val textPattern = TextExpression.Grammar.textExpr
 
         public val union: Matcher by rule {
-            charPattern * char('|') * charPattern * zeroOrMore(char('|') * charPattern)
+            charExpr * char('|') * charExpr * zeroOrMore(char('|') * charExpr)
         } with action {
             val subMatchers = state.patterns.takeLast(2 + children[3].children.size)
             state.patterns += { s, i -> subMatchers.any { it(s, i) } }
         }
 
         public val intersection: Matcher by rule {
-            charPattern * char(',') * charPattern * zeroOrMore(char(',') * charPattern)
+            charExpr * char(',') * charExpr * zeroOrMore(char(',') * charExpr)
         } with action {
             val subMatchers = state.patterns.takeLast(2 + children[3].children.size)
             state.patterns += { s, i -> subMatchers.all { it(s, i) } }
         }
 
         public val grouping: Matcher by rule {
-            char('(') * charPattern * char(')')
+            char('(') * charExpr * char(')')
         }
 
         public val negation: Matcher by rule {
-            char('!') * charPattern
+            char('!') * charExpr
         } with action {
             val subMatcher = state.patterns.removeLast()
             state.patterns += { s, i -> !subMatcher(s, i) }
         }
 
-        public val charSet: Matcher by rule {
+        public val charClass: Matcher by rule {
             val forbiddenChars = "[]%"
 
             val charClasses = mapOf(
@@ -75,25 +67,26 @@ public class CharExpression internal constructor() {
                 'd' to "0123456789"
             )
 
-            val setChar by rule {
+            val classChar by rule {
                 charNotIn(forbiddenChars)
             } with action {
                 when (val c = single()) {
                     '^' -> state.isEndAcceptable = true
-                    else -> state.acceptable.add(c)
+                    else -> state.acceptable += c
                 }
             }
 
-            val setEscape by rule {
+            val classEscape by rule {
                 char('%') * charIn("$forbiddenChars^")
             } with action {
                 val c = substring[1]
-                charClasses.getOrDefault(c, c.toString()).forEach { state.acceptable.add(it) }
+                charClasses.getOrDefault(c, c.toString()).forEach { state.acceptable += it }
             }
 
-            char('[') * oneOrMore(setChar or setEscape) * char(']')
+            char('[') * oneOrMore(classChar or classEscape) * char(']')
         } with action {
-            val acceptable = TCharHashSet(state.acceptable)
+            val acceptable = TCharHashSet(state.acceptable.length)
+            state.acceptable.forEach { acceptable.add(it) }
             val id = buildString {
                 val uniqueChars = acceptable.iterator()
                 append("[")
@@ -114,26 +107,12 @@ public class CharExpression internal constructor() {
         }
 
         public val charRange: Matcher by rule {
-            val forbiddenChars = ".,|()[]%"
-
-            val rangeChar by rule {
-                charNotIn(forbiddenChars)
-            } with action {
-                state.acceptable.add(single())
-            }
-
-            val rangeEscape by rule {
-                char('%') * charIn(forbiddenChars)
-            } with action {
-                state.acceptable.add(substring[1])
-            }
-
-            val rangeCharOrEscape by rangeChar or rangeEscape
+            val rangeCharOrEscape by charOrEscape(".,|()[]%")
 
             rangeCharOrEscape * text("..") * rangeCharOrEscape
         } with action {
-            val id = "${state.acceptable.getQuick(0)}..${state.acceptable.getQuick(1)}"
-            val matcher: CharPattern = if (id.first() == id.last()) {
+            val id = "${state.acceptable[0]}..${state.acceptable[1]}"
+            val matcher: Pattern = if (id.first() == id.last()) {
                 { s, i -> s[i] == id.first() }
             } else {
                 { s, i -> s[i] in id.first()..id.last() }
@@ -142,50 +121,36 @@ public class CharExpression internal constructor() {
         }
 
         public val suffix: Matcher by rule {
-            char('>') * maybe(char('=')) * (textPattern or charPattern)
+            char('>') * maybe(char('=')) * (textPattern or charExpr)
         } with action {
 
         }
 
         public val prefix: Matcher by rule {
-            char('<') * maybe(char('=')) * (textPattern or charPattern)
+            char('<') * maybe(char('=')) * (textPattern or charExpr)
         } with action {
 
         }
 
         public val singleChar: Matcher by rule {
-            val forbiddenChars = ",|()[]%"
-
-            val singleChar by rule {
-                charNotIn(forbiddenChars)
-            } with action {
-                state.acceptable.add(single())
-            }
-
-            val singleEscape by rule {
-                char('%') * charIn(forbiddenChars)
-            } with action {
-                state.acceptable.add(substring[1])
-            }
-
-            singleChar or singleEscape
+            charOrEscape(",|()[]%")
         } with action {
-            val c = state.acceptable.getQuick(0)
+            val c = state.acceptable[0]
             UniqueCharPattern(substring) { s, i -> s[i] == c }
         }
 
-        public val charPattern: Matcher by rule {
+        public val charExpr: Matcher by rule {
             union or
                     intersection or
                     grouping or
                     negation or
-                    charSet or
+                    charClass or
                     charRange or
                     suffix or
                     prefix or
                     singleChar
         }
 
-        internal val start = charPattern with action {}
+        internal val start = charExpr with action
     }
 }

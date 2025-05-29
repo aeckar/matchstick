@@ -15,7 +15,7 @@ import io.github.aeckar.parsing.dsl.ParserComponentDSL
  * @see MatchConsumer.consumeMatches
  */
 @ParserComponentDSL
-public class TransformContext<R> internal constructor(root: SyntaxTreeNode, state: R): Substring {
+public class TransformContext<R> @PublishedApi internal constructor(root: SyntaxTreeNode, state: R): Substring {
     private var isChildrenVisited = false
 
     /** Some state, whose final value is the output. */
@@ -44,7 +44,7 @@ public class TransformContext<R> internal constructor(root: SyntaxTreeNode, stat
     @Suppress("UNCHECKED_CAST")
     public fun descend() {
         if (isChildrenVisited) {
-            throw TransformTraversalException("descend() called more than once")
+            throw TreeTraversalException("descend() called more than once")
         }
         children.forEach {
             val context = TransformContext(it, state)
