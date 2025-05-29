@@ -11,8 +11,6 @@ import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.plusAssign
 
-// todo grammar to collect matchers, convert to ebnf, textmate
-
 /**
  * Contains data pertaining to character expressions.
  * @see RuleContext.charBy

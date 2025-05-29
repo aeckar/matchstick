@@ -5,10 +5,10 @@ package io.github.aeckar.parsing
  * @see RuleContext.charBy
  * @see RuleContext.textBy
  */
-public class MalformedPatternException internal constructor(message: String) : RuntimeException(message)
+public class MalformedExpressionException internal constructor(message: String) : RuntimeException(message)
 
 /** Thrown when [TransformContext.descend] is called more than once in the same scope. */
-public class TreeTraversalException internal constructor(message: String) : RuntimeException(message)
+public class MalformedTransformException internal constructor(message: String) : RuntimeException(message)
 
 /** Thrown when there exists no matches from which to derive a syntax tree from. */
 public class NoSuchMatchException internal constructor(message: String) : RuntimeException(message)

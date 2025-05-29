@@ -1,8 +1,10 @@
 package io.github.aeckar.parsing.dsl
 
-import io.github.aeckar.parsing.MatchConsumer
+import io.github.aeckar.parsing.RichTransform
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
+import io.github.aeckar.parsing.transformOf
+import kotlin.reflect.typeOf
 
 /**
  * When provided with an [ActionScope], returns an action conforming to the given output type.
@@ -33,9 +35,9 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  * @see mapOn
  * @see with
  */
-public fun <R> actionOn(): ActionPrototype<R> = { scope ->
-    MatchConsumer { context ->
-        context.run(scope)
-        context.finalState()
+public inline fun <reified R> actionOn(): ActionPrototype<R> = { scope ->
+    transformOf {
+        scope()
+        state
     }
 }

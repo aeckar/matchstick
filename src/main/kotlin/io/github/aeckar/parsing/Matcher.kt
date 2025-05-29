@@ -2,11 +2,12 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.parsing.dsl.matcher
+import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.UniqueProperty
 
-internal fun matcherOf(rule: RuleContext.Rule?, scope: LogicScope): Matcher = object : MatchCollector {
+internal fun matcherOf(rule: RuleContext.Rule?, scope: LogicScope): Matcher = object : RichMatcher {
     override fun collectMatches(funnel: Funnel): Int {
         return funnel.captureSubstring(rule ?: this, scope)
     }
@@ -15,7 +16,7 @@ internal fun matcherOf(rule: RuleContext.Rule?, scope: LogicScope): Matcher = ob
 /* ------------------------------ matcher operations ------------------------------ */
 
 @PublishedApi
-internal fun Matcher.collectMatches(funnel: Funnel) = (this as MatchCollector).collectMatches(funnel)
+internal fun Matcher.collectMatches(funnel: Funnel) = (this as RichMatcher).collectMatches(funnel)
 
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
@@ -75,8 +76,8 @@ public fun Matcher.toBrackusNaur(keepLeftRecursion: Boolean = true): String {
  *
  * This function is called whenever this matcher
  * [queries][LogicContext.lengthOf] or [matches][RuleContext.char] a substring in an input.
- * @see io.github.aeckar.parsing.dsl.matcher
- * @see io.github.aeckar.parsing.dsl.rule
+ * @see matcher
+ * @see rule
  * @see RuleContext
  * @see LogicContext
  * @see Transform
@@ -88,8 +89,14 @@ public sealed interface Matcher : Unique {
     }
 }
 
-/** Provides the [Matcher] interface with the [collectMatches] function. */
-internal fun interface MatchCollector : Matcher {
+/**
+ * Extends [Matcher] with [match collection][collectMatches] and [delimiter tracking][delimiter].
+ *
+ * All implementors of [Matcher] also implement this interface.
+ */
+internal fun interface RichMatcher : Matcher {
+    // val delimiter: Matcher
+
     /**
      * Returns the size of the matching substring at the beginning of the remaining input,
      * or -1 if one was not found
@@ -99,9 +106,9 @@ internal fun interface MatchCollector : Matcher {
 
 internal class MatcherProperty(
     override val id: String,
-    override val value: MatchCollector
-) : UniqueProperty(), MatchCollector {
-    constructor(id: String, original: Matcher) : this(id, original as MatchCollector)
+    override val value: RichMatcher
+) : UniqueProperty(), RichMatcher {
+    constructor(id: String, original: Matcher) : this(id, original as RichMatcher)
 
     override fun collectMatches(funnel: Funnel): Int {
         val length = value.collectMatches(funnel)

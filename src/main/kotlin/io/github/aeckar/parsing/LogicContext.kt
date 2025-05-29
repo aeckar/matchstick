@@ -5,8 +5,6 @@ import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.patterns.charPatternOf
 import io.github.aeckar.parsing.patterns.textPatternOf
 
-// todo greedy/repeated parsing
-
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
  * whose behavior is described by a user-defined function.
@@ -19,12 +17,12 @@ import io.github.aeckar.parsing.patterns.textPatternOf
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
  * @see io.github.aeckar.parsing.dsl.matcher
- * @see MatchCollector.collectMatches
+ * @see RichMatcher.collectMatches
  */
 @ParserComponentDSL
 public class LogicContext internal constructor(
     private val funnel: Funnel
-) : RuleContext(dummyScope), CharSequence by funnel.tape {
+) : RuleContext(), CharSequence by funnel.tape {
     internal var includeBegin = -1
         private set
 
@@ -80,7 +78,7 @@ public class LogicContext internal constructor(
      * @see io.github.aeckar.parsing.patterns.CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
-        return with (funnel.tape) { if (charPatternOf(expr)(original, offset)) 1 else -1 }
+        return with(funnel.tape) { if (charPatternOf(expr)(original, offset)) 1 else -1 }
     }
 
     /**
@@ -89,7 +87,7 @@ public class LogicContext internal constructor(
      * @see io.github.aeckar.parsing.patterns.TextExpression.Grammar
      */
     public fun lengthByText(expr: String): Int {
-        return with (funnel.tape) { if (textPatternOf(expr)(original, offset)) 1 else -1 }
+        return with(funnel.tape) { if (textPatternOf(expr)(original, offset)) 1 else -1 }
     }
 
     /* ------------------------------ offset modification ------------------------------ */

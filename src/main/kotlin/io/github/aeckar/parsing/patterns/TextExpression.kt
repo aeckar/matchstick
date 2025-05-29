@@ -24,13 +24,13 @@ public class TextExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse text expressions. */
     public object Grammar {
         private val action = actionOn<TextExpression>()
-        private val charExpr = CharExpression.Grammar.charExpr
+        private val charExpr = CharExpression.Grammar.start
 
         public val textExpr: Matcher by rule {
             val captureGroup by rule {
                 char('{') * (charExpr or textExpr) * char('}') * charIn("+*?")
             } with action {
-
+                resultOf(charExpr)
             }
 
             oneOrMore(charOrEscape("{}+*?"))

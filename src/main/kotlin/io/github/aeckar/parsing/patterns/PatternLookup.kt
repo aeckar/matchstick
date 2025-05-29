@@ -1,8 +1,6 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.Parser
-import io.github.aeckar.parsing.RuleContext
-import io.github.aeckar.parsing.parse
+import io.github.aeckar.parsing.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -29,16 +27,15 @@ internal fun charPatternOf(expr: String) = patternOf(expr, charPatternCache, Cha
  * or a new one if the pattern has not yet been cached.
  * @see RuleContext.textBy
  */
-internal fun textPatternOf(expr: String): Pattern {
-    if (expr !in textPatternCache) {
-        textPatternCache[expr] = TextExpression.Grammar.start.parse(expr, TextExpression()).rootPattern()
-    }
-    return textPatternCache.getValue(expr)
-}
+internal fun textPatternOf(expr: String) = patternOf(expr, textPatternCache, TextExpression.Grammar.start)
 
-private fun patternOf(expr: String, cache: MutableMap<String, Pattern>, start: Parser<Expression>) {
+private fun patternOf(expr: String, cache: MutableMap<String, Pattern>, start: Parser<Expression>): Pattern {
     if (expr !in cache) {
-        cache[expr] = start.parse(expr).rootPattern()
+        cache[expr] = try {
+            start.parse(expr).rootPattern()
+        } catch (_: NoSuchMatchException) {
+            throw MalformedExpressionException("Pattern expression '$expr' is malformed")
+        }
     }
     return cache.getValue(expr)
 }

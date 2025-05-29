@@ -1,6 +1,12 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.state.TreeNode
+import io.github.aeckar.parsing.state.instanceOf
+
+/** Returns a new syntax tree node. */
+public fun syntaxTreeOf(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
+    return SyntaxTreeNode(input, matches.toMutableList())
+}
 
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
@@ -10,7 +16,7 @@ import io.github.aeckar.parsing.state.TreeNode
 public class SyntaxTreeNode @PublishedApi internal constructor(
     input: CharSequence,
     matches: MutableList<Match>
-): TreeNode(), Substring {
+) : TreeNode(), Substring {
     /** The captured substring. */
     public override val substring: String
 
@@ -62,18 +68,34 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         return matcher ?: throw NoSuchElementException("Substring was not derived from a matcher")
     }
 
+    /**
+     * Transforms the given object using the transforms defined by the matchers that produced each.
+     *
+     * The transforms are encountered during post-order traversal of the syntax tree whose root is this node.
+     */
+    public fun <R> walk(initialState: R): R = walk(TransformContext(this /* placeholder */, initialState))
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <R> walk(outerContext: TransformContext<R>): R {
+        val state = outerContext.state
+        val transform = matcher as? RichTransform<R> ?: return state
+        return if (state instanceOf transform.stateTypeRef) {
+            transform.consumeMatches(TransformContext(this, state))
+        } else {
+            val subParserContext = TransformContext(this, initialStateOf<Any?>(transform.stateTypeRef))
+            outerContext.results[transform] = transform.consumeMatches(subParserContext)
+            if (transform.id === "<unknown>") {
+                outerContext.results += subParserContext.results
+            }
+            state
+        }
+    }
+
     override fun toString(): String {
         if (matcher == null) {
             return "\"$substring\""
         }
-        return "\"$substring\" @ ${matcher.id}"
-    }
-
-    public companion object {
-        /** Returns a new syntax tree node. */
-        public fun of(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
-            return SyntaxTreeNode(input, matches.toMutableList())
-        }
+        return "\"$substring\" @ $matcher"
     }
 }
 

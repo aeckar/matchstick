@@ -18,9 +18,10 @@ public operator fun <R> Parser<R>.provideDelegate(
 ): ReadOnlyProperty<Any?, Parser<R>> {
     return named(property.name).toReadOnlyProperty()
 }
+
 /** Returns a parser with the given matcher and transform. */
 public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
-    return object : MatchParser<R>, MatchCollector by this, MatchConsumer<R> by transform {
+    return object : RichParser<R>, RichMatcher by this, RichTransform<R> by transform {
         override val id = Unique.UNKNOWN_ID
     }
 }

@@ -13,4 +13,4 @@ public typealias RuleScope = RuleContext.() -> Matcher
  * Configures and returns a rule-based matcher.
  * @see matcher
  */
-public fun rule(scope: RuleScope): Matcher = RuleContext(scope).ruleBuilder.build()
+public fun rule(scope: RuleScope): Matcher = RuleContext().run(scope)

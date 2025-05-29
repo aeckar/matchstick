@@ -1,8 +1,10 @@
 package io.github.aeckar.parsing.dsl
 
-import io.github.aeckar.parsing.MatchConsumer
+import io.github.aeckar.parsing.RichTransform
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
+import io.github.aeckar.parsing.transformOf
+import kotlin.reflect.typeOf
 
 /**
  * When provided with an [MapScope], returns an action conforming to the given output type.
@@ -33,10 +35,4 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  * @see actionOn
  * @see with
  */
-@Suppress("UNCHECKED_CAST")
-public fun <R> mapOn(): MapPrototype<R> = { scope ->
-    MatchConsumer { context ->
-        context.state = context.run(scope)
-        context.finalState()
-    }
-}
+public inline fun <reified R> mapOn(): MapPrototype<R> = ::transformOf

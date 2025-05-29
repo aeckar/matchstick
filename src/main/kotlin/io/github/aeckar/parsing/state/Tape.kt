@@ -25,7 +25,7 @@ internal class Tape(
         if (original is Tape) {
             throw IllegalArgumentException("Sequence '${original.original}' has an offset of ${original.offset}")
         }
-        require (offset >= 0) { "Offset $offset is negative" }
+        require(offset >= 0) { "Offset $offset is negative" }
     }
 
     /** Returns an iterator returning the remaining characters in this tape, regardless of its current length. */
@@ -56,7 +56,7 @@ internal class Tape(
      * @throws IllegalArgumentException [endIndex] is smaller than [startIndex]
      */
     override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
-        class LazySubSequence(val original: CharSequence, val startIndex: Int, val endIndex: Int): CharSequence {
+        class LazySubSequence(val original: CharSequence, val startIndex: Int, val endIndex: Int) : CharSequence {
             override val length = this.endIndex - this.startIndex
 
             override fun get(index: Int): Char {

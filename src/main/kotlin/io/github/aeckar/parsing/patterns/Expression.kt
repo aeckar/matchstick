@@ -29,6 +29,4 @@ public sealed class Expression {
 
     internal fun rootPattern() = patterns.single()
     protected abstract fun clearAcceptable()
-
-
 }

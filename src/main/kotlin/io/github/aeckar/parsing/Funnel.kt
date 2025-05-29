@@ -7,7 +7,13 @@ import io.github.aeckar.parsing.dsl.LogicScope
 import io.github.aeckar.parsing.state.Tape
 import java.io.Serial
 
-// todo track farthest position/error location
+// todo 1. text-expression grammar
+// todo 2. ruleWithDelimiter {  }
+// todo 3. nearest-neighbor parsing
+// todo 4. farthest position/error location tracking
+// todo 5. greedy/repeated parsing
+// todo 6. textmate export
+// todo 7. ebnf export
 
 /** Inserts the given value into the set given by the specified key, creating a new one if one does not exist. */
 private fun <E> TIntObjectMap<MutableSet<E>>.putInSet(key: Int, setValue: E) {
@@ -28,7 +34,7 @@ private inline fun <E> TIntObjectMap<out Set<E>>.findInSet(key: Int, predicate: 
 /**
  * Collects matches in an input using a matcher.
  *
- * Instances of this class may be reused between top-level invocations of [MatchCollector.collectMatches].
+ * Instances of this class may be reused between top-level invocations of [RichMatcher.collectMatches].
  * @param tape the remaining portion of the original input
  * @param matches collects all matches in the input derived from this matcher, in list form
  * @param delimiter the matcher used to skip between
@@ -66,7 +72,9 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
      * To retrieve a previously captured substring from cache,
      * the dependencies between the cached match and the current funnel state must match.
      */
-    fun addDependency(rule: Matcher) { dependencies += rule }
+    fun addDependency(rule: Matcher) {
+        dependencies += rule
+    }
 
     /**
      * Increments the current choice.
@@ -110,8 +118,7 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
                 val begin = tape.offset
                 successCache
                     .findInSet(begin) { it.matcher == matcher && matchers.containsAll(it.dependencies) }
-                    ?.let { tape.offset += it.length } ?:
-                failCache
+                    ?.let { tape.offset += it.length } ?: failCache
                     .findInSet(begin) { it === matcher }
                     ?.let { abortMatch() }
             }
@@ -153,7 +160,9 @@ internal class Funnel(val tape: Tape, private val delimiter: Matcher, private va
     }
 
     companion object {
-        /** When called, signals that -1 should be returned from [collect][MatchCollector.collectMatches]. */
-        fun abortMatch(): Nothing { throw Failure }
+        /** When called, signals that -1 should be returned from [collect][RichMatcher.collectMatches]. */
+        fun abortMatch(): Nothing {
+            throw Failure
+        }
     }
 }

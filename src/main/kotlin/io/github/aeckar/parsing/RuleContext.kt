@@ -1,11 +1,9 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
-import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
-import io.github.aeckar.parsing.state.SingleUseBuilder
 import io.github.aeckar.parsing.state.ifNotEmpty
 
 /**
@@ -15,14 +13,10 @@ import io.github.aeckar.parsing.state.ifNotEmpty
  * and is thus referred to as one within this context.
  * @see io.github.aeckar.parsing.dsl.rule
  * @see LogicContext
- * @see MatchCollector.collectMatches
+ * @see RichMatcher.collectMatches
  */
 @ParserComponentDSL
-public open class RuleContext internal constructor(private val scope: RuleScope) {
-    internal val ruleBuilder = object : SingleUseBuilder<Matcher>() {
-        override fun buildLogic() = run(scope)
-    }
-
+public open class RuleContext internal constructor() {
     /** Wraps this [character query][charBy] in a negation. */
     public operator fun String.not(): String = "!($this)"
 
@@ -36,10 +30,11 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
     private sealed class ModifierRule(protected val subRule: Matcher) : Rule()
     private sealed class CompoundRule(protected val subRules: List<Matcher>) : Rule()
 
-    internal abstract class Rule() : MatchCollector {
+    internal abstract class Rule() : RichMatcher {
         abstract fun ruleLogic(funnel: Funnel)
 
         /*
+        todo
         fun toGrammarElement(): GrammarElement {
 
         }
@@ -140,7 +135,9 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
     }
 
     private class Option(subRule: Matcher) : ModifierRule(subRule) {
-        override fun ruleLogic(funnel: Funnel) { subRule.collectMatches(funnel) }
+        override fun ruleLogic(funnel: Funnel) {
+            subRule.collectMatches(funnel)
+        }
     }
 
     private class LocalRule(private val options: List<Matcher>) : Rule() {
@@ -181,16 +178,16 @@ public open class RuleContext internal constructor(private val scope: RuleScope)
     public fun textIn(substrings: Collection<String>): Matcher = matcher { yield(lengthOfFirst(substrings)) }
 
     /**
-     * Returns a rule matching a single character satisfying the pattern.
-     * @throws MalformedPatternException todo
+     * Returns a rule matching a single character satisfying the pattern given by the expression.
+     * @throws MalformedExpressionException the character expression is malformed
      * @see LogicContext.lengthByChar
      * @see CharExpression.Grammar
      */
     public fun charBy(expr: String): Matcher = matcher { yield(lengthByChar(expr)) }
 
     /**
-     * Returns a rule matching text satisfying the pattern.
-     * @throws MalformedPatternException todo
+     * Returns a rule matching text satisfying the pattern given by the expression.
+     * @throws MalformedExpressionException the text expression is malformed
      * @see LogicContext.lengthByText
      * @see TextExpression.Grammar
      */
