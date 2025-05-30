@@ -9,7 +9,9 @@ import io.github.aeckar.parsing.patterns.TextExpression
 /* ------------------------------ factory ------------------------------ */
 
 @PublishedApi
-internal fun ruleOf(separator: Matcher = emptySeparator, scope: RuleScope) = RuleContext(separator).run(scope)
+internal fun ruleOf(greedy: Boolean, lazySeparator: () -> Matcher = ::emptySeparator, scope: RuleScope): Matcher {
+    return RuleContext(lazySeparator).run(scope)
+}
 
 /* ------------------------------ context class ------------------------------ */
 
@@ -23,25 +25,22 @@ internal fun ruleOf(separator: Matcher = emptySeparator, scope: RuleScope) = Rul
  * @see RichMatcher.collectMatches
  */
 @ParserComponentDSL
-public open class RuleContext @PublishedApi internal constructor(private val separator: Matcher = zeroChars) {
-    /** Wraps this [character query][charBy] in a negation. */
-    public operator fun String.not(): String = "!($this)"
-
-    /** Maps each integer to the receiver repeated that number of times. */
-    public operator fun String.times(counts: Iterable<Int>): List<String> {
-        return counts.map { repeat(it) }
-    }
+public open class RuleContext @PublishedApi internal constructor(lazySeparator: () -> Matcher) {
+    private val separator by lazy(lazySeparator)
 
     /* ------------------------------ rule classes ------------------------------ */
 
-    private sealed class ModifierRule(separator: Matcher, protected val member: Matcher) : Rule(separator)
-    private sealed class CompoundRule(separator: Matcher, val members: List<Matcher>) : Rule(separator)
+    private sealed class ModifierRule(separator: Matcher, protected val subRule: Matcher) : Rule(separator)
+    private sealed class CompoundRule(separator: Matcher, val subRules: List<Matcher>) : Rule(separator)
 
     internal abstract class Rule(final override val separator: Matcher) : RichMatcher {
-        abstract fun ruleLogic(matchState: MatchState)
+        private val logicString by lazy(::logicString)
 
+        protected abstract fun logic(matchState: MatchState)
+        protected abstract fun logicString(): String
+        final override fun toString() = if (id !== "<unknown>") id else logicString
         final override fun collectMatches(matchState: MatchState): Int {
-            return matcherOf(this) { ruleLogic(matchState) }.collectMatches(matchState)
+            return matcherOf(scope = { logic(matchState) }, rule = this).collectMatches(matchState)
         }
     }
 
@@ -51,17 +50,24 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
 
     // Using 'separator'
     private inner class Concatenation(
-        rule1: Matcher,
-        rule2: Matcher,
+        subRule1: Matcher,
+        subRule2: Matcher,
         override val isContiguous: Boolean
-    ) : CompoundRule(this@RuleContext.separator, rule1.membersTo<Concatenation>() + rule2.membersTo<Concatenation>()),
-        MaybeContiguous {
-        override fun ruleLogic(matchState: MatchState) {
-            for ((index, subRule) in members.withIndex()) {
+    ) : CompoundRule(separator, subRule1.subRulesTo<Concatenation>() + subRule2.subRulesTo<Concatenation>()),
+            MaybeContiguous {
+        override fun logicString(): String {
+            val symbol = if (isContiguous) "&" else "~&"
+            return subRules.asSequence()
+                .map { it.componentString() }
+                .joinToString(" $symbol ")
+        }
+
+        override fun logic(matchState: MatchState) {
+            for ((index, subRule) in subRules.withIndex()) {
                 if (subRule.collectMatches(matchState) == -1) {
                     matchState.abortMatch()
                 }
-                if (index == members.lastIndex) {
+                if (index == subRules.lastIndex) {
                     break
                 }
                 separator.collectMatches(matchState)
@@ -70,19 +76,25 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
     }
 
     private class Alternation(
-        rule1: Matcher,
-        rule2: Matcher
-    ) : CompoundRule(zeroChars, rule1.membersTo<Alternation>() + rule2.membersTo<Alternation>()) {
-        override fun ruleLogic(matchState: MatchState) {
-            for (it in members) {
-                if (it in matchState) {
-                    matchState.addDependency(it)
+        subRule1: Matcher,
+        subRule2: Matcher
+    ) : CompoundRule(zeroChars, subRule1.subRulesTo<Alternation>() + subRule2.subRulesTo<Alternation>()) {
+        override fun logicString(): String {
+            return subRules.asSequence()
+                .map { it as? Concatenation ?: it.componentString() }
+                .joinToString(" | ")
+        }
+
+        override fun logic(matchState: MatchState) {
+            for (subRule in subRules) {
+                if (subRule in matchState) {
+                    matchState.addDependency(subRule)
                     continue
                 }
-                if (it.collectMatches(matchState) != -1) {
+                if (subRule.collectMatches(matchState) != -1) { // Must come after previous 'if'!
                     return
                 }
-                matchState.addChoice()
+                ++matchState.choice
             }
             matchState.abortMatch()
         }
@@ -93,15 +105,21 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
         subRule: Matcher,
         acceptsZero: Boolean,
         override val isContiguous: Boolean
-    ) : ModifierRule(this@RuleContext.separator, subRule), MaybeContiguous {
+    ) : ModifierRule(separator, subRule), MaybeContiguous {
         private val minMatchCount = if (acceptsZero) 0 else 1
 
-        override fun ruleLogic(matchState: MatchState) {
-            var matchCount = 0
-            while (member.collectMatches(matchState) != -1) {
-                separator.collectMatches(matchState)
-                ++matchCount
-            }
+        override fun logicString(): String {
+            val symbol = if (isContiguous) "+" else "~+"
+            return subRule.componentString() + symbol
+        }
+
+        override fun logic(matchState: MatchState) {
+            var separatorLength = 0
+            val matchCount = generateSequence { subRule.collectMatches(matchState) }
+                .takeWhile { it != -1 }
+                .onEach { separatorLength = separator.collectMatches(matchState) }
+                .count()
+            matchState.tape.offset -= separatorLength
             if (matchCount < minMatchCount) {
                 matchState.abortMatch()
             }
@@ -109,14 +127,20 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
     }
 
     private class Option(subRule: Matcher) : ModifierRule(zeroChars, subRule) {
-        override fun ruleLogic(matchState: MatchState) {
-            member.collectMatches(matchState)
+        override fun logicString() = "${subRule.componentString()}?"
+
+        override fun logic(matchState: MatchState) {
+            if (subRule.collectMatches(matchState) == -1) {
+                --matchState.choice
+            }
         }
     }
 
-    private class NearbyRule(private val options: List<Matcher>) : Rule(zeroChars) {
-        override fun ruleLogic(matchState: MatchState) {
-            if (options.minBy { matchState.distanceTo(it) }.collectMatches(matchState) == -1) {
+    private class NearbyRule(private val candidates: List<Matcher>) : Rule(zeroChars) {
+        override fun logicString() = candidates.joinToString(prefix = "[", postfix = "]")
+
+        override fun logic(matchState: MatchState) {
+            if (candidates.minBy { matchState.distanceTo(it) }.collectMatches(matchState) == -1) {
                 matchState.abortMatch()
             }
         }
@@ -128,30 +152,39 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
     public fun char(): Matcher = oneChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = matcher { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = matcher("'$c'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
-    public fun text(substring: String): Matcher = matcher { yield(lengthOf(substring)) }
+    public fun text(substring: String): Matcher = matcher("\"$substring\"") { yield(lengthOf(substring)) }
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: String): Matcher = charIn(chars.toList())
 
     /** Returns a rule matching the first acceptable character. */
-    public fun charIn(chars: Collection<Char>): Matcher = matcher { yield(lengthOfFirst(chars)) }
+    public fun charIn(chars: Collection<Char>): Matcher {
+        val logicString = "[${chars.joinToString("")}]"
+        return matcher(logicString) { yield(lengthOfFirst(chars)) }
+    }
 
     /** Returns a rule matching any character not in the given string. */
     public fun charNotIn(chars: String): Matcher = charNotIn(chars.toList())
 
     /** Returns a rule matching any character not in the given collection. */
-    public fun charNotIn(chars: Collection<Char>): Matcher = matcher {
-        if (lengthOfFirst(chars) != -1) {
-            fail()
+    public fun charNotIn(chars: Collection<Char>): Matcher {
+        val logicString = "![${chars.joinToString("")}]"
+        return matcher(logicString) {
+            if (lengthOfFirst(chars) != -1) {
+                fail()
+            }
+            yield(1)
         }
-        yield(1)
     }
 
     /** Returns a rule matching the first acceptable substring. */
-    public fun textIn(substrings: Collection<String>): Matcher = matcher { yield(lengthOfFirst(substrings)) }
+    public fun textIn(substrings: Collection<String>): Matcher {
+        val logicString = substrings.joinToString(" | ", "(", ")") { "\"$it\"" }
+        return matcher(logicString) { yield(lengthOfFirst(substrings)) }
+    }
 
     /**
      * Returns a rule matching a single character satisfying the pattern given by the expression.
@@ -159,7 +192,7 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
      * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = matcher { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = matcher("`$expr`") { yield(lengthByChar(expr)) }
 
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
@@ -167,7 +200,7 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
      * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = matcher { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = matcher("``$expr``") { yield(lengthByText(expr)) }
 
     /**
      * Returns a rule matching this one, then the [separator][Matcher.match], then the other.
@@ -221,13 +254,23 @@ public open class RuleContext @PublishedApi internal constructor(private val sep
         return NearbyRule(listOf(subRule1, subRule2) + others)
     }
 
-    /* ---------------------------------------------------------------------------- */
+    /* ------------------------------ utility ------------------------------ */
+
+    /** Wraps this [character expression][charBy] in a negation. */
+    public operator fun String.not(): String = "!($this)"
+
+    /** Maps each integer to the receiver repeated that number of times. */
+    public operator fun String.times(counts: Iterable<Int>): List<String> {
+        return counts.map { repeat(it) }
+    }
 
     private companion object {
         private val oneChar = matcher { yield(1) }
         private val zeroChars = matcher {}
 
         /** Flattens [CompoundRule] members. */
-        private inline fun <reified T : CompoundRule> Matcher.membersTo() = if (this is T) members else listOf(this)
+        private inline fun <reified T : CompoundRule> Matcher.subRulesTo() = if (this is T) subRules else listOf(this)
+
+        private  fun Matcher.componentString() = if (this is CompoundRule) "($this)" else toString()
     }
 }

@@ -2,20 +2,33 @@ package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.MatcherContext
-import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.emptySeparator
 import io.github.aeckar.parsing.matcherOf
 
 /**
+ * When provided with an [MatcherScope], returns an explicitly defined matcher with a specific separator.
+ * @see matcherAround
+ */
+public typealias MatcherFactory = (MatcherScope) -> Matcher
+
+/**
  * Provides a scope, evaluated at runtime, to
- * explicitly describe [matcher][io.github.aeckar.parsing.Matcher] behavior.
+ * explicitly describe [Matcher] behavior.
  */
 public typealias MatcherScope = MatcherContext.() -> Unit
 
 /**
  * Configures and returns a matcher whose behavior is explicitly defined and whose separator is an empty string.
+ * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see rule
  */
-public fun matcher(scope: MatcherScope): Matcher = matcherOf(null, scope = scope)
+public fun matcher(separator: () -> Matcher = ::emptySeparator, scope: MatcherScope): Matcher {
+    return matcherOf(separator, scope)
+}
+
+internal fun matcher(logicString: String, scope: MatcherScope): Matcher {
+    return matcherOf(scope = scope, logicString = logicString)
+}
 
 /**
  * Configures and returns a matcher whose behavior is explicitly defined with the given separator.
@@ -29,11 +42,9 @@ public fun matcher(scope: MatcherScope): Matcher = matcherOf(null, scope = scope
  *     /* Using 'whitespace' as separator... */
  * }
  * ```
+ * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see rule
- * @see RuleContext.plus
- * @see RuleContext.zeroOrSpread
- * @see RuleContext.oneOrSpread
  */
-public inline fun matcherIgnoring(crossinline separator: () -> Matcher): (MatcherScope) -> Matcher = { scope ->
-    matcherOf(null, separator(), scope)
+public fun matcherAround(separator: () -> Matcher): MatcherFactory = { scope ->
+    matcherOf(separator, scope)
 }

@@ -3,7 +3,7 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.instanceOf
 
-/** Returns a new syntax tree node. */
+/** Returns a new syntax tree according to the matched substrings. */
 public fun syntaxTreeOf(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
     return SyntaxTreeNode(input, matches.toMutableList())
 }

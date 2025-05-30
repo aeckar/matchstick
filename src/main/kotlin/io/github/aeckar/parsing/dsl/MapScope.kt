@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing.dsl
 
+import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
 import io.github.aeckar.parsing.transformOf
@@ -8,7 +9,7 @@ import io.github.aeckar.parsing.transformOf
  * When provided with an [MapScope], returns an action conforming to the given output type.
  * @see mapOn
  */
-public typealias MapPrototype<R> = (scope: MapScope<R>) -> Transform<R>
+public typealias MapFactory<R> = (scope: MapScope<R>) -> Transform<R>
 
 /**
  * Provides a scope, evaluated at runtime, to describe how an input should be transformed according to each match
@@ -22,6 +23,8 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  *
  * Reusing the value returned by this function improves readability for
  * related parsers being fed the same output.
+ *
+ * Binding a map to a [Parser] using [with] overwrites the previous transform.
  * ```kotlin
  * val map = mapOn<Output>()
  * val parser by rule {
@@ -33,4 +36,4 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  * @see actionOn
  * @see with
  */
-public inline fun <reified R> mapOn(): MapPrototype<R> = ::transformOf
+public inline fun <reified R> mapOn(): MapFactory<R> = ::transformOf

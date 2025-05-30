@@ -40,11 +40,11 @@ public abstract class TreeNode {
         private val style: Style,
         private val lineSeparator: String,
         private val rootNode: TreeNode
-    ) : SingleUseBuilder<String>() {
+    ) {
         private val builder = StringBuilder()
         private val branches = TByteArrayStack()
 
-        override fun buildLogic(): String {
+        fun build(): String {
             appendNode(style, lineSeparator, rootNode)
             builder.deleteCharAt(builder.lastIndex)
             return builder.toString()

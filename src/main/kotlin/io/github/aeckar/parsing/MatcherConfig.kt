@@ -9,11 +9,14 @@ import io.github.aeckar.parsing.patterns.textPatternOf
 
 @PublishedApi
 internal fun matcherOf(
-    rule: RuleContext.Rule?,
-    separator: Matcher = emptySeparator,
-    scope: MatcherScope
+    lazySeparator: () -> Matcher = ::emptySeparator,
+    scope: MatcherScope,
+    rule: RuleContext.Rule? = null,
+    logicString: String? = null
 ): Matcher = object : RichMatcher {
-    override val separator: Matcher = separator
+    override val separator: Matcher by lazy(lazySeparator)
+
+    override fun toString() = logicString ?: id
 
     override fun collectMatches(matchState: MatchState): Int {
         return matchState.captureSubstring(rule ?: this, scope)
@@ -39,7 +42,7 @@ internal fun matcherOf(
 @ParserComponentDSL
 public class MatcherContext internal constructor(
     private val matchState: MatchState
-) : RuleContext(), CharSequence by matchState.tape {
+) : RuleContext(::emptySeparator), CharSequence by matchState.tape {
     internal var includeBegin = -1
         private set
 
@@ -52,7 +55,7 @@ public class MatcherContext internal constructor(
      * Returns 1 if the character prefixes the offset input, or -1 if one is not found.
      * @see char
      */
-    public fun lengthOf(c: Char): Int = if (startsWith(c)) 1 else -1
+    public fun lengthOf(c: Char): Int = if(startsWith(c)) 1 else -1
 
     /**
      * Returns the length of the substring if it prefixes the offset input, or -1 if one is not found.
@@ -95,7 +98,7 @@ public class MatcherContext internal constructor(
      * @see io.github.aeckar.parsing.patterns.CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
-        return with(matchState.tape) { if (charPatternOf(expr)(original, offset)) 1 else -1 }
+        return if (charPatternOf(expr)(matchState.tape.original, matchState.tape.offset) == 1) 1 else -1
     }
 
     /**
@@ -103,9 +106,7 @@ public class MatcherContext internal constructor(
      * @see textBy
      * @see io.github.aeckar.parsing.patterns.TextExpression.Grammar
      */
-    public fun lengthByText(expr: String): Int {
-        return with(matchState.tape) { if (textPatternOf(expr)(original, offset)) 1 else -1 }
-    }
+    public fun lengthByText(expr: String): Int = textPatternOf(expr)(matchState.tape.original, matchState.tape.offset)
 
     /* ------------------------------ offset modification ------------------------------ */
 

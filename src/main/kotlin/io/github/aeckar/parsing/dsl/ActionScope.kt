@@ -3,12 +3,12 @@ package io.github.aeckar.parsing.dsl
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
 import io.github.aeckar.parsing.transformOf
-
+import io.github.aeckar.parsing.Parser
 /**
  * When provided with an [ActionScope], returns an action conforming to the given output type.
  * @see actionOn
  */
-public typealias ActionPrototype<R> = (scope: ActionScope<R>) -> Transform<R>
+public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
 
 /**
  * Provides a scope, evaluated at runtime, to describe how an input should be modified according to each match
@@ -22,6 +22,8 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  *
  * Reusing the value returned by this function improves readability for
  * related parsers being fed the same output.
+ *
+ * Binding an action to a [Parser] using [with] overwrites the previous transform.
  * ```kotlin
  * val action = actionOn<Output>()
  * val parser by rule {
@@ -31,9 +33,8 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  * }
  * ```
  * @see mapOn
- * @see with
  */
-public inline fun <reified R> actionOn(): ActionPrototype<R> = { scope ->
+public inline fun <reified R> actionOn(): ActionFactory<R> = { scope ->
     transformOf {
         scope()
         state

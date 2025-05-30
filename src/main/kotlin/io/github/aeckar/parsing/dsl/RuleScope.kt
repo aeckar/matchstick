@@ -2,19 +2,31 @@ package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.emptySeparator
 import io.github.aeckar.parsing.ruleOf
 
 /**
+ * When provided with an [RuleScope], returns a rule-based matcher with a specific separator.
+ * @see ruleAround
+ */
+public typealias RuleFactory = (Boolean, RuleScope) -> Matcher
+
+/**
  * Provides a scope, evaluated once, to describe the behavior
- * of a [rule][io.github.aeckar.parsing.RuleContext.Rule].
+ * of a [rule][RuleContext.Rule].
  */
 public typealias RuleScope = RuleContext.() -> Matcher
+
+/** Returns a reluctant matcher. */
+public operator fun RuleFactory.invoke(scope: RuleScope): Matcher = this(false, scope)
 
 /**
  * Configures and returns a rule-based matcher whose separator is an empty string.
  * @see matcher
  */
-public fun rule(scope: RuleScope): Matcher = ruleOf(scope = scope)
+public fun rule(greedy: Boolean = false, separator: () -> Matcher = ::emptySeparator, scope: RuleScope): Matcher {
+    return ruleOf(greedy, separator, scope)
+}
 
 /**
  * Configures and returns a rule-based matcher with the given separator.
@@ -28,11 +40,12 @@ public fun rule(scope: RuleScope): Matcher = ruleOf(scope = scope)
  *     /* Using 'whitespace' as separator... */
  * }
  * ```
+ * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see matcher
  * @see RuleContext.plus
  * @see RuleContext.zeroOrSpread
  * @see RuleContext.oneOrSpread
  */
-public inline fun ruleIgnoring(crossinline separator: () -> Matcher): (RuleScope) -> Matcher = { scope ->
-    ruleOf(separator(), scope)
+public fun ruleAround(separator: () -> Matcher): RuleFactory = { greedy, scope ->
+    ruleOf(greedy, separator, scope)
 }

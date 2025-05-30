@@ -32,6 +32,19 @@ internal class MatchState(val tape: Tape, private val matches: MutableList<Match
     private var isRecordingMatches = true
     private var depth = 0
 
+    /**
+     * Modifies the current choice.
+     *
+     * This operation should be performed when matching to [alternations][RuleContext.Alternation] or
+     * [options][RuleContext.Option] to record which sub-rule was matched, if any.
+     */
+    var choice: Int
+        get() = choiceCountStack.peek()
+        set(value) {
+            choiceCountStack.pop()
+            choiceCountStack.push(value)
+        }
+
     private data class MatchDependency(val rule: Matcher, val depth: Int) {
         override fun equals(other: Any?) = other is MatchDependency && rule == other.rule
         override fun hashCode() = rule.hashCode()
@@ -74,16 +87,6 @@ internal class MatchState(val tape: Tape, private val matches: MutableList<Match
      */
     fun addDependency(rule: Matcher) {
         dependencies += MatchDependency(rule, depth)
-    }
-
-    /**
-     * Increments the current choice.
-     *
-     * This operation should be performed when matching to [alternations][RuleContext.Alternation]
-     * to record which sub-rule was matched.
-     */
-    fun addChoice() {
-        choiceCountStack.push(choiceCountStack.pop() + 1)
     }
 
     /** Assigns the matcher to the most recent match. */

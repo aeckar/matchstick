@@ -2,7 +2,7 @@ import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule
-import io.github.aeckar.parsing.dsl.ruleIgnoring
+import io.github.aeckar.parsing.dsl.ruleAround
 import io.github.aeckar.parsing.dsl.with
 import kotlin.test.Test
 
@@ -22,7 +22,7 @@ internal class DoubleDown {
 
     companion object Grammar {
         private val action = actionOn<DoubleDown>()
-        private val rule = ruleIgnoring(::whitespace)
+        private val rule = ruleAround(::whitespace)
 
         val whitespace by rule {
             charIn(" ")
@@ -121,7 +121,6 @@ internal class DoubleDown {
         val lineGroup by rule { zeroOrSpread(lineElement or charBy(!"^|>\n,<={ }*{{[-$]}|[{[ x]}]}")) * char() }
         val labellableLineGroup by rule { maybe(label) + lineGroup }
         val enumerableLineGroup by rule { char('$') + labellableLineGroup }
-        val lineOrGroup by rule { line or lineGroup }
 
         val lineElement by rule {
             inlineCode or
@@ -140,13 +139,13 @@ internal class DoubleDown {
         /* ------------------------------ inline formatting ------------------------------ */
 
         val bold by rule {
-            text("**") * lineOrGroup * text("**")
+            text("**") * nearestIn(line, lineGroup) * text("**")
         } with action {
             descendWithTag("strong", "dt-bold")
         }
 
         val italics by rule {
-            char('*') * lineOrGroup * char('*')
+            char('*') * nearestIn(line, lineGroup) * char('*')
         } with action {
             descendWithTag("em", "dt-italics")
         }

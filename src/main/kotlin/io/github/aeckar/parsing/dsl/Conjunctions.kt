@@ -27,12 +27,12 @@ public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
 }
 
 /** Returns a parser with the given matcher and an action that does nothing. */
-public infix fun <R> Matcher.with(action: ActionPrototype<R>): Parser<R> {
+public infix fun <R> Matcher.with(action: ActionFactory<R>): Parser<R> {
     return this with action {}
 }
 
 /** Returns a parser with the given matcher and a mapping that returns the previous state. */
-public infix fun <R> Matcher.with(map: MapPrototype<R>): Parser<R> {
+public infix fun <R> Matcher.with(map: MapFactory<R>): Parser<R> {
     return this with map { state }
 }
 

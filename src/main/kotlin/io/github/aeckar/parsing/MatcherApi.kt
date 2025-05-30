@@ -28,9 +28,6 @@ public fun Matcher.match(sequence: CharSequence): MutableList<Match> {
     return matches
 }
 
-// todo  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
-// = Matcher.emptyString
-
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in tree form.
  *
