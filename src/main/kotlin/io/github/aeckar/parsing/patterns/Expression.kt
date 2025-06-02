@@ -13,7 +13,7 @@ internal fun RuleContext.charOrEscape(forbiddenChars: String): Parser<Expression
     return rule {
         charNotIn(forbiddenChars) or char('%') * charIn(forbiddenChars)
     } with (actionOn<Expression>()) {
-        state.acceptable += substring[choice]
+        state.charData += substring[choice]
     }
 }
 
@@ -26,8 +26,8 @@ internal fun RuleContext.charOrEscape(forbiddenChars: String): Parser<Expression
  */
 public sealed class Expression {
     protected val patterns: MutableList<Pattern> = mutableListOf()
-    internal val acceptable: StringBuilder = StringBuilder()
+    internal val charData: StringBuilder = StringBuilder()
 
     internal fun rootPattern() = patterns.single()
-    protected abstract fun clearAcceptable()
+    protected abstract fun clearCharData()
 }

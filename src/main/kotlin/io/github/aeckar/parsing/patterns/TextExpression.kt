@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
-import io.github.aeckar.parsing.state.readOnlyCopy
+import io.github.aeckar.parsing.state.removeLast
 
 // todo document grammar
 
@@ -17,8 +17,8 @@ import io.github.aeckar.parsing.state.readOnlyCopy
  * @see MatcherContext.lengthByText
  */
 public class TextExpression internal constructor() : Expression() {
-    override fun clearAcceptable() {
-        acceptable.clear()
+    override fun clearCharData() {
+        charData.clear()
     }
 
     /** Holds the matchers used to parse text expressions. */
@@ -74,16 +74,16 @@ public class TextExpression internal constructor() : Expression() {
         public val substring: Matcher by rule {
             oneOrMore(charOrEscape("|{}+*?"))
         } with action {
-            val substring = state.acceptable
+            val substring = state.charData
             state.patterns += textPattern { s, i -> if (s.startsWith(substring, i)) substring.length else -1 }
-            state.clearAcceptable()
+            state.clearCharData()
         }
 
-        public val textExpr: Matcher by rule {
-            oneOrMore(substring or captureGroup)
+        public val concatenation: Matcher by rule {
+            oneOrMore(textExpr)
         } with action {
-            val patterns = state.patterns.readOnlyCopy()
-            val rootPattern = textPattern { s, i ->
+            val patterns = state.patterns.removeLast(children[0].children.size)
+            state.patterns += textPattern { s, i ->
                 var offset = 0
                 var matchCount = 0
                 patterns.asSequence()
@@ -93,8 +93,24 @@ public class TextExpression internal constructor() : Expression() {
                     .forEach { offset += it }
                 if (matchCount != patterns.size) -1 else offset
             }
-            state.patterns.clear()
-            state.patterns += rootPattern
+        }
+
+        public val union: Matcher by rule {
+            textExpr * char('|') * textExpr * zeroOrMore(char('|') * textExpr)
+        } with action {
+            val patterns = state.patterns.removeLast(2 + children[3].children.size)
+            state.patterns += textPattern { s, i ->
+                patterns.asSequence()
+                    .map { it(s, i) }
+                    .firstOrNull { it != -1 } ?: -1
+            }
+        }
+
+        public val textExpr: Matcher by rule {
+            union or
+                    concatenation or
+                    substring or
+                    captureGroup
         }
 
         internal val start = textExpr with action

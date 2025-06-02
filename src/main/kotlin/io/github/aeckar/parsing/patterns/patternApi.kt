@@ -4,27 +4,27 @@ import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.state.Unique
 import java.util.concurrent.ConcurrentHashMap
 
-// IMPORTANT: Unlike in matcher {} block, character patterns return 0 on failure
-
 private val charPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
     .apply { put("") { _, _ -> 0 } }
 
 private val textPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
     .apply { put("") { _, _ -> 0 } }
 
-/* ------------------------------ pattern factories ------------------------------ */
+/* ------------------------------ factories ------------------------------ */
 
 internal inline fun charPattern(crossinline predicate: (sequence: CharSequence, index: Int) -> Boolean): Pattern {
     return CharPattern { s, i -> if (predicate(s, i)) 1 else 0 }
 }
 
 /**
- * Returns the pre-compiled character pattern,
- * or a new one if the pattern has not yet been cached.
+ * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
+ *
+ * The returned pattern must return 0 on failure.
  * @see RuleContext.charBy
  */
 internal fun charPatternOf(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
 
+/** The returned pattern must return -1 on failure. */
 internal fun textPattern(pattern: Pattern): Pattern = TextPattern(pattern)
 
 /**

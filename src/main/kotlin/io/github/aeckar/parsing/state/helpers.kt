@@ -9,6 +9,12 @@ import kotlin.reflect.KType
 internal fun <E> MutableList<E>.readOnlyCopy() = toList()
 internal fun <E> MutableSet<E>.readOnlyCopy() = toSet()
 
+internal fun <E> MutableList<E>.removeLast(count: Int): List<E> {
+    val subList = subList(size - count, size)
+    return subList.readOnlyCopy()
+        .also { subList.clear() }
+}
+
 /** Appends the characters to this object. */
 internal operator fun Appendable.plusAssign(sequence: CharSequence) {
     append(sequence)
