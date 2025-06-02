@@ -32,7 +32,7 @@ public class TextExpression internal constructor() : Expression() {
                 textPattern("{$subPattern}+") { s, i ->
                     var offset = 0
                     var matchCount = 0
-                    generateSequence { subPattern(s, i) }
+                    generateSequence { subPattern.accept(s, i) }
                         .onEach { if (it != failureValue) ++matchCount }
                         .takeWhile { i + offset < s.length && it != failureValue }
                         .forEach { offset += it }
@@ -43,14 +43,14 @@ public class TextExpression internal constructor() : Expression() {
                 val failureValue = subPattern.failureValue()
                 textPattern("{$subPattern}*") { s, i ->
                     var offset = 0
-                    generateSequence { subPattern(s, i) }
+                    generateSequence { subPattern.accept(s, i) }
                         .takeWhile { i + offset < s.length && it != failureValue }
                         .forEach { offset += it }
                     offset
                 }
             },
             '?' to { subPattern: Pattern ->
-                textPattern("{$subPattern}?") { s, i -> subPattern(s, i).coerceAtLeast(0) }
+                textPattern("{$subPattern}?") { s, i -> subPattern.accept(s, i).coerceAtLeast(0) }
             }
         )
 
@@ -59,7 +59,7 @@ public class TextExpression internal constructor() : Expression() {
         } with action {
             val pattern: Pattern = if (children[1].choice == 0) {
                 val charPattern = resultsOf(charExpr).single().rootPattern()
-                textPattern(charPattern.toString()) { s, i -> if (charPattern(s, i) == 1) 1 else -1 }
+                textPattern(charPattern.toString()) { s, i -> if (charPattern.accept(s, i) == 1) 1 else -1 }
             } else {
                 state.patterns.removeLast()
             }
@@ -86,7 +86,7 @@ public class TextExpression internal constructor() : Expression() {
                 var offset = 0
                 var matchCount = 0
                 patterns.asSequence()
-                    .map { it(s, i) }
+                    .map { it.accept(s, i) }
                     .onEach { if (it != -1) ++matchCount }
                     .takeWhile { i + offset < s.length && it != -1 }
                     .forEach { offset += it }
@@ -100,7 +100,7 @@ public class TextExpression internal constructor() : Expression() {
             val patterns = state.patterns.removeLast(2 + children[3].children.size)
             state.patterns += textPattern(patterns.joinToString("|")) { s, i ->
                 patterns.asSequence()
-                    .map { it(s, i) }
+                    .map { it.accept(s, i) }
                     .firstOrNull { it != -1 } ?: -1
             }
         }

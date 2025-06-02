@@ -14,6 +14,7 @@ private val textPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<St
 
 /* ------------------------------ factories ------------------------------ */
 
+/** The returned pattern must return 0 on failure. */
 internal inline fun charPattern(
     descriptiveString: String,
     crossinline predicate: (sequence: CharSequence, index: Int) -> Boolean
@@ -22,14 +23,6 @@ internal inline fun charPattern(
         override fun toString(): String = descriptiveString
     }
 }
-
-/**
- * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
- *
- * The returned pattern must return 0 on failure.
- * @see RuleContext.charBy
- */
-internal fun charPatternOf(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
 
 /** The returned pattern must return -1 on failure. */
 internal fun textPattern(
@@ -42,11 +35,22 @@ internal fun textPattern(
 }
 
 /**
- * Returns the pre-compiled text pattern,
- * or a new one if the pattern has not yet been cached.
+ * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
+ * @see RuleContext.charBy
+ */
+internal fun charPatternOf(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
+
+/**
+ * Returns the pre-compiled text pattern, or a new one if the pattern has not yet been cached.
  * @see RuleContext.textBy
  */
 internal fun textPatternOf(expr: String) = patternOf(expr, textPatternCache, TextExpression.Grammar.start)
+
+/**
+ * Returns the text pattern specified by the given expression.
+ * @see TextExpression.Grammar
+ */
+public fun pattern(expr: String): Pattern = textPatternOf(expr)
 
 private fun patternOf(expr: String, cache: MutableMap<String, Pattern>, start: Parser<Expression>): Pattern {
     if (expr !in cache) {
@@ -68,10 +72,13 @@ internal fun Pattern.failureValue(): Int {
 /* ------------------------------ pattern classes ------------------------------ */
 
 /**
- * When [matched][invoke] to a character in a sequence,
- * returns true if the character and its position in the sequence satisfies some condition.
+ * When [matched][invoke] to a character in a sequence, returns
+ * the length of the subsequence satisfying some condition.
  */
-internal typealias Pattern = (sequence: CharSequence, index: Int) -> Int
+public fun interface Pattern {
+    /** Returns the length of the subsequence satisfying some condition. */
+    public fun accept(sequence: CharSequence, index: Int): Int
+}
 
 internal fun interface CharPattern : Pattern
 internal fun interface TextPattern : Pattern

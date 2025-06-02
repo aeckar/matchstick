@@ -65,18 +65,6 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
     return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>) }
 }
 
-/** . */
-public fun Matcher.toTextMate(): String {
-    //use kotlinx.ser JsonElement
-    TODO()
-}
-
-/** . */
-public fun Matcher.toBrackusNaur(keepLeftRecursion: Boolean = true): String {
-    //option for no left-recursion
-    TODO()
-}
-
 /* ------------------------------ matcher classes ------------------------------ */
 
 /**

@@ -36,13 +36,6 @@ internal sealed class CompoundMatcher(
     internal abstract val descriptiveString: String
     private var isInitialized = false
 
-    internal var isExportSupported = true
-        get() {
-            initialize()
-            return field
-        }
-        private set
-
     /** For each sub-rule, keeps a set of all rules containing left recursions of this one in that branch. */
     protected lateinit var leftRecursionsPerSubRule: List<Set<Matcher>>
         private set
@@ -67,9 +60,6 @@ internal sealed class CompoundMatcher(
             recursions += rule as CompoundMatcher
             return rule.subMatchers.map { subRule ->
                 if (subRule !is CompoundMatcher) {
-                    if ((subRule as RichMatcher).compoundMatcher == null) {
-                        isExportSupported = false
-                    }
                     return@map null
                 }
                 if (subRule !in recursions) {
