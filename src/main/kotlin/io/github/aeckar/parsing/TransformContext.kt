@@ -2,23 +2,6 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.with
-import kotlin.reflect.typeOf
-
-/* ------------------------------ factory ------------------------------ */
-
-@PublishedApi
-internal inline fun <reified R> transformOf(
-    crossinline scope: TransformContext<R>.() -> R
-): Transform<R> = object : RichTransform<R> {
-    override val stateTypeRef = typeOf<R>()
-
-    override fun consumeMatches(context: TransformContext<R>): R {
-        context.setState(context.run(scope))
-        return context.finalState()
-    }
-}
-
-/* ------------------------------ context class ------------------------------ */
 
 /**
  * Configures and returns a transform.

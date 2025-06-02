@@ -10,6 +10,20 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 
+/* ------------------------------ factories ------------------------------ */
+
+@PublishedApi
+internal inline fun <reified R> newTransform(
+    crossinline scope: TransformContext<R>.() -> R
+): Transform<R> = object : RichTransform<R> {
+    override val stateTypeRef = typeOf<R>()
+
+    override fun consumeMatches(context: TransformContext<R>): R {
+        context.setState(context.run(scope))
+        return context.finalState()
+    }
+}
+
 /* ------------------------------ transform operations ------------------------------ */
 
 @PublishedApi

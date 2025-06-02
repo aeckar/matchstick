@@ -1,29 +1,9 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.patterns.charPatternOf
 import io.github.aeckar.parsing.patterns.textPatternOf
-
-/* ------------------------------ factory ------------------------------ */
-
-@PublishedApi
-internal fun matcherOf(
-    lazySeparator: () -> Matcher = ::emptySeparator,
-    scope: MatcherScope,
-    rule: RuleContext.Rule? = null,
-    logicString: String? = null
-): Matcher = object : RichMatcher {
-    override val separator: Matcher by lazy(lazySeparator)
-
-    override fun toString() = logicString ?: id
-
-    override fun collectMatches(matchState: MatchState): Int {
-        return matchState.captureSubstring(rule ?: this, scope)
-    }
-}
-
-/* ------------------------------ context class ------------------------------ */
 
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
@@ -36,14 +16,15 @@ internal fun matcherOf(
  *
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
- * @see io.github.aeckar.parsing.dsl.matcher
+ * @see matcher
  * @see RichMatcher.collectMatches
  */
 @ParserComponentDSL
 public class MatcherContext internal constructor(
-    private val matchState: MatchState
-) : RuleContext(::emptySeparator), CharSequence by matchState.tape {
-    internal var includeBegin = -1
+    internal val matchState: MatchState,
+    lazySeparator: () -> Matcher,
+) : RuleContext(false, lazySeparator), CharSequence by matchState.tape {
+    internal var includePos = -1
         private set
 
     /* ------------------------------ match queries ------------------------------ */
@@ -75,10 +56,7 @@ public class MatcherContext internal constructor(
      */
     @JvmName("lengthOfFirstChar")
     public fun lengthOfFirst(chars: Collection<Char>): Int {
-        return chars.asSequence()
-            .map { lengthOf(it) }
-            .filter { it != -1 }
-            .firstOrNull() ?: -1
+        return chars.find { lengthOf(it) != -1 }?.let { 1 } ?: -1
     }
 
     /**
@@ -86,10 +64,7 @@ public class MatcherContext internal constructor(
      * @see charIn
      */
     public fun lengthOfFirst(substrings: Collection<String>): Int {
-        return substrings.asSequence()
-            .map { lengthOf(it) }
-            .filter { it != -1 }
-            .firstOrNull() ?: -1
+        return substrings.find { lengthOf(it) != -1 }?.length ?: -1
     }
 
     /**
@@ -128,7 +103,7 @@ public class MatcherContext internal constructor(
      */
     public fun yield(length: Int) {
         if (length < 0) {
-            matchState.abortMatch()
+            throw MatchInterrupt { "Negative yield $length at offset ${matchState.tape.offset}" }
         }
         yieldRemaining()
         consume(length)
@@ -144,33 +119,32 @@ public class MatcherContext internal constructor(
      */
     public fun include(length: Int) {
         if (length < 0) {
-            matchState.abortMatch()
+            throw MatchInterrupt { "Negative yield $length at offset ${matchState.tape.offset}" }
         }
-        if (includeBegin == -1) {
-            includeBegin = matchState.tape.offset
+        if (includePos == -1) {
+            includePos = matchState.tape.offset
         }
         applyOffset(length)
     }
 
     /** Yields all characters specified by successive calls to [include]. */
     internal fun yieldRemaining() {
-        if (includeBegin == -1) {
+        if (includePos == -1) {
             return
         }
-        matchState.addMatch(null, includeBegin)
-        includeBegin = -1
+        matchState.addMatch(null, includePos)
+        includePos = -1
     }
 
     private fun applyOffset(length: Int) {
         if (length < 0) {
             return
         }
-        with(matchState.tape) {
-            if (offset + length > original.length) {
-                matchState.abortMatch()
-            }
+        val tape = matchState.tape
+        if (tape.offset + length > tape.original.length) {
+            throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.original.length}" }
         }
-        matchState.tape.offset += length
+        tape.offset += length
     }
 
     /* ------------------------------ misc. ------------------------------ */
@@ -178,6 +152,9 @@ public class MatcherContext internal constructor(
     /** Returns an iterator returning the remaining characters in the input, regardless of the current offset. */
     public fun remaining(): CharIterator = matchState.tape.remaining()
 
-    /** Fails the current match unconditionally. */
-    public fun fail(): Nothing = matchState.abortMatch()
+    /** Fails the current match. */
+    public fun fail(): Nothing = throw unnamedMatchInterrupt
+
+    /** Fails the current match with the given cause. */
+    public fun fail(lazyCause: () -> String): Nothing = throw MatchInterrupt(lazyCause)
 }

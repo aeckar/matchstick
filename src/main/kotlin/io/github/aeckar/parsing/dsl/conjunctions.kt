@@ -3,6 +3,7 @@ package io.github.aeckar.parsing.dsl
 import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.toReadOnlyProperty
+import io.github.aeckar.parsing.state.unknownID
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -22,7 +23,7 @@ public operator fun <R> Parser<R>.provideDelegate(
 /** Returns a parser with the given matcher and transform. */
 public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
     return object : RichParser<R>, RichMatcher by this, RichTransform<R> by transform {
-        override val id = Unique.UNKNOWN_ID
+        override val id = unknownID
     }
 }
 

@@ -3,7 +3,7 @@ package io.github.aeckar.parsing.dsl
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.emptySeparator
-import io.github.aeckar.parsing.ruleOf
+import io.github.aeckar.parsing.newRule
 
 /**
  * When provided with an [RuleScope], returns a rule-based matcher with a specific separator.
@@ -13,7 +13,7 @@ public typealias RuleFactory = (Boolean, RuleScope) -> Matcher
 
 /**
  * Provides a scope, evaluated once, to describe the behavior
- * of a [rule][RuleContext.Rule].
+ * of a [rule][CompoundRule].
  */
 public typealias RuleScope = RuleContext.() -> Matcher
 
@@ -25,7 +25,7 @@ public operator fun RuleFactory.invoke(scope: RuleScope): Matcher = this(false, 
  * @see matcher
  */
 public fun rule(greedy: Boolean = false, separator: () -> Matcher = ::emptySeparator, scope: RuleScope): Matcher {
-    return ruleOf(greedy, separator, scope)
+    return newRule(greedy, separator, scope)
 }
 
 /**
@@ -47,5 +47,5 @@ public fun rule(greedy: Boolean = false, separator: () -> Matcher = ::emptySepar
  * @see RuleContext.oneOrSpread
  */
 public fun ruleAround(separator: () -> Matcher): RuleFactory = { greedy, scope ->
-    ruleOf(greedy, separator, scope)
+    newRule(greedy, separator, scope)
 }

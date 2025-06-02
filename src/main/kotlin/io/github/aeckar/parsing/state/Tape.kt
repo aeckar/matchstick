@@ -41,10 +41,10 @@ internal class Tape(
 
     /** Returns the original sequence, truncated and prepended with ellipses if the offset is greater than 0. */
     override fun toString(): String {
-        return (offset - 10..offset + 10).mapNotNull {
-            if (it in original.indices) {
-                val c = original[it]
-                if (it == offset) "[$c]" else c
+        return (offset - 10..offset + 10).mapNotNull { index ->
+            if (index in original.indices) {
+                val c = original[index]
+                if (index == offset) "[$c]" else c
             } else {
                 null
             }

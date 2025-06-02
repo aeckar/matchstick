@@ -1,5 +1,7 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.dsl.MatcherScope
+import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.state.Tape
@@ -7,6 +9,30 @@ import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.UniqueProperty
 
 internal val emptySeparator = matcher {}
+
+/* ------------------------------ factories ------------------------------ */
+
+@PublishedApi
+internal fun newMatcher(
+    lazySeparator: () -> Matcher = ::emptySeparator,
+    scope: MatcherScope,
+    compoundMatcher: CompoundMatcher? = null,
+    descriptiveString: String? = null
+): Matcher = object : RichMatcher {
+    override val compoundMatcher get() = compoundMatcher
+    override val separator by lazy(lazySeparator)
+
+    override fun toString() = descriptiveString ?: id
+
+    override fun collectMatches(matchState: MatchState): Int {
+        return matchState.matcherLogic(compoundMatcher ?: this, scope, MatcherContext(matchState, ::separator))
+    }
+}
+
+@PublishedApi
+internal fun newRule(greedy: Boolean, lazySeparator: () -> Matcher = ::emptySeparator, scope: RuleScope): Matcher {
+    return RuleContext(greedy, lazySeparator).run(scope)
+}
 
 /* ------------------------------ matcher operations ------------------------------ */
 
@@ -21,11 +47,12 @@ internal fun Matcher.collectMatches(matchState: MatchState) = (this as RichMatch
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  * @param sequence the input sequence
  */
-public fun Matcher.match(sequence: CharSequence): MutableList<Match> {
+public fun Matcher.match(sequence: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
-    val input = Tape(sequence)
-    collectMatches(MatchState(input, matches))
-    return matches
+    val matchState = MatchState(Tape(sequence), matches)
+    collectMatches(matchState)
+    // IMPORTANT: Return mutable list to be used by [treeify] and [parse]
+    return if (matches.isEmpty()) Result(matchState.failures) else Result(matchState.failures, matches)
 }
 
 /**
@@ -34,20 +61,19 @@ public fun Matcher.match(sequence: CharSequence): MutableList<Match> {
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  * @throws NoSuchMatchException the sequence does not match the matcher with the given separator
  */
-public fun Matcher.treeify(sequence: CharSequence): SyntaxTreeNode {
-    return SyntaxTreeNode(sequence, match(sequence))
+public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
+    return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>) }
 }
 
-// todo handle if matcher {} used, cannot convert to static schema
-// todo for EBNF, give option for no left-recursion
-
 /** . */
-public fun Matcher.toTextMate(): String {   // todo use kotlinx.ser JsonElement
+public fun Matcher.toTextMate(): String {
+    //use kotlinx.ser JsonElement
     TODO()
 }
 
 /** . */
 public fun Matcher.toBrackusNaur(keepLeftRecursion: Boolean = true): String {
+    //option for no left-recursion
     TODO()
 }
 
@@ -56,6 +82,8 @@ public fun Matcher.toBrackusNaur(keepLeftRecursion: Boolean = true): String {
 /**
  * Recursively finds a meaningful substring within a substring of the input
  * for this matcher and any sub-matchers.
+ *
+ * The terms *rule* and *matcher* will be used interchangeably.
  *
  * A substring satisfies a matcher if a non-negative integer is returned
  * when a sub-sequence of the input prefixed with that substring is passed to [collectMatches].
@@ -85,6 +113,7 @@ public sealed interface Matcher : Unique
  */
 internal interface RichMatcher : Matcher {
     val separator: Matcher
+    val compoundMatcher: CompoundMatcher?
 
     /**
      * Returns the size of the matching substring at the beginning of the remaining input,
@@ -101,7 +130,7 @@ internal class MatcherProperty(
 
     override fun collectMatches(matchState: MatchState): Int {
         val length = value.collectMatches(matchState)
-        matchState.setMatcher(this)
+        matchState.matches.last().matcher = this
         return length
     }
 }

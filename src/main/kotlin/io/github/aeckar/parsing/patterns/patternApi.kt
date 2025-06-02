@@ -37,8 +37,8 @@ internal fun textPatternOf(expr: String) = patternOf(expr, textPatternCache, Tex
 private fun patternOf(expr: String, cache: MutableMap<String, Pattern>, start: Parser<Expression>): Pattern {
     if (expr !in cache) {
         cache[expr] = try {
-            start.parse(expr).rootPattern()
-        } catch (_: NoSuchMatchException) {
+            start.parse(expr).result().rootPattern()
+        } catch (_: NoSuchElementException) {
             throw MalformedExpressionException("Pattern expression '$expr' is malformed")
         }
     }

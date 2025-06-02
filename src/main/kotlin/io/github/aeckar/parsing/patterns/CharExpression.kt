@@ -1,6 +1,5 @@
 package io.github.aeckar.parsing.patterns
 
-import gnu.trove.set.hash.TCharHashSet
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.MatcherContext
 import io.github.aeckar.parsing.RuleContext
@@ -80,23 +79,19 @@ public class CharExpression internal constructor() : Expression() {
 
             char('[') * oneOrMore(classChar or classEscape) * char(']')
         } with action {
-            val acceptable = TCharHashSet(state.acceptable.length)
-            state.acceptable.forEach { acceptable.add(it) }
+            val uniqueChars = state.acceptable.filterIndexed { i, c -> i == state.acceptable.indexOf(c) }
             val id = buildString {
-                val uniqueChars = acceptable.iterator()
                 append("[")
-                while (uniqueChars.hasNext()) {
-                    append(uniqueChars.next())
-                }
+                append(uniqueChars)
                 if (state.isEndAcceptable) {
                     append('^')
                 }
                 append("]")
             }
             val isEndAcceptable = state.isEndAcceptable
-            val isCharAcceptable = !acceptable.isEmpty
+            val isCharAcceptable = !uniqueChars.isEmpty()
             state.patterns += UniquePattern(id, charPattern { s, i ->
-                isEndAcceptable && i >= s.length || isCharAcceptable && s[i] in acceptable
+                isEndAcceptable && i >= s.length || isCharAcceptable && s[i] in uniqueChars
             })
             state.clearAcceptable()
         }

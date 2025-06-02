@@ -2,8 +2,14 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.instanceOf
+import io.github.aeckar.parsing.state.unknownID
 
-/** Returns a new syntax tree according to the matched substrings. */
+private val syntaxTreePlaceholder = syntaxTreeOf("", emptyList())
+
+/**
+ * Returns a new syntax tree according to the matched substrings.
+ * @throws NoSuchMatchException a match cannot be made to the input
+ */
 public fun syntaxTreeOf(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
     return SyntaxTreeNode(input, matches.toMutableList())
 }
@@ -45,7 +51,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
 
         /* 2. Recursively initialize subtree */
         children = buildList {
-            while (matches.isNotEmpty() && matches.last().depth < match.depth) {
+            while (matches.isNotEmpty() && matches.last().depth > match.depth) {
                 this += SyntaxTreeNode(input, matches)
             }
             reverse()
@@ -73,7 +79,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
      *
      * The transforms are encountered during post-order traversal of the syntax tree whose root is this node.
      */
-    public fun <R> walk(initialState: R): R = walk(TransformContext(this /* placeholder */, initialState))
+    public fun <R> walk(initialState: R): R = walk(TransformContext(syntaxTreePlaceholder, initialState))
 
     @Suppress("UNCHECKED_CAST")
     private fun <R> walk(outerContext: TransformContext<R>): R {
@@ -84,7 +90,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         } else {
             val subParserContext = TransformContext(this, initialStateOf<Any?>(transform.stateTypeRef))
             outerContext.results[transform] = transform.consumeMatches(subParserContext)
-            if (transform.id === "<unknown>") {
+            if (transform.id === unknownID) {
                 outerContext.results += subParserContext.results
             }
             state

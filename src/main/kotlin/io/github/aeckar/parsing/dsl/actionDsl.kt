@@ -2,7 +2,7 @@ package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
-import io.github.aeckar.parsing.transformOf
+import io.github.aeckar.parsing.newTransform
 import io.github.aeckar.parsing.Parser
 /**
  * When provided with an [ActionScope], returns an action conforming to the given output type.
@@ -35,7 +35,7 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  * @see mapOn
  */
 public inline fun <reified R> actionOn(): ActionFactory<R> = { scope ->
-    transformOf {
+    newTransform {
         scope()
         state
     }

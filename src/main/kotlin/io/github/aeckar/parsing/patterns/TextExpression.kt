@@ -1,6 +1,5 @@
 package io.github.aeckar.parsing.patterns
 
-import gnu.trove.map.hash.TCharObjectHashMap
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.MatcherContext
 import io.github.aeckar.parsing.RuleContext
@@ -8,7 +7,6 @@ import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
-import io.github.aeckar.parsing.state.plusAssign
 
 /**
  * Contains data pertaining to text expressions.
@@ -25,8 +23,8 @@ public class TextExpression internal constructor() : Expression() {
         private val action = actionOn<TextExpression>()
         private val charExpr = CharExpression.Grammar.start
 
-        private val modifiers = TCharObjectHashMap<(Pattern) -> Pattern>(3).apply {
-            put('+') { subPattern ->
+        private val modifiers = mapOf(
+            '+' to { subPattern: Pattern ->
                 val failureValue = subPattern.failureValue()
                 textPattern { s, i ->
                     var offset = 0
@@ -37,21 +35,21 @@ public class TextExpression internal constructor() : Expression() {
                         .forEach { offset += it }
                     if (matchCount == 0) -1 else offset
                 }
-            }
-            put('*') { subPattern ->
+            },
+            '*' to { subPattern: Pattern ->
                 val failureValue = subPattern.failureValue()
                 textPattern { s, i ->
                     var offset = 0
                     generateSequence { subPattern(s, i) }
                         .takeWhile { i + offset < s.length && it != failureValue }
-                        .onEach { offset += it }
-                        .sum()
+                        .forEach { offset += it }
+                    offset
                 }
-            }
-            put('?') { subPattern ->
+            },
+            '?' to { subPattern: Pattern ->
                 textPattern { s, i -> subPattern(s, i).coerceAtLeast(0) }
             }
-        }
+        )
 
         public val captureGroup: Matcher by rule {
             char('{') * (charExpr or textExpr) * char('}') * maybe(charIn("+*?"))
@@ -63,7 +61,7 @@ public class TextExpression internal constructor() : Expression() {
                 state.patterns.removeLast()
             }
             state.patterns += if (children[3].choice == 0) {
-                modifiers[children[3].single()](pattern)
+                modifiers.getValue(children[3].single())(pattern)
             } else {
                 pattern
             }

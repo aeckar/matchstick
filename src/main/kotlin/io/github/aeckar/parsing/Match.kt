@@ -7,7 +7,7 @@ package io.github.aeckar.parsing
  * @param begin the offset of the full sequence where the matched substring begins
  * @param endExclusive one past the last index containing a character in the matched substring
  * @param choice if [matcher] requires choosing between multiple rules, represents the index of the option chosen.
- * Otherwise, is 0
+ * If the matcher failed to match its sub-rule, is -1. Otherwise, is 0.
  * @param depth the depth of the matcher, if nested. If the matcher is not nested, the value of this property is 0
  */
 public class Match internal constructor(
