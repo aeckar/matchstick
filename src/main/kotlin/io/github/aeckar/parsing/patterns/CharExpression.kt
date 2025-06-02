@@ -34,14 +34,14 @@ public class CharExpression internal constructor() : Expression() {
             charExpr * char('|') * charExpr * zeroOrMore(char('|') * charExpr)
         } with action {
             val subPatterns = state.patterns.removeLast(2 + children[3].children.size)
-            state.patterns += charPattern { s, i -> subPatterns.any { it(s, i) != 0 } }
+            state.patterns += charPattern(subPatterns.joinToString("|")) { s, i -> subPatterns.any { it(s, i) != 0 } }
         }
 
         public val intersection: Matcher by rule {
             charExpr * char(',') * charExpr * zeroOrMore(char(',') * charExpr)
         } with action {
             val subPatterns = state.patterns.removeLast(2 + children[3].children.size)
-            state.patterns += charPattern { s, i -> subPatterns.all { it(s, i) != 0 } }
+            state.patterns += charPattern(subPatterns.joinToString(",")) { s, i -> subPatterns.all { it(s, i) != 0 } }
         }
 
         public val grouping: Matcher by rule {
@@ -52,7 +52,7 @@ public class CharExpression internal constructor() : Expression() {
             char('!') * charExpr
         } with action {
             val subPattern = state.patterns.removeLast()
-            state.patterns += charPattern { s, i -> subPattern(s, i) == 0 }
+            state.patterns += charPattern("!$subPattern") { s, i -> subPattern(s, i) == 0 }
         }
 
         public val charClass: Matcher by rule {
@@ -93,9 +93,9 @@ public class CharExpression internal constructor() : Expression() {
             }
             val isEndAcceptable = state.isEndAcceptable
             val isCharAcceptable = !uniqueChars.isEmpty()
-            state.patterns += UniquePattern(id, charPattern { s, i ->
+            state.patterns += charPattern(id) { s, i ->
                 isEndAcceptable && i >= s.length || isCharAcceptable && s[i] in uniqueChars
-            })
+            }
             state.clearCharData()
         }
 
@@ -105,12 +105,10 @@ public class CharExpression internal constructor() : Expression() {
             rangeCharOrEscape * text("..") * rangeCharOrEscape
         } with action {
             val id = "${state.charData[0]}..${state.charData[1]}"
-            val matcher: Pattern = if (id.first() == id.last()) {
-                charPattern { s, i -> s[i] == id.first() }
-            } else {
-                charPattern { s, i -> s[i] in id.first()..id.last() }
-            }
-            state.patterns += UniquePattern(id, matcher)
+            state.patterns += charPattern(id, when {
+                id.first() == id.last() -> { s, i -> s[i] == id.first() }
+                else -> { s, i -> s[i] in id.first()..id.last() }
+            })
         }
 
         public val suffix: Matcher by rule {
@@ -129,7 +127,7 @@ public class CharExpression internal constructor() : Expression() {
             charOrEscape(",|()[]%")
         } with action {
             val c = state.charData[0]
-            state.patterns += UniquePattern(substring, charPattern { s, i -> s[i] == c })
+            state.patterns += charPattern(substring) { s, i -> s[i] == c }
         }
 
         public val charExpr: Matcher by rule {

@@ -1,7 +1,9 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.MalformedExpressionException
+import io.github.aeckar.parsing.Parser
+import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.parse
 import java.util.concurrent.ConcurrentHashMap
 
 private val charPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
@@ -12,8 +14,13 @@ private val textPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<St
 
 /* ------------------------------ factories ------------------------------ */
 
-internal inline fun charPattern(crossinline predicate: (sequence: CharSequence, index: Int) -> Boolean): Pattern {
-    return CharPattern { s, i -> if (predicate(s, i)) 1 else 0 }
+internal inline fun charPattern(
+    descriptiveString: String,
+    crossinline predicate: (sequence: CharSequence, index: Int) -> Boolean
+): Pattern {
+    return object : CharPattern by ({ s: CharSequence, i: Int -> if (predicate(s, i)) 1 else 0 }) {
+        override fun toString(): String = descriptiveString
+    }
 }
 
 /**
@@ -25,7 +32,14 @@ internal inline fun charPattern(crossinline predicate: (sequence: CharSequence, 
 internal fun charPatternOf(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
 
 /** The returned pattern must return -1 on failure. */
-internal fun textPattern(pattern: Pattern): Pattern = TextPattern(pattern)
+internal fun textPattern(
+    descriptiveString: String,
+    pattern: Pattern
+): Pattern {
+    return object : TextPattern by pattern {
+        override fun toString() = descriptiveString
+    }
+}
 
 /**
  * Returns the pre-compiled text pattern,
@@ -48,8 +62,7 @@ private fun patternOf(expr: String, cache: MutableMap<String, Pattern>, start: P
 /* ------------------------------ pattern operations ------------------------------ */
 
 internal fun Pattern.failureValue(): Int {
-    val unwrap = if (this is UniquePattern) matcher else this
-    return if (unwrap is CharPattern) 0 else -1
+    return if (this is CharPattern) 0 else -1
 }
 
 /* ------------------------------ pattern classes ------------------------------ */
@@ -62,6 +75,3 @@ internal typealias Pattern = (sequence: CharSequence, index: Int) -> Int
 
 internal fun interface CharPattern : Pattern
 internal fun interface TextPattern : Pattern
-
-/** Assigns a string value to a pattern for debugging purposes. */
-internal class UniquePattern(override val id: String, val matcher: Pattern) : Pattern by matcher, Unique

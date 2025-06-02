@@ -12,8 +12,8 @@ import kotlin.reflect.typeOf
 private val singleChar = nonRecursiveMatcher(".") { yield(1) }
 private val compoundMatcherPlaceholder = Neighbor(RuleContext(false, ::emptySeparator), emptyList())
 
-private fun nonRecursiveMatcher(logicString: String, scope: MatcherScope): Matcher {
-    return newMatcher(scope = scope, descriptiveString = logicString, compoundMatcher = compoundMatcherPlaceholder)
+private fun nonRecursiveMatcher(descriptiveString: String, scope: MatcherScope): Matcher {
+    return newMatcher(scope = scope, descriptiveString = descriptiveString, compoundMatcher = compoundMatcherPlaceholder)
 }
 
 /* ------------------------------ context class ------------------------------ */

@@ -29,7 +29,7 @@ public class TextExpression internal constructor() : Expression() {
         private val modifiers = mapOf(
             '+' to { subPattern: Pattern ->
                 val failureValue = subPattern.failureValue()
-                textPattern { s, i ->
+                textPattern("{$subPattern}+") { s, i ->
                     var offset = 0
                     var matchCount = 0
                     generateSequence { subPattern(s, i) }
@@ -41,7 +41,7 @@ public class TextExpression internal constructor() : Expression() {
             },
             '*' to { subPattern: Pattern ->
                 val failureValue = subPattern.failureValue()
-                textPattern { s, i ->
+                textPattern("{$subPattern}*") { s, i ->
                     var offset = 0
                     generateSequence { subPattern(s, i) }
                         .takeWhile { i + offset < s.length && it != failureValue }
@@ -50,7 +50,7 @@ public class TextExpression internal constructor() : Expression() {
                 }
             },
             '?' to { subPattern: Pattern ->
-                textPattern { s, i -> subPattern(s, i).coerceAtLeast(0) }
+                textPattern("{$subPattern}?") { s, i -> subPattern(s, i).coerceAtLeast(0) }
             }
         )
 
@@ -59,23 +59,22 @@ public class TextExpression internal constructor() : Expression() {
         } with action {
             val pattern: Pattern = if (children[1].choice == 0) {
                 val charPattern = resultsOf(charExpr).single().rootPattern()
-                textPattern { s, i -> if (charPattern(s, i) == 1) 1 else -1 }
+                textPattern(charPattern.toString()) { s, i -> if (charPattern(s, i) == 1) 1 else -1 }
             } else {
                 state.patterns.removeLast()
             }
             state.patterns += if (children[3].choice == 0) {
                 modifiers.getValue(children[3].single())(pattern)
             } else {
-                pattern
+                textPattern("{$pattern}", pattern)
             }
-
         }
 
         public val substring: Matcher by rule {
             oneOrMore(charOrEscape("|{}+*?"))
         } with action {
-            val substring = state.charData
-            state.patterns += textPattern { s, i -> if (s.startsWith(substring, i)) substring.length else -1 }
+            val substring = state.charData.toString()
+            state.patterns += textPattern(substring) { s, i -> if (s.startsWith(substring, i)) substring.length else -1 }
             state.clearCharData()
         }
 
@@ -83,7 +82,7 @@ public class TextExpression internal constructor() : Expression() {
             oneOrMore(textExpr)
         } with action {
             val patterns = state.patterns.removeLast(children[0].children.size)
-            state.patterns += textPattern { s, i ->
+            state.patterns += textPattern(patterns.joinToString("")) { s, i ->
                 var offset = 0
                 var matchCount = 0
                 patterns.asSequence()
@@ -99,7 +98,7 @@ public class TextExpression internal constructor() : Expression() {
             textExpr * char('|') * textExpr * zeroOrMore(char('|') * textExpr)
         } with action {
             val patterns = state.patterns.removeLast(2 + children[3].children.size)
-            state.patterns += textPattern { s, i ->
+            state.patterns += textPattern(patterns.joinToString("|")) { s, i ->
                 patterns.asSequence()
                     .map { it(s, i) }
                     .firstOrNull { it != -1 } ?: -1
