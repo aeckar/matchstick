@@ -64,10 +64,8 @@ internal interface RichTransform<R> : Transform<R> {
 }
 
 internal class TransformProperty<R>(
-    id: String,
+    override val id: String,
     override val value: RichTransform<R>
 ) : UniqueProperty(), RichTransform<R> by value {
-    override val id: String = id
-
-    constructor(name: String, original: Transform<R>) : this(name, original as RichTransform<R>)
+    constructor(id: String, value: Transform<R>) : this(id, value as RichTransform<R>)
 }

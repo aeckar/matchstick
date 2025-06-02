@@ -65,7 +65,7 @@ internal sealed class CompoundMatcher(
         private fun childrenOf(relation: MatcherRelation): List<Recursive?> {
             val (rule) = relation
             recursions += rule as CompoundMatcher
-            val children = rule.subMatchers.map { subRule ->
+            return rule.subMatchers.map { subRule ->
                 if (subRule !is CompoundMatcher) {
                     if ((subRule as RichMatcher).compoundMatcher == null) {
                         isExportSupported = false
@@ -79,9 +79,7 @@ internal sealed class CompoundMatcher(
                 } else {
                     MatcherRelation(subRule, relation)
                 }
-            }
-            recursions.removeLast()
-            return children
+            }.also { recursions.removeLast() }
         }
 
         private fun leftRecursionsOf(relation: MatcherRelation): Set<Matcher> {

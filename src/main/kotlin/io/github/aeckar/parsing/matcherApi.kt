@@ -126,11 +126,10 @@ internal class MatcherProperty(
     override val id: String,
     override val value: RichMatcher
 ) : UniqueProperty(), RichMatcher by value {
-    constructor(id: String, original: Matcher) : this(id, original as RichMatcher)
+    constructor(id: String, value: Matcher) : this(id, value as RichMatcher)
 
     override fun collectMatches(matchState: MatchState): Int {
-        val length = value.collectMatches(matchState)
-        matchState.matches.last().matcher = this
-        return length
+        return value.collectMatches(matchState)
+            .also { matchState.matches.last().matcher = this }
     }
 }
