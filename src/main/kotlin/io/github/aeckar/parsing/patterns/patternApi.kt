@@ -62,4 +62,6 @@ internal typealias Pattern = (sequence: CharSequence, index: Int) -> Int
 
 internal fun interface CharPattern : Pattern
 internal fun interface TextPattern : Pattern
+
+/** Assigns a string value to a pattern for debugging purposes. */
 internal class UniquePattern(override val id: String, val matcher: Pattern) : Pattern by matcher, Unique
