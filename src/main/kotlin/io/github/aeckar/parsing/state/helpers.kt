@@ -1,8 +1,13 @@
 package io.github.aeckar.parsing.state
 
+import io.github.aeckar.parsing.StateInitializerException
 import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
+
+internal fun <E> MutableList<E>.readOnlyCopy() = toList()
+internal fun <E> MutableSet<E>.readOnlyCopy() = toSet()
 
 /** Appends the characters to this object. */
 internal operator fun Appendable.plusAssign(sequence: CharSequence) {
@@ -14,11 +19,6 @@ internal operator fun Appendable.plusAssign(c: Char) {
     append(c)
 }
 
-/** Returns this list, or the default value if the size of this collection is not empty. */
-internal inline fun <C : R, R : Collection<*>> C.ifNotEmpty(defaultValue: (C) -> R): R {
-    return if (isEmpty()) this else defaultValue(this)
-}
-
 /** Returns a property delegate returning this value. */
 internal fun <T> T.toReadOnlyProperty() = ReadOnlyProperty { _: Any?, _: KProperty<*> -> this }
 
@@ -27,4 +27,20 @@ internal infix fun <T> T.instanceOf(type: KType): Boolean {
         return type.isMarkedNullable
     }
     return this::class === type.classifier
+}
+
+@Suppress("UNCHECKED_CAST")
+@PublishedApi
+internal fun <T> initialStateOf(typeRef: KType): T {
+    val classRef = typeRef.classifier as KClass<T>
+    return try {
+        // Use Java reflection, does not require extra dependency
+        classRef.java.getDeclaredConstructor().newInstance()
+    } catch (e: Exception) {
+        if (typeRef.isMarkedNullable) {
+            null as T
+        } else {
+            throw StateInitializerException("Nullary constructor of type ${classRef.qualifiedName} is inaccessible", e)
+        }
+    }
 }

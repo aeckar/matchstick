@@ -2,6 +2,7 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.readOnlyCopy
 
 /**
  * Collects matches in an input using a matcher.
@@ -80,7 +81,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
             matches += match
         }
         if (matcher is CompoundMatcher) {
-            successCache.addAtIndex(begin, MatchSuccess(match, dependencies.toList()))
+            successCache.addAtIndex(begin, MatchSuccess(match, dependencies.readOnlyCopy()))
         }
     }
 
@@ -117,14 +118,14 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
                 addMatch(matcher, originalOffset)
                 val length = tape.offset - originalOffset
                 if (matcher is CompoundMatcher) {
-                    successCache.addAtIndex(originalOffset, MatchSuccess(matches.last(), dependencies.toList()))
+                    successCache.addAtIndex(originalOffset, MatchSuccess(matches.last(), dependencies.readOnlyCopy()))
                 }
                 length
             } finally {
                 failures.clear()
             }
         } catch (e: MatchInterrupt) {
-            val failure = MatchFailure(e.lazyCause, tape.offset, matcher, dependencies.toList())
+            val failure = MatchFailure(e.lazyCause, tape.offset, matcher, dependencies.readOnlyCopy())
             failures += failure
             if (matcher is CompoundMatcher) {
                 failureCache.addAtIndex(originalOffset, failure)

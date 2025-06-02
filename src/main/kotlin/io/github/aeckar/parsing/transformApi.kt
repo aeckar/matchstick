@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.dsl.MapScope
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.mapOn
 import io.github.aeckar.parsing.state.Unique
@@ -8,15 +9,16 @@ import io.github.aeckar.parsing.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
-import kotlin.reflect.typeOf
 
 /* ------------------------------ factories ------------------------------ */
 
 @PublishedApi
-internal inline fun <reified R> newTransform(
-    crossinline scope: TransformContext<R>.() -> R
+internal fun <R> newTransform(
+    inputType: KType,
+    scope: MapScope<R>
 ): Transform<R> = object : RichTransform<R> {
-    override val stateTypeRef = typeOf<R>()
+    override val inputType = inputType
+    override val scope: TransformContext<R>.() -> R = scope
 
     override fun consumeMatches(context: TransformContext<R>): R {
         context.setState(context.run(scope))
@@ -52,12 +54,13 @@ public operator fun <R> Transform<R>.provideDelegate(
 public sealed interface Transform<out R> : Unique
 
 /**
- * Extends [Transform] with [match consumption][consumeMatches] and [state verification][stateTypeRef].
+ * Extends [Transform] with [match consumption][consumeMatches] and [state verification][inputType].
  *
  * All implementors of [Transform] also implement this interface.
  */
 internal interface RichTransform<R> : Transform<R> {
-    val stateTypeRef: KType
+    val inputType: KType
+    val scope: TransformContext<R>.() -> R
 
     /** Returns the transformed output according to the behavior of the given context and its initial state. */
     fun consumeMatches(context: TransformContext<R>): R

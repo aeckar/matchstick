@@ -2,6 +2,7 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.state.UniqueProperty
+import io.github.aeckar.parsing.state.initialStateOf
 import kotlin.reflect.typeOf
 
 /* ------------------------------ parser operations ------------------------------ */
@@ -38,7 +39,7 @@ public sealed interface Parser<out T> : Matcher, Transform<T>
 
 /**
  * Extends [Parser] with [match collection][collectMatches],
- * [match consumption][consumeMatches], and [state verification][stateTypeRef].
+ * [match consumption][consumeMatches], and [state verification][inputType].
  *
  * All implementors of [Parser] also implement this interface.
  */

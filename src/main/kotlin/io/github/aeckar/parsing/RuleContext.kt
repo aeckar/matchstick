@@ -3,8 +3,11 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.rule
+import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
+import io.github.aeckar.parsing.state.Intangible
+import kotlin.reflect.typeOf
 
 private val singleChar = nonRecursiveMatcher(".") { yield(1) }
 private val compoundMatcherPlaceholder = Neighbor(RuleContext(false, ::emptySeparator), emptyList())
@@ -30,6 +33,11 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
 
     /** Used to identify meaningless characters between captured substrings, such as whitespace. */
     public val separator: Matcher by lazy(lazySeparator)
+
+    /** Returns a copy of this parser that will not reuse the existing state when visited. */
+    public fun Parser<*>.unique(): Matcher {
+        return with(newTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
+    }
 
     /* ------------------------------ rule factories ------------------------------ */
 
@@ -73,6 +81,9 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
 
     /**
      * Returns a rule matching a single character satisfying the pattern given by the expression.
+     *
+     * If a function may be called that has the same functionality as the given expression,
+     * that function should be called instead.
      * @throws MalformedExpressionException the character expression is malformed
      * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
@@ -81,6 +92,9 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
 
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
+     *
+     * If a function may be called that has the same functionality as the given expression,
+     * that function should be called instead.
      * @throws MalformedExpressionException the text expression is malformed
      * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
@@ -139,7 +153,7 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
      *
      * Rules of the returned type will always fail if a greedy match is attempted.
      */
-    public fun nearestIn(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
+    public fun nearestOf(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
         return Neighbor(this@RuleContext, listOf(subRule1, subRule2) + others)
     }
 

@@ -9,6 +9,8 @@ import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.state.plusAssign
 
+// todo document grammar
+
 /**
  * Contains data pertaining to character expressions.
  * @see RuleContext.charBy
@@ -30,15 +32,15 @@ public class CharExpression internal constructor() : Expression() {
         public val union: Matcher by rule {
             charExpr * char('|') * charExpr * zeroOrMore(char('|') * charExpr)
         } with action {
-            val subMatchers = state.patterns.takeLast(2 + children[3].children.size)
-            state.patterns += charPattern { s, i -> subMatchers.any { it(s, i) != 0 } }
+            val subPatterns = state.patterns.takeLast(2 + children[3].children.size)
+            state.patterns += charPattern { s, i -> subPatterns.any { it(s, i) != 0 } }
         }
 
         public val intersection: Matcher by rule {
             charExpr * char(',') * charExpr * zeroOrMore(char(',') * charExpr)
         } with action {
-            val subMatchers = state.patterns.takeLast(2 + children[3].children.size)
-            state.patterns += charPattern { s, i -> subMatchers.all { it(s, i) != 0 } }
+            val subPatterns = state.patterns.takeLast(2 + children[3].children.size)
+            state.patterns += charPattern { s, i -> subPatterns.all { it(s, i) != 0 } }
         }
 
         public val grouping: Matcher by rule {
@@ -48,8 +50,8 @@ public class CharExpression internal constructor() : Expression() {
         public val negation: Matcher by rule {
             char('!') * charExpr
         } with action {
-            val subMatcher = state.patterns.removeLast()
-            state.patterns += charPattern { s, i -> subMatcher(s, i) == 0 }
+            val subPattern = state.patterns.removeLast()
+            state.patterns += charPattern { s, i -> subPattern(s, i) == 0 }
         }
 
         public val charClass: Matcher by rule {
@@ -107,7 +109,7 @@ public class CharExpression internal constructor() : Expression() {
             } else {
                 charPattern { s, i -> s[i] in id.first()..id.last() }
             }
-            UniquePattern(id, matcher)
+            state.patterns += UniquePattern(id, matcher)
         }
 
         public val suffix: Matcher by rule {
@@ -126,7 +128,7 @@ public class CharExpression internal constructor() : Expression() {
             charOrEscape(",|()[]%")
         } with action {
             val c = state.acceptable[0]
-            UniquePattern(substring, charPattern { s, i -> s[i] == c })
+            state.patterns += UniquePattern(substring, charPattern { s, i -> s[i] == c })
         }
 
         public val charExpr: Matcher by rule {

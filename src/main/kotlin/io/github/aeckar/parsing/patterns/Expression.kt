@@ -8,7 +8,8 @@ import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.state.plusAssign
 
-internal fun charOrEscape(forbiddenChars: String): Parser<Expression> {
+@Suppress("UnusedReceiverParameter")
+internal fun RuleContext.charOrEscape(forbiddenChars: String): Parser<Expression> {
     return rule {
         charNotIn(forbiddenChars) or char('%') * charIn(forbiddenChars)
     } with (actionOn<Expression>()) {

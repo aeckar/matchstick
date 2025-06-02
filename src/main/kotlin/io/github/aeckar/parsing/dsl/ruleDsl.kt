@@ -12,8 +12,7 @@ import io.github.aeckar.parsing.newRule
 public typealias RuleFactory = (Boolean, RuleScope) -> Matcher
 
 /**
- * Provides a scope, evaluated once, to describe the behavior
- * of a [rule][CompoundRule].
+ * Provides a scope, evaluated once, to describe the behavior of a rule.
  */
 public typealias RuleScope = RuleContext.() -> Matcher
 

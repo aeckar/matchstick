@@ -4,6 +4,8 @@ import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
 import io.github.aeckar.parsing.newTransform
 import io.github.aeckar.parsing.Parser
+import kotlin.reflect.typeOf
+
 /**
  * When provided with an [ActionScope], returns an action conforming to the given output type.
  * @see actionOn
@@ -35,7 +37,7 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  * @see mapOn
  */
 public inline fun <reified R> actionOn(): ActionFactory<R> = { scope ->
-    newTransform {
+    newTransform(typeOf<R>()) {
         scope()
         state
     }

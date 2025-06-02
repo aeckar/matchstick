@@ -139,13 +139,13 @@ internal class DoubleDown {
         /* ------------------------------ inline formatting ------------------------------ */
 
         val bold by rule {
-            text("**") * nearestIn(line, lineGroup) * text("**")
+            text("**") * nearestOf(line, lineGroup) * text("**")
         } with action {
             descendWithTag("strong", "dt-bold")
         }
 
         val italics by rule {
-            char('*') * nearestIn(line, lineGroup) * char('*')
+            char('*') * nearestOf(line, lineGroup) * char('*')
         } with action {
             descendWithTag("em", "dt-italics")
         }

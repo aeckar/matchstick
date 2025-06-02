@@ -2,6 +2,8 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.matcher
+import io.github.aeckar.parsing.patterns.CharExpression
+import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.patterns.charPatternOf
 import io.github.aeckar.parsing.patterns.textPatternOf
 
@@ -70,7 +72,7 @@ public class MatcherContext internal constructor(
     /**
      * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see charBy
-     * @see io.github.aeckar.parsing.patterns.CharExpression.Grammar
+     * @see CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
         return if (charPatternOf(expr)(matchState.tape.original, matchState.tape.offset) == 1) 1 else -1
@@ -79,7 +81,7 @@ public class MatcherContext internal constructor(
     /**
      * Returns 1 if a string satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see textBy
-     * @see io.github.aeckar.parsing.patterns.TextExpression.Grammar
+     * @see TextExpression.Grammar
      */
     public fun lengthByText(expr: String): Int = textPatternOf(expr)(matchState.tape.original, matchState.tape.offset)
 

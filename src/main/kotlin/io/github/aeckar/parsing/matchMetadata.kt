@@ -7,7 +7,7 @@ internal data class MatchDependency(val rule: Matcher, val depth: Int) {
 
 internal data class MatchSuccess(
     val match: Match,
-    val dependencies: List<MatchDependency>
+    val dependencies: Set<MatchDependency>
 )
 
 /**
@@ -20,7 +20,7 @@ public class MatchFailure internal constructor(
     lazyCause: () -> String?,
     public val offset: Int,
     public val matcher: Matcher,
-    internal val dependencies: List<MatchDependency>
+    internal val dependencies: Set<MatchDependency>
 ) {
     /** A description of the failure provided by the implementor. */
     public val cause: String? by lazy(lazyCause)

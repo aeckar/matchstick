@@ -7,6 +7,9 @@ import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
+import io.github.aeckar.parsing.state.readOnlyCopy
+
+// todo document grammar
 
 /**
  * Contains data pertaining to text expressions.
@@ -55,7 +58,7 @@ public class TextExpression internal constructor() : Expression() {
             char('{') * (charExpr or textExpr) * char('}') * maybe(charIn("+*?"))
         } with action {
             val pattern: Pattern = if (children[1].choice == 0) {
-                val charPattern = resultOf(charExpr).rootPattern()
+                val charPattern = resultsOf(charExpr).single().rootPattern()
                 textPattern { s, i -> if (charPattern(s, i) == 1) 1 else -1 }
             } else {
                 state.patterns.removeLast()
@@ -69,7 +72,7 @@ public class TextExpression internal constructor() : Expression() {
         }
 
         public val substring: Matcher by rule {
-            oneOrMore(charOrEscape("{}+*?"))
+            oneOrMore(charOrEscape("|{}+*?"))
         } with action {
             val substring = state.acceptable
             state.patterns += textPattern { s, i -> if (s.startsWith(substring, i)) substring.length else -1 }
@@ -79,7 +82,7 @@ public class TextExpression internal constructor() : Expression() {
         public val textExpr: Matcher by rule {
             oneOrMore(substring or captureGroup)
         } with action {
-            val patterns = state.patterns.toList()
+            val patterns = state.patterns.readOnlyCopy()
             val rootPattern = textPattern { s, i ->
                 var offset = 0
                 var matchCount = 0

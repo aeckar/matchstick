@@ -1,6 +1,7 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.state.TreeNode
+import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
 import io.github.aeckar.parsing.state.unknownID
 
@@ -84,14 +85,21 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     @Suppress("UNCHECKED_CAST")
     private fun <R> walk(outerContext: TransformContext<R>): R {
         val state = outerContext.state
-        val transform = matcher as? RichTransform<R> ?: return state
-        return if (state instanceOf transform.stateTypeRef) {
-            transform.consumeMatches(TransformContext(this, state))
+        if (matcher !is Transform<*>) {
+            return state
+        }
+        matcher as RichTransform<R>
+        return if (state instanceOf matcher.inputType) {
+            matcher.consumeMatches(TransformContext(this, state))
         } else {
-            val subParserContext = TransformContext(this, initialStateOf<Any?>(transform.stateTypeRef))
-            outerContext.results[transform] = transform.consumeMatches(subParserContext)
-            if (transform.id === unknownID) {
-                outerContext.results += subParserContext.results
+            val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.inputType))
+            val result = matcher.consumeMatches(subParserContext) // Visit sub-transform
+            if (matcher.id === unknownID) {
+                subParserContext.resultsBySubParser.forEach { (key, value) ->
+                    outerContext.addResult(key, value)
+                }
+            } else {
+                outerContext.addResult(matcher, result)
             }
             state
         }
