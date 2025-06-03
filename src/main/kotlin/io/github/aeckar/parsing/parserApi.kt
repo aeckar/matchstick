@@ -51,7 +51,8 @@ internal class ParserProperty<R>(
     id: String,
     override val value: RichParser<R>
 ) : UniqueProperty(), RichParser<R> by value {
-    override val id: String = if (id == unknownID) id.intern() else id
+    override val id = if (id == unknownID) id.intern() else id
+    override val identity get() = this
 
     constructor(id: String, value: Parser<R>) : this(id, value as RichParser<R>)
 }

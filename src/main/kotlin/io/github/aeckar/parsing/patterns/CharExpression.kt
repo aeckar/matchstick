@@ -11,6 +11,7 @@ import io.github.aeckar.parsing.state.removeLast
 import io.github.aeckar.parsing.state.plusAssign
 
 // todo document grammar
+// fixme rules after empty (inf. recursion)
 
 /**
  * Contains data pertaining to character expressions.
@@ -131,7 +132,7 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         public val prefix: Matcher by rule {
-            char('<') * maybe(char('=')) * (textExpr or charExpr)
+            char('<') * maybe(char('=')) * (charExpr or textExpr)
         } with action {
             val subPattern = state.patterns.removeLast()
             val acceptEquality = children[1].choice != -1

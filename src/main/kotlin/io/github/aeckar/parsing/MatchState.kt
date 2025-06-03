@@ -4,6 +4,9 @@ import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.readOnlyCopy
 
+// todo matchers per position
+// todo debugging
+
 /**
  * Collects matches in an input using a matcher.
  *
@@ -30,8 +33,8 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
     /**
      * Modifies the current choice.
      *
-     * This operation should be performed when matching to [alternations][Alternation] or
-     * [options][Option] to record which sub-rule was matched, if any.
+     * This operation should be performed when matching to [alternations][io.github.aeckar.parsing.rules.Alternation] or
+     * [options][io.github.aeckar.parsing.rules.Option] to record which sub-rule was matched, if any.
      */
     var choice: Int
         get() = choiceCounts.last()

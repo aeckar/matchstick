@@ -4,6 +4,9 @@ import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.rule
+import io.github.aeckar.parsing.rules.Aggregation
+import io.github.aeckar.parsing.rules.CompoundMatcher
+import io.github.aeckar.parsing.rules.IdentityMatcher
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.UniqueProperty
@@ -22,7 +25,7 @@ internal fun newMatcher(
 ): Matcher = object : AbstractMatcher() {
     override val separator by lazy(lazySeparator)
     override val isCacheable get() = isCacheable
-    override val underlyingMatcher get() = this
+    override val identity get() = this
 
     override fun toString() = descriptiveString ?: unknownID
 
@@ -38,18 +41,18 @@ internal fun newRule(
     scope: RuleScope
 ): Matcher = object : AbstractMatcher() {
     val context = RuleContext(greedy, lazySeparator)
-    override val separator get() = (underlyingMatcher as RichMatcher).separator
+    override val separator get() = (identity as RichMatcher).separator
     override val isCacheable get() = true
 
-    override val underlyingMatcher by lazy {
+    override val identity by lazy {
         val rule = context.run(scope)
         if (rule.id === unknownID) rule else IdentityMatcher(context, rule)
     }
 
-    override fun toString() = underlyingMatcher.toString()
+    override fun toString() = identity.toString()
 
     override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
-        return underlyingMatcher.collectMatches(identity ?: this, matchState)
+        return this.identity.collectMatches(identity ?: this.identity, matchState)
     }
 }
 
@@ -60,12 +63,32 @@ internal fun Matcher.collectMatches(identity: Matcher?, matchState: MatchState):
     return (this as RichMatcher).collectMatches(identity, matchState)
 }
 
+/**
+ * If this matcher is of the given type, returns its sub-rules.
+ * Otherwise, returns a list containing itself.
+ */
+internal inline fun <reified T: CompoundMatcher> Matcher.subRulesOrSelf() = if (this is T) subMatchers else listOf(this)
+
+/**
+ * Returns the string representation of this matcher as a sub-rule.
+ *
+ * As such, this function parenthesizes this rule if it comprises multiple other rules.
+ */
+internal fun Matcher.fundamentalString(): String {
+    return when (this) {
+        is Aggregation -> "($this)"
+        is CompoundMatcher -> toString()
+        else -> toString()
+    }
+}
+
+/** Returns the most fundamental [identity][RichMatcher.identity] of this matcher. */
 internal fun Matcher.fundamentalMatcher(): Matcher {
     var prev = this
-    var cur = (this as RichMatcher).underlyingMatcher
+    var cur = (this as RichMatcher).identity
     while (cur !== prev) {
         prev = cur
-        cur = (cur as RichMatcher).underlyingMatcher
+        cur = (cur as RichMatcher).identity
     }
     return cur
 }
@@ -135,7 +158,7 @@ public sealed interface Matcher : Unique
  */
 internal interface RichMatcher : Matcher {
     val separator: Matcher
-    val underlyingMatcher: Matcher
+    val identity: Matcher
     val isCacheable: Boolean
 
     /**
@@ -149,20 +172,21 @@ internal class MatcherProperty(
     id: String,
     override val value: RichMatcher
 ) : UniqueProperty(), RichMatcher by value {
-    override val id: String = if (id == unknownID) id.intern() else id
+    override val id = if (id == unknownID) id.intern() else id
+    override val identity get() = this
 
     constructor(id: String, value: Matcher) : this(id, value as RichMatcher)
 
     override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
         return value.collectMatches(identity ?: this, matchState)
-            .also { matchState.matches.last().matcher = this }
     }
 }
 
 internal abstract class AbstractMatcher() : RichMatcher {
-    override fun hashCode() = id.hashCode()
+    override fun hashCode() = identity.id.hashCode()
     override fun equals(other: Any?): Boolean {
-        return other === this || other is RichMatcher && other.underlyingMatcher === this ||
-                other is UniqueProperty && other.value is RichMatcher && (other.value as RichMatcher).underlyingMatcher === this
+        return other === this || other is RichMatcher && other.identity === identity ||
+                other is UniqueProperty && other.value is RichMatcher &&
+                (other.value as RichMatcher).identity === identity
     }
 }

@@ -13,7 +13,7 @@ internal data class MatchSuccess(
 /**
  * Describes why a match at a specific location in an input failed.
  * @param matcher the matcher that failed
- * @param cause
+ * @param cause a description of what caused the failure, if present
  * @param offset the index in the input at which the match failed
  */
 public class MatchFailure internal constructor(
@@ -30,4 +30,7 @@ public class MatchFailure internal constructor(
 
     /** Returns the [offset]. */
     public operator fun component2(): Int = offset
+
+    /** Returns the [matcher]. */
+    public operator fun component3(): Matcher = matcher
 }

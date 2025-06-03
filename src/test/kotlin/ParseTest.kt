@@ -156,7 +156,7 @@ class ParseTest {
     @Test
     fun test() {
         //println(DoubleDown.blockComment.treeify("/** hello */").resultOrNull()?.treeString())
-        val blockComment by rule { text("/*") * textBy("{!=*/}+") * text("*/") }
+        val blockComment by rule { text("/*") * textBy("{!=%*/}+") * text("*/") }
 
         println(blockComment.treeify("/** hello */").resultOrNull()?.treeString())
     }

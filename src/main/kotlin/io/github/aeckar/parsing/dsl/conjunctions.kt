@@ -23,9 +23,9 @@ public operator fun <R> Parser<R>.provideDelegate(
 public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
     return object : AbstractMatcher(), RichParser<R>, RichMatcher by this, RichTransform<R> by transform {
         override val id get() = this@with.id
-        override val underlyingMatcher get() = this@with
+        override val identity get() = (this@with as RichMatcher).identity
 
-        override fun toString() = underlyingMatcher.toString()
+        override fun toString() = this@with.toString()
     }
 }
 

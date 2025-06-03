@@ -10,11 +10,42 @@ public data class Result<R> @PublishedApi internal constructor(
     public val failures: List<MatchFailure>,
     private val result: Any? = resultPlaceholder
 ) {
+    private val trace by lazy {
+        if (isSuccess()) {
+            return@lazy ""
+        }
+        buildString {
+            failures.forEach { (cause, offset, matcher) ->
+                append("$matcher @ $offset${if (cause != null) " ($cause)" else ""}\n")
+            }
+            deleteAt(lastIndex) // Remove last newline
+        }
+    }
+
     /** Returns true if the operation succeeded. */
     public fun isSuccess(): Boolean = failures.isEmpty()
 
     /** Returns true if the operation failed. */
     public fun isFailure(): Boolean = failures.isNotEmpty()
+
+    /** Executes the block if the operation succeeded. */
+    public inline fun onSuccess(block: (result: R) -> Unit): Result<R> {
+        if (isSuccess()) {
+            block(result())
+        }
+        return this
+    }
+
+    /** Executes the block if the operation failed. */
+    public inline fun onFailure(block: (failures: List<MatchFailure>) -> Unit): Result<R> {
+        if (isFailure()) {
+            block(failures)
+        }
+        return this
+    }
+
+    /** Returns a trace of all previously failed matches leading up to the failure of the operation. */
+    public fun trace(): String = trace
 
     /**
      * Asserts that the operation was a success and returns its result.

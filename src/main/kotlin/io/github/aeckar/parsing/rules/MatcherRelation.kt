@@ -1,6 +1,6 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.rules
 
-internal sealed interface Recursive
+import io.github.aeckar.parsing.Matcher
 
 internal data class MatcherRelation(val rule: Matcher, val parent: MatcherRelation?) : Recursive {
     override fun hashCode() = rule.hashCode()

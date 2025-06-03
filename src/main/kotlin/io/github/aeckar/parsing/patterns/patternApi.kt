@@ -59,11 +59,9 @@ private inline fun <reified T : Expression, P : Pattern> patternOf(
     start: Parser<T>
 ): P {
     if (expr !in cache) {
-        cache[expr] = try {
-            start.parse(expr).result().rootPattern() as P
-        } catch (_: NoSuchElementException) {
-            throw MalformedExpressionException("Pattern expression '$expr' is malformed")
-        }
+        start.parse(expr)
+            .onSuccess { result -> cache[expr] = result.rootPattern() as P }
+            .onFailure { failures -> throw MalformedExpressionException("Pattern '$expr' is malformed") }
     }
     return cache.getValue(expr)
 }

@@ -6,6 +6,11 @@ import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
+import io.github.aeckar.parsing.rules.Alternation
+import io.github.aeckar.parsing.rules.Concatenation
+import io.github.aeckar.parsing.rules.LocalMatcher
+import io.github.aeckar.parsing.rules.Option
+import io.github.aeckar.parsing.rules.Repetition
 import io.github.aeckar.parsing.state.Intangible
 import kotlin.reflect.typeOf
 
