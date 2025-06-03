@@ -2,7 +2,7 @@ package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.MatchState
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.context.RuleContext
 import io.github.aeckar.parsing.collectMatches
 import io.github.aeckar.parsing.unnamedMatchInterrupt
 

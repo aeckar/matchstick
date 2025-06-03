@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.context.TransformContext
 import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
@@ -62,13 +63,13 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     /**
      * Returns true if [matcher] is not null.
      *
-     * If false is returned, this node holds an [explicitly][MatcherContext] captured substring.
+     * If false is returned, this node holds an [explicitly][io.github.aeckar.parsing.context.MatcherContext] captured substring.
      */
     public fun isYield(): Boolean = matcher != null
 
     /**
      * Returns the [matcher] attributed to this node.
-     * @throws NoSuchElementException this node contains an [explicitly][MatcherContext] captured substring
+     * @throws NoSuchElementException this node contains an [explicitly][io.github.aeckar.parsing.context.MatcherContext] captured substring
      * @see isYield
      */
     public fun matcher(): Matcher {

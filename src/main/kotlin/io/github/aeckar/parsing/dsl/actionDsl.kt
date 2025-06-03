@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Transform
-import io.github.aeckar.parsing.TransformContext
+import io.github.aeckar.parsing.context.TransformContext
 import io.github.aeckar.parsing.newTransform
 import io.github.aeckar.parsing.Parser
 import kotlin.reflect.typeOf

@@ -1,14 +1,19 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.context
 
+import io.github.aeckar.parsing.MatchInterrupt
+import io.github.aeckar.parsing.MatchState
+import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.collectMatches
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.patterns.charPatternOf
 import io.github.aeckar.parsing.patterns.textPatternOf
+import io.github.aeckar.parsing.unnamedMatchInterrupt
 
 /**
- * Configures a [Matcher] that is evaluated each time it is invoked,
+ * Configures a [io.github.aeckar.parsing.Matcher] that is evaluated each time it is invoked,
  * whose behavior is described by a user-defined function.
  *
  * Matches captured by an invocation of [yield][MatcherContext.yield]
@@ -19,7 +24,7 @@ import io.github.aeckar.parsing.patterns.textPatternOf
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
  * @see matcher
- * @see RichMatcher.collectMatches
+ * @see io.github.aeckar.parsing.RichMatcher.collectMatches
  */
 @ParserComponentDSL
 public class MatcherContext internal constructor(

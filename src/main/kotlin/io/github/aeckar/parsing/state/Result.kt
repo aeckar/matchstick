@@ -1,4 +1,6 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.state
+
+import io.github.aeckar.parsing.MatchFailure
 
 private val resultPlaceholder = Any()
 

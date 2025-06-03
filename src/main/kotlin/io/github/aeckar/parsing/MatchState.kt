@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.context.MatcherContext
 import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.readOnlyCopy

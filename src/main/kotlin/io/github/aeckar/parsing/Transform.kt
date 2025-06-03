@@ -1,33 +1,13 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.MapScope
+import io.github.aeckar.parsing.context.TransformContext
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.mapOn
 import io.github.aeckar.parsing.state.Unique
-import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.aeckar.parsing.state.toReadOnlyProperty
-import io.github.aeckar.parsing.state.unknownID
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
-
-/* ------------------------------ factories ------------------------------ */
-
-@PublishedApi
-internal fun <R> newTransform(
-    inputType: KType,
-    scope: MapScope<R>
-): Transform<R> = object : RichTransform<R> {
-    override val inputType = inputType
-    override val scope: TransformContext<R>.() -> R = scope
-
-    override fun consumeMatches(context: TransformContext<R>): R {
-        context.setState(context.run(scope))
-        return context.finalState()
-    }
-}
-
-/* ------------------------------ transform operations ------------------------------ */
 
 @PublishedApi
 internal fun <R> Transform<R>.consumeMatches(context: TransformContext<R>): R {
@@ -42,7 +22,6 @@ public operator fun <R> Transform<R>.provideDelegate(
     return ParserProperty(property.name, this as Parser<R>).toReadOnlyProperty()
 }
 
-/* ------------------------------ transform classes ------------------------------ */
 
 /**
  * Transforms an input value according to a syntax tree in list form.

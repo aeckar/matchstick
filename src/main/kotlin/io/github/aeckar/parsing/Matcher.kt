@@ -1,62 +1,16 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.MatcherScope
-import io.github.aeckar.parsing.dsl.RuleScope
+import io.github.aeckar.parsing.context.MatcherContext
+import io.github.aeckar.parsing.context.RuleContext
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.rules.Aggregation
 import io.github.aeckar.parsing.rules.CompoundMatcher
-import io.github.aeckar.parsing.rules.IdentityMatcher
+import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
-import io.github.aeckar.parsing.state.UniqueProperty
-import io.github.aeckar.parsing.state.unknownID
 
 internal val emptySeparator = matcher {}
-
-/* ------------------------------ factories ------------------------------ */
-
-@PublishedApi
-internal fun newMatcher(
-    lazySeparator: () -> Matcher = ::emptySeparator,
-    scope: MatcherScope,
-    descriptiveString: String? = null,
-    isCacheable: Boolean = false
-): Matcher = object : AbstractMatcher() {
-    override val separator by lazy(lazySeparator)
-    override val isCacheable get() = isCacheable
-    override val identity get() = this
-
-    override fun toString() = descriptiveString ?: unknownID
-
-    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
-        return matchState.matcherLogic(identity ?: this, scope, MatcherContext(matchState, ::separator))
-    }
-}
-
-@PublishedApi
-internal fun newRule(
-    greedy: Boolean,
-    lazySeparator: () -> Matcher = ::emptySeparator,
-    scope: RuleScope
-): Matcher = object : AbstractMatcher() {
-    val context = RuleContext(greedy, lazySeparator)
-    override val separator get() = (identity as RichMatcher).separator
-    override val isCacheable get() = true
-
-    override val identity by lazy {
-        val rule = context.run(scope)
-        if (rule.id === unknownID) rule else IdentityMatcher(context, rule)
-    }
-
-    override fun toString() = identity.toString()
-
-    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
-        return this.identity.collectMatches(identity ?: this.identity, matchState)
-    }
-}
-
-/* ------------------------------ matcher operations ------------------------------ */
 
 @PublishedApi
 internal fun Matcher.collectMatches(identity: Matcher?, matchState: MatchState): Int {
@@ -119,8 +73,6 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
     return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>) }
 }
 
-/* ------------------------------ matcher classes ------------------------------ */
-
 /**
  * Recursively finds a meaningful substring within a substring of the input
  * for this matcher and any sub-matchers.
@@ -166,27 +118,4 @@ internal interface RichMatcher : Matcher {
      * of the remaining input, or -1 if one was not found.
      */
     fun collectMatches(identity: Matcher?, matchState: MatchState): Int
-}
-
-internal class MatcherProperty(
-    id: String,
-    override val value: RichMatcher
-) : UniqueProperty(), RichMatcher by value {
-    override val id = if (id == unknownID) id.intern() else id
-    override val identity get() = this
-
-    constructor(id: String, value: Matcher) : this(id, value as RichMatcher)
-
-    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
-        return value.collectMatches(identity ?: this, matchState)
-    }
-}
-
-internal abstract class AbstractMatcher() : RichMatcher {
-    override fun hashCode() = identity.id.hashCode()
-    override fun equals(other: Any?): Boolean {
-        return other === this || other is RichMatcher && other.identity === identity ||
-                other is UniqueProperty && other.value is RichMatcher &&
-                (other.value as RichMatcher).identity === identity
-    }
 }

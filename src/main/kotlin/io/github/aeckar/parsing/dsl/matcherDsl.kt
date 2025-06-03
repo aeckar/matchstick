@@ -1,6 +1,7 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.*
+import io.github.aeckar.parsing.context.MatcherContext
 
 /**
  * When provided with an [MatcherScope], returns an explicitly defined matcher with a specific separator.
@@ -17,7 +18,7 @@ public typealias MatcherScope = MatcherContext.() -> Unit
 /**
  * Configures and returns a matcher whose behavior is explicitly defined and whose separator is an empty string.
  * @see rule
- * @see RuleContext.separator
+ * @see io.github.aeckar.parsing.context.RuleContext.separator
  */
 public fun matcher(separator: () -> Matcher = ::emptySeparator, scope: MatcherScope): Matcher {
     return newMatcher(separator, scope)
@@ -37,6 +38,6 @@ public fun matcher(separator: () -> Matcher = ::emptySeparator, scope: MatcherSc
  * ```
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see rule
- * @see RuleContext.separator
+ * @see io.github.aeckar.parsing.context.RuleContext.separator
  */
 public fun matcherAround(separator: () -> Matcher): MatcherFactory = { scope -> newMatcher(separator, scope) }

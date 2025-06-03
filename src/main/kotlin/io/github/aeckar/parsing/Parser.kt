@@ -1,9 +1,8 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.with
-import io.github.aeckar.parsing.state.UniqueProperty
+import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.initialStateOf
-import io.github.aeckar.parsing.state.unknownID
 import kotlin.reflect.typeOf
 
 /* ------------------------------ parser operations ------------------------------ */
@@ -11,7 +10,7 @@ import kotlin.reflect.typeOf
 /**
  * Generates an output using [initialState] according to the syntax tree produced from the input.
  * @throws NoSuchMatchException a match cannot be made to the input
- * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
+ * @throws MalformedTransformException [io.github.aeckar.parsing.context.TransformContext.descend] is called more than once by any sub-parser
  */
 public fun <R> Parser<R>.parse(sequence: CharSequence, initialState: R): Result<R> {
     return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>).walk(initialState) }
@@ -22,7 +21,7 @@ public fun <R> Parser<R>.parse(sequence: CharSequence, initialState: R): Result<
  *
  * The initial state is given by the nullary constructor of the concrete class [R].
  * If the given type is nullable and no nullary constructor is found, `null` is used as the initial state.
- * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
+ * @throws MalformedTransformException [io.github.aeckar.parsing.context.TransformContext.descend] is called more than once by any sub-parser
  * @throws StateInitializerException the nullary constructor of [R] is inaccessible
  */
 public inline fun <reified R> Parser<R>.parse(sequence: CharSequence): Result<R> {
@@ -47,12 +46,3 @@ public sealed interface Parser<out T> : Matcher, Transform<T>
  */
 internal interface RichParser<T> : Parser<T>, RichMatcher, RichTransform<T>
 
-internal class ParserProperty<R>(
-    id: String,
-    override val value: RichParser<R>
-) : UniqueProperty(), RichParser<R> by value {
-    override val id = if (id == unknownID) id.intern() else id
-    override val identity get() = this
-
-    constructor(id: String, value: Parser<R>) : this(id, value as RichParser<R>)
-}

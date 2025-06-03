@@ -1,8 +1,8 @@
 package io.github.aeckar.parsing.patterns
 
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.MatcherContext
-import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.context.MatcherContext
+import io.github.aeckar.parsing.context.RuleContext
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule

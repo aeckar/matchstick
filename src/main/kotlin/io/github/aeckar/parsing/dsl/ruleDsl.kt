@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.context.RuleContext
 import io.github.aeckar.parsing.emptySeparator
 import io.github.aeckar.parsing.newRule
 

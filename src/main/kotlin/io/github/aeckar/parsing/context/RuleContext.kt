@@ -1,16 +1,18 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.context
 
+import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.Parser
+import io.github.aeckar.parsing.RichTransform
 import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.dsl.with
+import io.github.aeckar.parsing.emptySeparator
+import io.github.aeckar.parsing.newMatcher
+import io.github.aeckar.parsing.newTransform
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
-import io.github.aeckar.parsing.rules.Alternation
-import io.github.aeckar.parsing.rules.Concatenation
-import io.github.aeckar.parsing.rules.LocalMatcher
-import io.github.aeckar.parsing.rules.Option
-import io.github.aeckar.parsing.rules.Repetition
+import io.github.aeckar.parsing.rules.*
 import io.github.aeckar.parsing.state.Intangible
 import kotlin.reflect.typeOf
 
@@ -29,7 +31,7 @@ private fun cacheableMatcher(descriptiveString: String, scope: MatcherScope): Ma
  * and is thus referred to as one within this context.
  * @see rule
  * @see MatcherContext
- * @see RichMatcher.collectMatches
+ * @see io.github.aeckar.parsing.RichMatcher.collectMatches
  */
 @ParserComponentDSL
 public open class RuleContext @PublishedApi internal constructor(greedy: Boolean, lazySeparator: () -> Matcher) {
@@ -88,7 +90,7 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
-     * @throws MalformedExpressionException the character expression is malformed
+     * @throws io.github.aeckar.parsing.MalformedExpressionException the character expression is malformed
      * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
@@ -99,14 +101,14 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
-     * @throws MalformedExpressionException the text expression is malformed
+     * @throws io.github.aeckar.parsing.MalformedExpressionException the text expression is malformed
      * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
     public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
 
     /**
-     * Returns a rule matching this one, then the [separator][Matcher.match], then the other.
+     * Returns a rule matching this one, then the [separator][io.github.aeckar.parsing.match], then the other.
      * @see times
      */
     public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(this@RuleContext, this, other, false)
@@ -122,14 +124,14 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
 
     /**
      * Returns a rule matching the given rule one or more times,
-     * with the [separator][Matcher.match] between each match.
+     * with the [separator][io.github.aeckar.parsing.match] between each match.
      * @see oneOrSpread
      */
     public fun oneOrMore(subRule: Matcher): Matcher = Repetition(this@RuleContext, subRule, false, false)
 
     /**
      * Returns a rule matching the given rule zero or more times,
-     * with the [separator][Matcher.match] between each match.
+     * with the [separator][io.github.aeckar.parsing.match] between each match.
      * @see zeroOrSpread
      */
     public fun zeroOrMore(subRule: Matcher): Matcher = Repetition(this@RuleContext, subRule, true, false)

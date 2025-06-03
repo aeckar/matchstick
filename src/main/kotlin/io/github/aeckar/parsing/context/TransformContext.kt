@@ -1,5 +1,9 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.context
 
+import io.github.aeckar.parsing.MalformedTransformException
+import io.github.aeckar.parsing.Parser
+import io.github.aeckar.parsing.SyntaxTreeNode
+import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
 import io.github.aeckar.parsing.dsl.with
 
@@ -9,7 +13,7 @@ import io.github.aeckar.parsing.dsl.with
  * Itself represents the captured substring.
  * @see io.github.aeckar.parsing.dsl.mapOn
  * @see io.github.aeckar.parsing.dsl.actionOn
- * @see RichTransform.consumeMatches
+ * @see io.github.aeckar.parsing.RichTransform.consumeMatches
  */
 @ParserComponentDSL
 public class TransformContext<R> @PublishedApi internal constructor(
@@ -59,7 +63,7 @@ public class TransformContext<R> @PublishedApi internal constructor(
 
     /**
      * The index of the sub-matcher that the [substring] satisfies.
-     * @see Match.choice
+     * @see io.github.aeckar.parsing.Match.choice
      */
     public val choice: Int get() = root.choice
 
@@ -70,7 +74,7 @@ public class TransformContext<R> @PublishedApi internal constructor(
 
     /**
      * Visits the [children] of the current node, in the order they were matched.
-     * @throws MalformedTransformException this function is called more than once within the same scope
+     * @throws io.github.aeckar.parsing.MalformedTransformException this function is called more than once within the same scope
      */
     @Suppress("UNCHECKED_CAST")
     public fun descend() {
