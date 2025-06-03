@@ -65,6 +65,7 @@ public class MatcherContext internal constructor(
      * Returns the length of the first substring prefixing the offset input, or -1 if none are found.
      * @see charIn
      */
+    @JvmName("lengthOfFirstString")
     public fun lengthOfFirst(substrings: Collection<String>): Int {
         return substrings.find { lengthOf(it) != -1 }?.length ?: -1
     }
@@ -75,7 +76,7 @@ public class MatcherContext internal constructor(
      * @see CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
-        return if (charPatternOf(expr)(matchState.tape.original, matchState.tape.offset) == 1) 1 else -1
+        return if (charPatternOf(expr).accept(matchState.tape.original, matchState.tape.offset) == 1) 1 else -1
     }
 
     /**
@@ -83,7 +84,9 @@ public class MatcherContext internal constructor(
      * @see textBy
      * @see TextExpression.Grammar
      */
-    public fun lengthByText(expr: String): Int = textPatternOf(expr)(matchState.tape.original, matchState.tape.offset)
+    public fun lengthByText(expr: String): Int {
+        return textPatternOf(expr).accept(matchState.tape.original, matchState.tape.offset)
+    }
 
     /* ------------------------------ offset modification ------------------------------ */
 

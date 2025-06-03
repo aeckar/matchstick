@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.newRule
 
 /**
  * When provided with an [RuleScope], returns a rule-based matcher with a specific separator.
- * @see ruleAround
+ * @see ruleSeparatedBy
  */
 public typealias RuleFactory = (Boolean, RuleScope) -> Matcher
 
@@ -45,6 +45,6 @@ public fun rule(greedy: Boolean = false, separator: () -> Matcher = ::emptySepar
  * @see RuleContext.zeroOrSpread
  * @see RuleContext.oneOrSpread
  */
-public fun ruleAround(separator: () -> Matcher): RuleFactory = { greedy, scope ->
+public fun ruleSeparatedBy(separator: () -> Matcher): RuleFactory = { greedy, scope ->
     newRule(greedy, separator, scope)
 }

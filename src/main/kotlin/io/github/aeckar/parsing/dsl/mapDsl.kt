@@ -34,7 +34,17 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  *     /* ... */
  * }
  * ```
+ * @param preOrder if true, [TransformContext.descend] is called before entering the scope
  * @see actionOn
  * @see with
  */
-public inline fun <reified R> mapOn(): MapFactory<R> = { scope -> newTransform(typeOf<R>(), scope) }
+public inline fun <reified R> mapOn(preOrder: Boolean = false): MapFactory<R> {
+    return { scope ->
+        newTransform(typeOf<R>()) {
+            if (preOrder) {
+                descend()
+            }
+            scope()
+        }
+    }
+}

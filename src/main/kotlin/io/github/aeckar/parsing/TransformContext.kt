@@ -15,7 +15,7 @@ import io.github.aeckar.parsing.dsl.with
 public class TransformContext<R> @PublishedApi internal constructor(
     private val root: SyntaxTreeNode,   // Stores properties in single object
     state: R
-) : Substring {
+) {
     private var isChildrenVisited = false
     internal val resultsBySubParser = mutableMapOf<Transform<*>, MutableList<Any?>>()
 
@@ -47,12 +47,15 @@ public class TransformContext<R> @PublishedApi internal constructor(
      */
     @Suppress("UNCHECKED_CAST")
     public fun <R> resultsOf(subParser: Parser<R>): List<R> {
+        if (subParser == this) {
+            return listOf(state) as List<R>
+        }
         return object : List<R> by resultsBySubParser[subParser].orEmpty() as List<R> {}    // Prevent modification
     }
 
     /* ------------------------------ root node properties ------------------------------ */
 
-    public override val substring: String get() = root.substring
+    public val substring: String get() = root.substring
 
     /**
      * The index of the sub-matcher that the [substring] satisfies.

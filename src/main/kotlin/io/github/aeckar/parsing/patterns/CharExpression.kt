@@ -28,7 +28,12 @@ public class CharExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse character expressions. */
     public object Grammar {
         private val action = actionOn<CharExpression>()
-        private val textPattern = TextExpression.Grammar.start
+
+        private val textExpr by rule {
+            TextExpression.Grammar.start
+        } with action {
+            state.patterns += resultsOf(TextExpression.Grammar.start).single().rootPattern()
+        }
 
         public val union: Matcher by rule {
             charExpr * char('|') * charExpr * zeroOrMore(char('|') * charExpr)
@@ -71,7 +76,7 @@ public class CharExpression internal constructor() : Expression() {
             val classChar by rule {
                 charNotIn(forbiddenChars)
             } with action {
-                when (val c = single()) {
+                when (val c = substring.single()) {
                     '^' -> state.isEndAcceptable = true
                     else -> state.charData += c
                 }
@@ -97,7 +102,7 @@ public class CharExpression internal constructor() : Expression() {
             }
             val isEndAcceptable = state.isEndAcceptable
             val isCharAcceptable = !uniqueChars.isEmpty()
-            state.patterns += charPattern(id) { s, i -> // todo optimize opportunity
+            state.patterns += charPattern(id) { s, i ->
                 isEndAcceptable && i >= s.length || isCharAcceptable && s[i] in uniqueChars
             }
             state.clearCharData()
@@ -126,18 +131,22 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         public val prefix: Matcher by rule {
-            char('<') * maybe(char('=')) * (textPattern or charExpr)
+            char('<') * maybe(char('=')) * (textExpr or charExpr)
         } with action {
-            val subPattern = if (children[2].choice == 0) {
-                resultsOf(textPattern).single().rootPattern()
-            } else {
-                state.patterns.removeLast()
-            }
+            val subPattern = state.patterns.removeLast()
             val acceptEquality = children[1].choice != -1
-            val failure = subPattern.failureValue()
+            val failure = subPattern.failureValue() // -1 for text patterns
             state.patterns += charPattern("<${if (acceptEquality) "=" else ""}$subPattern") { s, i ->
                 subPattern.accept(s, i + 1) != failure || acceptEquality && subPattern.accept(s, i) != failure
             }
+        }
+
+        public val firstChar: Matcher by rule {
+            char('=') * (textExpr or charExpr)
+        } with action {
+            val subPattern = state.patterns.removeLast()
+            val failure = subPattern.failureValue() // -1 for text patterns
+            state.patterns += charPattern("=$subPattern") { s, i -> subPattern.accept(s, i) != failure }
         }
 
         public val singleChar: Matcher by rule {
@@ -156,6 +165,7 @@ public class CharExpression internal constructor() : Expression() {
                     charRange or
                     suffix or
                     prefix or
+                    firstChar or
                     singleChar
         }
 

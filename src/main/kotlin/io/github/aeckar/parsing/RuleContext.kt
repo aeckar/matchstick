@@ -10,7 +10,7 @@ import io.github.aeckar.parsing.state.Intangible
 import kotlin.reflect.typeOf
 
 private val singleChar = nonRecursiveMatcher(".") { yield(1) }
-private val compoundMatcherPlaceholder = Neighbor(RuleContext(false, ::emptySeparator), emptyList())
+private val compoundMatcherPlaceholder = LocalMatcher(RuleContext(false, ::emptySeparator), emptyList())
 
 private fun nonRecursiveMatcher(descriptiveString: String, scope: MatcherScope): Matcher {
     return newMatcher(scope = scope, descriptiveString = descriptiveString, compoundMatcher = compoundMatcherPlaceholder)
@@ -154,7 +154,7 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
      * Rules of the returned type will always fail if a greedy match is attempted.
      */
     public fun nearestOf(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
-        return Neighbor(this@RuleContext, listOf(subRule1, subRule2) + others)
+        return LocalMatcher(this@RuleContext, listOf(subRule1, subRule2) + others)
     }
 
     /* ------------------------------ utility ------------------------------ */

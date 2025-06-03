@@ -277,7 +277,7 @@ internal class Option(
     }
 }
 
-internal class Neighbor(
+internal class LocalMatcher(
     context: RuleContext,
     private val candidates: List<Matcher>
 ) : CompoundMatcher(context, emptyList()) {
@@ -291,5 +291,17 @@ internal class Neighbor(
         if (neighbor !in matchState || neighbor.collectMatches(matchState) == -1) {
             throw unnamedMatchInterrupt
         }
+    }
+}
+
+internal class IdentityMatcher(
+    context: RuleContext,
+    subMatcher: Matcher
+) : CompoundMatcher(context, listOf(subMatcher)), Modifier {
+    override val subMatcher = subMatchers.single()
+    override val descriptiveString by lazy { "{${subMatcher.subRuleString()}}" }
+
+    override fun ruleLogic(matchState: MatchState) {
+        subMatcher.collectMatches(matchState)
     }
 }

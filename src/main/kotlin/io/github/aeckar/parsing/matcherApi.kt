@@ -7,6 +7,7 @@ import io.github.aeckar.parsing.dsl.rule
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.UniqueProperty
+import io.github.aeckar.parsing.state.unknownID
 
 internal val emptySeparator = matcher {}
 
@@ -31,7 +32,9 @@ internal fun newMatcher(
 
 @PublishedApi
 internal fun newRule(greedy: Boolean, lazySeparator: () -> Matcher = ::emptySeparator, scope: RuleScope): Matcher {
-    return RuleContext(greedy, lazySeparator).run(scope)
+    val context = RuleContext(greedy, lazySeparator)
+    val rule = context.run(scope)
+    return if (rule.id === unknownID) rule else IdentityMatcher(context, rule)
 }
 
 /* ------------------------------ matcher operations ------------------------------ */

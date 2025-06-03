@@ -23,9 +23,9 @@ public fun syntaxTreeOf(input: CharSequence, matches: List<Match>): SyntaxTreeNo
 public class SyntaxTreeNode @PublishedApi internal constructor(
     input: CharSequence,
     matches: MutableList<Match>
-) : TreeNode(), Substring {
+) : TreeNode() {
     /** The captured substring. */
-    public override val substring: String
+    public val substring: String
 
     /** The matcher that captured the [substring], if present. */
     public val matcher: Matcher?
@@ -90,7 +90,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         }
         matcher as RichTransform<R>
         return if (state instanceOf matcher.inputType) {
-            matcher.consumeMatches(TransformContext(this, state))
+            matcher.consumeMatches(TransformContext(this, state))   // Invokes this function recursively
         } else {
             val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.inputType))
             val result = matcher.consumeMatches(subParserContext) // Visit sub-transform

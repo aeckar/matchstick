@@ -34,10 +34,15 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  *     /* ... */
  * }
  * ```
+ * @param preOrder if true, [TransformContext.descend] is called before entering the scope
  * @see mapOn
+ * @see with
  */
-public inline fun <reified R> actionOn(): ActionFactory<R> = { scope ->
+public inline fun <reified R> actionOn(preOrder: Boolean = false): ActionFactory<R> = { scope ->
     newTransform(typeOf<R>()) {
+        if (preOrder) {
+            descend()
+        }
         scope()
         state
     }

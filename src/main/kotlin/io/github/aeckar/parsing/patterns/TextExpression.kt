@@ -24,7 +24,15 @@ public class TextExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse text expressions. */
     public object Grammar {
         private val action = actionOn<TextExpression>()
-        private val charExpr = CharExpression.Grammar.start
+
+        private val charExpr by rule {
+            CharExpression.Grammar.start
+        } with action {
+            val charPattern = resultsOf(CharExpression.Grammar.start).single().rootPattern()
+            state.patterns += textPattern(charPattern.toString()) { s, i ->
+                if (charPattern.accept(s, i) == 1) 1 else -1
+            }
+        }
 
         private val modifiers = mapOf(
             '+' to { subPattern: Pattern ->
@@ -57,14 +65,9 @@ public class TextExpression internal constructor() : Expression() {
         public val captureGroup: Matcher by rule {
             char('{') * (charExpr or textExpr) * char('}') * maybe(charIn("+*?"))
         } with action {
-            val pattern: Pattern = if (children[1].choice == 0) {
-                val charPattern = resultsOf(charExpr).single().rootPattern()
-                textPattern(charPattern.toString()) { s, i -> if (charPattern.accept(s, i) == 1) 1 else -1 }
-            } else {
-                state.patterns.removeLast()
-            }
+            val pattern = state.patterns.removeLast()
             state.patterns += if (children[3].choice == 0) {
-                modifiers.getValue(children[3].single())(pattern)
+                modifiers.getValue(children[3].substring.single())(pattern)
             } else {
                 textPattern("{$pattern}", pattern)
             }

@@ -2,7 +2,7 @@ import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.actionOn
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.rule
-import io.github.aeckar.parsing.dsl.ruleAround
+import io.github.aeckar.parsing.dsl.ruleSeparatedBy
 import io.github.aeckar.parsing.dsl.with
 import kotlin.test.Test
 
@@ -12,8 +12,8 @@ import kotlin.test.Test
 
 internal class DoubleDown {
     private val output = StringBuilder()
-    private val variables = mutableListOf<Substring>()
-    private val imports = mutableListOf<Substring>()
+    private val variables = mutableListOf<String>()
+    private val imports = mutableListOf<String>()
     private var tabCount = 0
 
     fun emit(obj: Any?) {
@@ -22,13 +22,11 @@ internal class DoubleDown {
 
     companion object Grammar {
         private val action = actionOn<DoubleDown>()
-        private val rule = ruleAround(::whitespace)
+        private val rule = ruleSeparatedBy(::whitespace)
 
-        val whitespace by rule {
-            charIn(" ")
-        }//todo
+        val whitespace by rule { charIn(" \t\n\r\u000c") }
 
-        private fun TransformContext<DoubleDown>.descendWithTag(tagName: String, vararg classes: String) {
+        private fun TransformContext<DoubleDown>.descendWithHtmlTag(tagName: String, vararg classes: String) {
             val classString = classes.joinToString(separator = " ", prefix = "class='", postfix = "'")
             state.emit("<$tagName $classString>")
             ++state.tabCount
@@ -67,28 +65,28 @@ internal class DoubleDown {
 
         /* ------------------------------ comments ------------------------------ */
 
-        val lineComment by rule { text("//") * oneOrMore(charBy("!\n")) }
-        val blockComment by rule { text("/*") * oneOrMore(charBy(!"*,</")) * text("*/") }
+        val lineComment by rule { text("//") * textBy("{!\n}+") }
+        val blockComment by rule { text("/*") * textBy("{!=*/}+") * text("*/") }
 
         /* ------------------------------ top-level elements ------------------------------ */
 
         val heading by rule {
             textIn("#" * (1..6)) + enumerableLine
         } with action {
-            val headerType = children[0].length
-            descendWithTag("h$headerType", "dt-heading", "dt-h$headerType")
+            val headerType = children[0].substring.length
+            descendWithHtmlTag("h$headerType", "dt-heading", "dt-h$headerType")
         }
 
         val import by rule {
-            text("import") + char('"') + oneOrMore(charBy(!"[\"\n]")) + char('"')
+            text("import") + char('"') + textBy("\"{![\"\n]}+") + char('"')
         } with action {
-            state.imports += children[2]
+            state.imports += children[2].substring
         }
 
         val assignment by rule {
             identifier + char('=') + topLevelElement
         } with action {
-            if (children[0] in state.variables) {
+            if (children[0].substring in state.variables) {
                 /* error */
             }
         }
@@ -141,13 +139,13 @@ internal class DoubleDown {
         val bold by rule {
             text("**") * nearestOf(line, lineGroup) * text("**")
         } with action {
-            descendWithTag("strong", "dt-bold")
+            descendWithHtmlTag("strong", "dt-bold")
         }
 
         val italics by rule {
             char('*') * nearestOf(line, lineGroup) * char('*')
         } with action {
-            descendWithTag("em", "dt-italics")
+            descendWithHtmlTag("em", "dt-italics")
         }
 
 
