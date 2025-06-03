@@ -55,7 +55,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
     }
 
     /** Returns true if the matcher is currently in use. */
-    operator fun contains(matcher: Matcher) = matchers.asReversed().any { it === matcher }
+    operator fun contains(matcher: Matcher) = matchers.asReversed().any { it == matcher }
 
     /**
      * Returns [Int.MAX_VALUE] if the matcher is not currently in use
@@ -101,7 +101,6 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
         matcher as RichMatcher
         return try {
             try {
-
                 if (matcher.isCacheable) {
                     val result = matchResultOf(matcher)
                     if (result is MatchSuccess) {

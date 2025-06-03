@@ -32,7 +32,9 @@ public class MatcherContext internal constructor(
     /* ------------------------------ match queries ------------------------------ */
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
-    public fun lengthOf(matcher: Matcher): Int = matchState.ignoringMatches { matcher.collectMatches(matchState) }
+    public fun lengthOf(matcher: Matcher): Int {
+        return matchState.ignoringMatches { matcher.collectMatches(matcher, matchState) }
+    }
 
     /**
      * Returns 1 if the character prefixes the offset input, or -1 if one is not found.

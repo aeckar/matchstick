@@ -39,7 +39,7 @@ public operator fun <R> Transform<R>.provideDelegate(
     thisRef: Any?,
     property: KProperty<*>
 ): ReadOnlyProperty<Any?, Transform<R>> {
-    return TransformProperty(property.name, this).toReadOnlyProperty()
+    return ParserProperty(property.name, this as Parser<R>).toReadOnlyProperty()
 }
 
 /* ------------------------------ transform classes ------------------------------ */
@@ -65,13 +65,4 @@ internal interface RichTransform<R> : Transform<R> {
 
     /** Returns the transformed output according to the behavior of the given context and its initial state. */
     fun consumeMatches(context: TransformContext<R>): R
-}
-
-internal class TransformProperty<R>(
-    id: String,
-    override val value: RichTransform<R>
-) : UniqueProperty(), RichTransform<R> by value {
-    override val id: String = if (id == unknownID) id.intern() else id
-
-    constructor(id: String, value: Transform<R>) : this(id, value as RichTransform<R>)
 }

@@ -10,10 +10,11 @@ private inline fun <reified T: CompoundMatcher> Matcher.subRulesOrSelf() = if (t
  * As such, this function parenthesizes this rule if it comprises multiple other rules.
  */
 private fun Matcher.subRuleString(): String {
-    return when (this) {
-        is Concatenation, is Alternation -> "(${this@subRuleString.descriptiveString})"
-        is CompoundMatcher -> this@subRuleString.descriptiveString
-        else -> toString()
+    val atom = fundamentalMatcher()
+    return when (atom) {
+        is Concatenation, is Alternation -> "(${atom.descriptiveString})"
+        is CompoundMatcher -> atom.descriptiveString
+        else -> atom.toString()
     }
 }
 
@@ -30,9 +31,10 @@ private interface MaybeContiguous {
 internal sealed class CompoundMatcher(
     private val context: RuleContext,
     val subMatchers: List<Matcher>
-) : RichMatcher, Recursive {
-    override val separator get() = context.separator
-    override val isCacheable get() = true
+) : AbstractMatcher(), Recursive {
+    final override val separator get() = context.separator
+    final override val isCacheable get() = true
+    final override val underlyingMatcher get() = this
     internal abstract val descriptiveString: String
     private var isInitialized = false
 
@@ -111,7 +113,9 @@ internal sealed class CompoundMatcher(
     }
 
     protected abstract fun ruleLogic(matchState: MatchState)
-    final override fun toString() = if (id !== unknownID) id else this@CompoundMatcher.descriptiveString
+    final override fun equals(other: Any?) = super.equals(other)
+    final override fun hashCode() = super.hashCode()
+    final override fun toString() = if (id !== unknownID) id else descriptiveString
 
     /**
      * Recursively iterates over this rule and its sub-rules,
@@ -127,16 +131,17 @@ internal sealed class CompoundMatcher(
         isInitialized = true
     }
 
-    final override fun collectMatches(matchState: MatchState): Int {
+    final override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
+        val trueIdentity = identity ?: this
         initialize()
-        return newMatcher(compoundMatcher = this, scope = {
+        return newMatcher(scope = {
             ruleLogic(matchState)
             if (context.isGreedy && leftRecursionsPerSubRule[0] != setOf(this)) {
                 var madeGreedyMatch = false
                 --matchState.depth
                 while (true) {
                     matchState.leftAnchor = this@CompoundMatcher
-                    if (collectMatches(matchState) <= 0) {
+                    if (collectMatches(trueIdentity, matchState) <= 0) {
                         madeGreedyMatch = true
                     } else {
                         break
@@ -146,14 +151,14 @@ internal sealed class CompoundMatcher(
                     ++matchState.depth
                 }
             }
-        }).collectMatches(matchState)
+        }).collectMatches(trueIdentity, matchState)
     }
 
     protected fun collectSeparatorMatches(matchState: MatchState): Int {
         if (separator === emptySeparator) {
             return 0
         }
-        return separator.collectMatches(matchState)
+        return separator.collectMatches(separator, matchState)
     }
 }
 
@@ -179,7 +184,7 @@ internal class Concatenation(
             separatorLength = collectSeparatorMatches(matchState)
         }
         for ((index, rule) in rules.withIndex()) {
-            if (rule.collectMatches(matchState) == -1) {
+            if (rule.collectMatches(rule, matchState) == -1) {
                 throw unnamedMatchInterrupt
             }
             if (index == subMatchers.lastIndex) {
@@ -208,7 +213,7 @@ internal class Alternation(
                     matchState.addDependency(rule)   // Recursion guard
                     continue
                 }
-                if (leftAnchor in leftRecursionsPerSubRule[index] && rule.collectMatches(matchState) != -1) {
+                if (leftAnchor in leftRecursionsPerSubRule[index] && rule.collectMatches(rule, matchState) != -1) {
                     return
                 }
                 ++matchState.choice
@@ -220,7 +225,7 @@ internal class Alternation(
                 matchState.addDependency(rule)   // Recursion guard
                 continue
             }
-            if (rule.collectMatches(matchState) != -1) {
+            if (rule.collectMatches(rule, matchState) != -1) {
                 return
             }
             ++matchState.choice
@@ -257,7 +262,7 @@ internal class Repetition(
             }
         }
         while (true) {
-            if (subMatcher.collectMatches(matchState) <= 0) {  // Failure or empty match
+            if (subMatcher.collectMatches(subMatcher, matchState) <= 0) {  // Failure or empty match
                 break
             }
             ++matchCount
@@ -278,7 +283,7 @@ internal class Option(
     override val descriptiveString by lazy { "${subMatcher.subRuleString()}?" }
 
     override fun ruleLogic(matchState: MatchState) {
-        if (this@Option.subMatcher.collectMatches(matchState) == -1) {
+        if (subMatcher.collectMatches(subMatcher, matchState) == -1) {
             matchState.choice = -1
         }
     }
@@ -294,8 +299,8 @@ internal class LocalMatcher(
         if (matchState.leftAnchor != null) {
             return
         }
-        val neighbor = candidates.minBy { matchState.distanceTo(it) }
-        if (neighbor !in matchState || neighbor.collectMatches(matchState) == -1) {
+        val localRule = candidates.minBy { matchState.distanceTo(it) }
+        if (localRule !in matchState || localRule.collectMatches(localRule, matchState) == -1) {
             throw unnamedMatchInterrupt
         }
     }
@@ -309,6 +314,6 @@ internal class IdentityMatcher(
     override val descriptiveString by lazy { "{${subMatcher.subRuleString()}}" }
 
     override fun ruleLogic(matchState: MatchState) {
-        subMatcher.collectMatches(matchState)
+        subMatcher.collectMatches(subMatcher, matchState)
     }
 }

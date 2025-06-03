@@ -12,7 +12,7 @@ import kotlin.reflect.typeOf
 private val singleChar = cacheableMatcher(".") { yield(1) }
 
 private fun cacheableMatcher(descriptiveString: String, scope: MatcherScope): Matcher {
-    return newMatcher(::emptySeparator, scope, null, descriptiveString, true)
+    return newMatcher(::emptySeparator, scope, descriptiveString, true)
 }
 
 /* ------------------------------ context class ------------------------------ */

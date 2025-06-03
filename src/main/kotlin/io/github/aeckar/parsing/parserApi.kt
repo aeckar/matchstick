@@ -33,6 +33,8 @@ public inline fun <reified R> Parser<R>.parse(sequence: CharSequence): Result<R>
 
 /**
  * Evaluates the bounds produced by this same symbol after parsing a sub-sequence of some input.
+ *
+ * All implementors of [RichTransform] also implement this interface.
  * @param T the type of the output state
  * @see with
  */

@@ -17,17 +17,17 @@ internal val emptySeparator = matcher {}
 internal fun newMatcher(
     lazySeparator: () -> Matcher = ::emptySeparator,
     scope: MatcherScope,
-    compoundMatcher: Matcher? = null,
     descriptiveString: String? = null,
     isCacheable: Boolean = false
-): Matcher = object : RichMatcher {
+): Matcher = object : AbstractMatcher() {
     override val separator by lazy(lazySeparator)
     override val isCacheable get() = isCacheable
+    override val underlyingMatcher get() = this
 
-    override fun toString() = descriptiveString ?: id
+    override fun toString() = descriptiveString ?: unknownID
 
-    override fun collectMatches(matchState: MatchState): Int {
-        return matchState.matcherLogic(compoundMatcher ?: this, scope, MatcherContext(matchState, ::separator))
+    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
+        return matchState.matcherLogic(identity ?: this, scope, MatcherContext(matchState, ::separator))
     }
 }
 
@@ -36,25 +36,39 @@ internal fun newRule(
     greedy: Boolean,
     lazySeparator: () -> Matcher = ::emptySeparator,
     scope: RuleScope
-): Matcher = object : RichMatcher {
+): Matcher = object : AbstractMatcher() {
     val context = RuleContext(greedy, lazySeparator)
-    override val separator get() = (rule as RichMatcher).separator
+    override val separator get() = (underlyingMatcher as RichMatcher).separator
     override val isCacheable get() = true
 
-    val rule by lazy {
+    override val underlyingMatcher by lazy {
         val rule = context.run(scope)
         if (rule.id === unknownID) rule else IdentityMatcher(context, rule)
     }
 
-    override fun collectMatches(matchState: MatchState): Int {
-        return rule.collectMatches(matchState)
+    override fun toString() = underlyingMatcher.toString()
+
+    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
+        return underlyingMatcher.collectMatches(identity ?: this, matchState)
     }
 }
 
 /* ------------------------------ matcher operations ------------------------------ */
 
 @PublishedApi
-internal fun Matcher.collectMatches(matchState: MatchState) = (this as RichMatcher).collectMatches(matchState)
+internal fun Matcher.collectMatches(identity: Matcher?, matchState: MatchState): Int {
+    return (this as RichMatcher).collectMatches(identity, matchState)
+}
+
+internal fun Matcher.fundamentalMatcher(): Matcher {
+    var prev = this
+    var cur = (this as RichMatcher).underlyingMatcher
+    while (cur !== prev) {
+        prev = cur
+        cur = (cur as RichMatcher).underlyingMatcher
+    }
+    return cur
+}
 
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
@@ -67,7 +81,7 @@ internal fun Matcher.collectMatches(matchState: MatchState) = (this as RichMatch
 public fun Matcher.match(sequence: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
     val matchState = MatchState(Tape(sequence), matches)
-    collectMatches(matchState)
+    collectMatches(this, matchState)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
     return if (matches.isEmpty()) Result(matchState.failures) else Result(matchState.failures, matches)
 }
@@ -101,21 +115,17 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  * Matches satisfying this matcher and its sub-matches are collectively considered to be *derived*
  * from this matcher.
  *
- * This function is called whenever this matcher
- * [queries][MatcherContext.lengthOf] or [matches][RuleContext.char] a substring in an input.
+ * This function is called whenever this matcher [queries][MatcherContext.lengthOf]
+ * or [matches][RuleContext.char] a substring in an input.
+ *
+ * Matchers are equivalent according to their matching logic.
  * @see matcher
  * @see rule
  * @see RuleContext
  * @see MatcherContext
  * @see Transform
  */
-public sealed interface Matcher : Unique {
-    public companion object {
-        init {
-            unknownID.intern()
-        }
-    }
-}
+public sealed interface Matcher : Unique
 
 /**
  * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],
@@ -125,13 +135,14 @@ public sealed interface Matcher : Unique {
  */
 internal interface RichMatcher : Matcher {
     val separator: Matcher
+    val underlyingMatcher: Matcher
     val isCacheable: Boolean
 
     /**
-     * Returns the size of the matching substring at the beginning of the remaining input,
-     * or -1 if one was not found
+     * Returns the size of the matching substring at the beginning
+     * of the remaining input, or -1 if one was not found.
      */
-    fun collectMatches(matchState: MatchState): Int
+    fun collectMatches(identity: Matcher?, matchState: MatchState): Int
 }
 
 internal class MatcherProperty(
@@ -142,8 +153,16 @@ internal class MatcherProperty(
 
     constructor(id: String, value: Matcher) : this(id, value as RichMatcher)
 
-    override fun collectMatches(matchState: MatchState): Int {
-        return value.collectMatches(matchState)
+    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
+        return value.collectMatches(identity ?: this, matchState)
             .also { matchState.matches.last().matcher = this }
+    }
+}
+
+internal abstract class AbstractMatcher() : RichMatcher {
+    override fun hashCode() = id.hashCode()
+    override fun equals(other: Any?): Boolean {
+        return other === this || other is RichMatcher && other.underlyingMatcher === this ||
+                other is UniqueProperty && other.value is RichMatcher && (other.value as RichMatcher).underlyingMatcher === this
     }
 }

@@ -39,6 +39,4 @@ public fun matcher(separator: () -> Matcher = ::emptySeparator, scope: MatcherSc
  * @see rule
  * @see RuleContext.separator
  */
-public fun matcherAround(separator: () -> Matcher): MatcherFactory = { scope ->
-    newMatcher(separator, scope)
-}
+public fun matcherAround(separator: () -> Matcher): MatcherFactory = { scope -> newMatcher(separator, scope) }
