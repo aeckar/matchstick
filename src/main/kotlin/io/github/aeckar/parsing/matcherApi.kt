@@ -17,11 +17,12 @@ internal val emptySeparator = matcher {}
 internal fun newMatcher(
     lazySeparator: () -> Matcher = ::emptySeparator,
     scope: MatcherScope,
-    compoundMatcher: CompoundMatcher? = null,
-    descriptiveString: String? = null
+    compoundMatcher: Matcher? = null,
+    descriptiveString: String? = null,
+    isCacheable: Boolean = false
 ): Matcher = object : RichMatcher {
-    override val compoundMatcher get() = compoundMatcher
     override val separator by lazy(lazySeparator)
+    override val isCacheable get() = isCacheable
 
     override fun toString() = descriptiveString ?: id
 
@@ -31,10 +32,23 @@ internal fun newMatcher(
 }
 
 @PublishedApi
-internal fun newRule(greedy: Boolean, lazySeparator: () -> Matcher = ::emptySeparator, scope: RuleScope): Matcher {
+internal fun newRule(
+    greedy: Boolean,
+    lazySeparator: () -> Matcher = ::emptySeparator,
+    scope: RuleScope
+): Matcher = object : RichMatcher {
     val context = RuleContext(greedy, lazySeparator)
-    val rule = context.run(scope)
-    return if (rule.id === unknownID) rule else IdentityMatcher(context, rule)
+    override val separator get() = (rule as RichMatcher).separator
+    override val isCacheable get() = true
+
+    val rule by lazy {
+        val rule = context.run(scope)
+        if (rule.id === unknownID) rule else IdentityMatcher(context, rule)
+    }
+
+    override fun collectMatches(matchState: MatchState): Int {
+        return rule.collectMatches(matchState)
+    }
 }
 
 /* ------------------------------ matcher operations ------------------------------ */
@@ -54,7 +68,7 @@ public fun Matcher.match(sequence: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
     val matchState = MatchState(Tape(sequence), matches)
     collectMatches(matchState)
-    // IMPORTANT: Return mutable list to be used by [treeify] and [parse]
+    // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
     return if (matches.isEmpty()) Result(matchState.failures) else Result(matchState.failures, matches)
 }
 
@@ -95,16 +109,23 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  * @see MatcherContext
  * @see Transform
  */
-public sealed interface Matcher : Unique
+public sealed interface Matcher : Unique {
+    public companion object {
+        init {
+            unknownID.intern()
+        }
+    }
+}
 
 /**
- * Extends [Matcher] with [match collection][collectMatches] and [separator tracking][separator].
+ * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],
+ * and [cache validation][isCacheable].
  *
  * All implementors of [Matcher] also implement this interface.
  */
 internal interface RichMatcher : Matcher {
     val separator: Matcher
-    val compoundMatcher: CompoundMatcher?
+    val isCacheable: Boolean
 
     /**
      * Returns the size of the matching substring at the beginning of the remaining input,
@@ -114,9 +135,11 @@ internal interface RichMatcher : Matcher {
 }
 
 internal class MatcherProperty(
-    override val id: String,
+    id: String,
     override val value: RichMatcher
 ) : UniqueProperty(), RichMatcher by value {
+    override val id: String = if (id == unknownID) id.intern() else id
+
     constructor(id: String, value: Matcher) : this(id, value as RichMatcher)
 
     override fun collectMatches(matchState: MatchState): Int {

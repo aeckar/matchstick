@@ -25,15 +25,6 @@ public class TextExpression internal constructor() : Expression() {
     public object Grammar {
         private val action = actionOn<TextExpression>()
 
-        private val charExpr by rule {
-            CharExpression.Grammar.start
-        } with action {
-            val charPattern = resultsOf(CharExpression.Grammar.start).single().rootPattern()
-            state.patterns += textPattern(charPattern.toString()) { s, i ->
-                if (charPattern.accept(s, i) == 1) 1 else -1
-            }
-        }
-
         private val modifiers = mapOf(
             '+' to { subPattern: Pattern ->
                 val failureValue = subPattern.failureValue()
@@ -61,6 +52,15 @@ public class TextExpression internal constructor() : Expression() {
                 textPattern("{$subPattern}?") { s, i -> subPattern.accept(s, i).coerceAtLeast(0) }
             }
         )
+
+        private val charExpr by rule {
+            CharExpression.Grammar.start
+        } with action {
+            val charPattern = resultsOf(CharExpression.Grammar.start).single().rootPattern()
+            state.patterns += textPattern(charPattern.toString()) { s, i ->
+                if (charPattern.accept(s, i) == 1) 1 else -1
+            }
+        }
 
         public val captureGroup: Matcher by rule {
             char('{') * (charExpr or textExpr) * char('}') * maybe(charIn("+*?"))

@@ -113,10 +113,10 @@ public class CharExpression internal constructor() : Expression() {
 
             rangeCharOrEscape * text("..") * rangeCharOrEscape
         } with action {
-            val id = "${state.charData[0]}..${state.charData[1]}"
-            state.patterns += charPattern(id, when {
-                id.first() == id.last() -> { s, i -> s[i] == id.first() }
-                else -> { s, i -> s[i] in id.first()..id.last() }
+            val range = "${state.charData[0]}..${state.charData[1]}"
+            state.patterns += charPattern(range, when {
+                range.first() == range.last() -> { s, i -> s[i] == range.first() }
+                else -> { s, i -> s[i] in range.first()..range.last() }
             })
         }
 

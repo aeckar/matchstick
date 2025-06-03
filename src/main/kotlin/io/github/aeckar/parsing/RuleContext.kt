@@ -9,11 +9,10 @@ import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.state.Intangible
 import kotlin.reflect.typeOf
 
-private val singleChar = nonRecursiveMatcher(".") { yield(1) }
-private val compoundMatcherPlaceholder = LocalMatcher(RuleContext(false, ::emptySeparator), emptyList())
+private val singleChar = cacheableMatcher(".") { yield(1) }
 
-private fun nonRecursiveMatcher(descriptiveString: String, scope: MatcherScope): Matcher {
-    return newMatcher(scope = scope, descriptiveString = descriptiveString, compoundMatcher = compoundMatcherPlaceholder)
+private fun cacheableMatcher(descriptiveString: String, scope: MatcherScope): Matcher {
+    return newMatcher(::emptySeparator, scope, null, descriptiveString, true)
 }
 
 /* ------------------------------ context class ------------------------------ */
@@ -45,10 +44,10 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
     public fun char(): Matcher = singleChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = nonRecursiveMatcher("'$c'") { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = cacheableMatcher("'$c'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
-    public fun text(substring: String): Matcher = nonRecursiveMatcher("\"$substring\"") { yield(lengthOf(substring)) }
+    public fun text(substring: String): Matcher = cacheableMatcher("\"$substring\"") { yield(lengthOf(substring)) }
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: String): Matcher = charIn(chars.toList())
@@ -56,7 +55,7 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: Collection<Char>): Matcher {
         val logicString = "[${chars.joinToString("")}]"
-        return nonRecursiveMatcher(logicString) { yield(lengthOfFirst(chars)) }
+        return cacheableMatcher(logicString) { yield(lengthOfFirst(chars)) }
     }
 
     /** Returns a rule matching any character not in the given string. */
@@ -65,7 +64,7 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
     /** Returns a rule matching any character not in the given collection. */
     public fun charNotIn(chars: Collection<Char>): Matcher {
         val logicString = "![${chars.joinToString("")}]"
-        return nonRecursiveMatcher(logicString) {
+        return cacheableMatcher(logicString) {
             if (lengthOfFirst(chars) != -1) {
                 fail()
             }
@@ -76,7 +75,7 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
     /** Returns a rule matching the first acceptable substring. */
     public fun textIn(substrings: Collection<String>): Matcher {
         val logicString = substrings.joinToString(" | ", "(", ")") { "\"$it\"" }
-        return nonRecursiveMatcher(logicString) { yield(lengthOfFirst(substrings)) }
+        return cacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
     }
 
     /**
@@ -88,7 +87,7 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
      * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = nonRecursiveMatcher("`$expr`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
 
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
@@ -99,19 +98,19 @@ public open class RuleContext @PublishedApi internal constructor(greedy: Boolean
      * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = nonRecursiveMatcher("``$expr``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
 
     /**
      * Returns a rule matching this one, then the [separator][Matcher.match], then the other.
      * @see times
      */
-    public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(this@RuleContext, this, other, true)
+    public operator fun Matcher.plus(other: Matcher): Matcher = Concatenation(this@RuleContext, this, other, false)
 
     /**
      * Returns a rule matching this one, then the other directly after.
      * @see plus
      */
-    public operator fun Matcher.times(other: Matcher): Matcher = Concatenation(this@RuleContext, this, other, false)
+    public operator fun Matcher.times(other: Matcher): Matcher = Concatenation(this@RuleContext, this, other, true)
 
     /** Returns a rule matching this one or the other. */
     public infix fun Matcher.or(other: Matcher): Matcher = Alternation(this@RuleContext, this, other)

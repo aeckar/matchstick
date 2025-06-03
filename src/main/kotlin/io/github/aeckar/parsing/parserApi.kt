@@ -3,6 +3,7 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.aeckar.parsing.state.initialStateOf
+import io.github.aeckar.parsing.state.unknownID
 import kotlin.reflect.typeOf
 
 /* ------------------------------ parser operations ------------------------------ */
@@ -38,14 +39,17 @@ public inline fun <reified R> Parser<R>.parse(sequence: CharSequence): Result<R>
 public sealed interface Parser<out T> : Matcher, Transform<T>
 
 /**
- * Extends [Parser] with [match collection][collectMatches],
- * [match consumption][consumeMatches], and [state verification][inputType].
+ * Extends [Parser] with the properties of both [rich matchers][RichMatcher] and [rich transforms][RichTransform].
  *
  * All implementors of [Parser] also implement this interface.
  */
 internal interface RichParser<T> : Parser<T>, RichMatcher, RichTransform<T>
 
 internal class ParserProperty<R>(
-    override val id: String,
-    override val value: Parser<R>
-) : UniqueProperty(), Parser<R> by value
+    id: String,
+    override val value: RichParser<R>
+) : UniqueProperty(), RichParser<R> by value {
+    override val id: String = if (id == unknownID) id.intern() else id
+
+    constructor(id: String, value: Parser<R>) : this(id, value as RichParser<R>)
+}

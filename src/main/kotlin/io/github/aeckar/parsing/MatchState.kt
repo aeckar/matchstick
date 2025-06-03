@@ -80,7 +80,10 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
         if (isRecordingMatches) {
             matches += match
         }
-        if (matcher is CompoundMatcher) {
+        if (matcher == null) {
+            return
+        }
+        if ((matcher as RichMatcher).isCacheable) {
             successCache.addAtIndex(begin, MatchSuccess(match, dependencies.readOnlyCopy()))
         }
     }
@@ -95,9 +98,11 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
         matchers += matcher
         choiceCounts += 0
         ++depth
+        matcher as RichMatcher
         return try {
             try {
-                if (matcher is CompoundMatcher) {
+
+                if (matcher.isCacheable) {
                     val result = matchResultOf(matcher)
                     if (result is MatchSuccess) {
                         tape.offset += result.match.length
@@ -117,7 +122,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
                 context.yieldRemaining()
                 addMatch(matcher, originalOffset)
                 val length = tape.offset - originalOffset
-                if (matcher is CompoundMatcher) {
+                if (matcher.isCacheable) {
                     successCache.addAtIndex(originalOffset, MatchSuccess(matches.last(), dependencies.readOnlyCopy()))
                 }
                 length
@@ -127,7 +132,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
         } catch (e: MatchInterrupt) {
             val failure = MatchFailure(e.lazyCause, tape.offset, matcher, dependencies.readOnlyCopy())
             failures += failure
-            if (matcher is CompoundMatcher) {
+            if (matcher.isCacheable) {
                 failureCache.addAtIndex(originalOffset, failure)
             }
             dependencies.retainAll { it.depth <= depth }

@@ -13,7 +13,7 @@ private fun Matcher.subRuleString(): String {
     return when (this) {
         is Concatenation, is Alternation -> "(${this@subRuleString.descriptiveString})"
         is CompoundMatcher -> this@subRuleString.descriptiveString
-        else -> id
+        else -> toString()
     }
 }
 
@@ -31,8 +31,8 @@ internal sealed class CompoundMatcher(
     private val context: RuleContext,
     val subMatchers: List<Matcher>
 ) : RichMatcher, Recursive {
-    override val compoundMatcher get() = this
     override val separator get() = context.separator
+    override val isCacheable get() = true
     internal abstract val descriptiveString: String
     private var isInitialized = false
 
@@ -46,7 +46,7 @@ internal sealed class CompoundMatcher(
      * Each element in this list can take one of three types:
      * - [CompoundMatcher]: The sub-rule at that index
      * - [MatcherRelation]: A recursion of the rule at that index
-     * - `null`: An explicit matcher, defined using a `matcher {}` block
+     * - `null`: An non-compound matcher
      */
     private lateinit var children: List<Recursive?>
 
@@ -105,8 +105,8 @@ internal sealed class CompoundMatcher(
         }
 
         fun execute() {
-            childrenOf(MatcherRelation(this@CompoundMatcher, null))
-            leftRecursionsPerSubRuleOf(children)
+            children = childrenOf(MatcherRelation(this@CompoundMatcher, null))
+            leftRecursionsPerSubRule = leftRecursionsPerSubRuleOf(children)
         }
     }
 
@@ -148,6 +148,13 @@ internal sealed class CompoundMatcher(
             }
         }).collectMatches(matchState)
     }
+
+    protected fun collectSeparatorMatches(matchState: MatchState): Int {
+        if (separator === emptySeparator) {
+            return 0
+        }
+        return separator.collectMatches(matchState)
+    }
 }
 
 /* ------------------------------ specialized rule classes ------------------------------ */
@@ -166,19 +173,19 @@ internal class Concatenation(
 
     override fun ruleLogic(matchState: MatchState) {
         var separatorLength = 0
-        val args = subMatchers.iterator()
+        val rules = subMatchers.iterator()
         if (matchState.leftAnchor in leftRecursionsPerSubRule[0]) {
-            args.next() // Drop first sub-match
-            separatorLength = separator.collectMatches(matchState)
+            rules.next() // Drop first sub-match
+            separatorLength = collectSeparatorMatches(matchState)
         }
-        for ((index, arg) in args.withIndex()) {
-            if (arg.collectMatches(matchState) == -1) {
+        for ((index, rule) in rules.withIndex()) {
+            if (rule.collectMatches(matchState) == -1) {
                 throw unnamedMatchInterrupt
             }
             if (index == subMatchers.lastIndex) {
                 break
             }
-            separatorLength = separator.collectMatches(matchState)
+            separatorLength = collectSeparatorMatches(matchState)
         }
         matchState.tape.offset -= separatorLength
     }
@@ -196,24 +203,24 @@ internal class Alternation(
     override fun ruleLogic(matchState: MatchState) {
         val leftAnchor = matchState.leftAnchor  // Enable smart-cast
         if (leftAnchor != null) {
-            for ((index, subRule) in subMatchers.withIndex()) { // Extract for-loop
-                if (subRule in matchState) {
-                    matchState.addDependency(subRule)   // Recursion guard
+            for ((index, rule) in subMatchers.withIndex()) { // Extract for-loop
+                if (rule in matchState) {
+                    matchState.addDependency(rule)   // Recursion guard
                     continue
                 }
-                if (leftAnchor in leftRecursionsPerSubRule[index] && subRule.collectMatches(matchState) != -1) {
+                if (leftAnchor in leftRecursionsPerSubRule[index] && rule.collectMatches(matchState) != -1) {
                     return
                 }
                 ++matchState.choice
             }
             throw unnamedMatchInterrupt
         }
-        for (arg in subMatchers) {
-            if (arg in matchState) {
-                matchState.addDependency(arg)   // Recursion guard
+        for (rule in subMatchers) {
+            if (rule in matchState) {
+                matchState.addDependency(rule)   // Recursion guard
                 continue
             }
-            if (arg.collectMatches(matchState) != -1) {
+            if (rule.collectMatches(matchState) != -1) {
                 return
             }
             ++matchState.choice
@@ -244,7 +251,7 @@ internal class Repetition(
         if (leftAnchor != null) {    // Use anchor as first match
             if (leftAnchor in leftRecursionsPerSubRule.single()) {
                 ++matchCount
-                separatorLength = separator.collectMatches(matchState)
+                separatorLength = collectSeparatorMatches(matchState)
             } else {   // Greedy match fails
                 return
             }
@@ -254,7 +261,7 @@ internal class Repetition(
                 break
             }
             ++matchCount
-            separatorLength = separator.collectMatches(matchState)
+            separatorLength = collectSeparatorMatches(matchState)
         }
         matchState.tape.offset -= separatorLength   // Truncate separator in substring
         if (matchCount < minMatchCount) {

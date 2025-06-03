@@ -6,6 +6,7 @@ import io.github.aeckar.parsing.dsl.mapOn
 import io.github.aeckar.parsing.state.Unique
 import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.aeckar.parsing.state.toReadOnlyProperty
+import io.github.aeckar.parsing.state.unknownID
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
@@ -67,8 +68,10 @@ internal interface RichTransform<R> : Transform<R> {
 }
 
 internal class TransformProperty<R>(
-    override val id: String,
+    id: String,
     override val value: RichTransform<R>
 ) : UniqueProperty(), RichTransform<R> by value {
+    override val id: String = if (id == unknownID) id.intern() else id
+
     constructor(id: String, value: Transform<R>) : this(id, value as RichTransform<R>)
 }

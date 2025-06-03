@@ -26,7 +26,7 @@ public class Match internal constructor(
 
     /** Returns a string in the form "`begin`..`endExclusive` @ `matcher`(`depth`)".  */
     override fun toString(): String {
-        val predicateOrEmpty = matcher ?: ""
+        val predicateOrEmpty = if (matcher != null) "$matcher " else ""
         return "$begin..<$endExclusive @ $predicateOrEmpty($depth)"
     }
 }

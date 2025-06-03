@@ -6,10 +6,10 @@ import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.parse
 import java.util.concurrent.ConcurrentHashMap
 
-private val charPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
+private val charPatternCache: MutableMap<String, CharPattern> = ConcurrentHashMap<String, CharPattern>()
     .apply { put("") { _, _ -> 0 } }
 
-private val textPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
+private val textPatternCache: MutableMap<String, TextPattern> = ConcurrentHashMap<String, TextPattern>()
     .apply { put("") { _, _ -> 0 } }
 
 /* ------------------------------ factories ------------------------------ */
@@ -52,10 +52,15 @@ internal fun textPatternOf(expr: String) = patternOf(expr, textPatternCache, Tex
  */
 public fun pattern(expr: String): Pattern = textPatternOf(expr)
 
-private fun patternOf(expr: String, cache: MutableMap<String, Pattern>, start: Parser<Expression>): Pattern {
+@Suppress("UNCHECKED_CAST")
+private inline fun <reified T : Expression, P : Pattern> patternOf(
+    expr: String,
+    cache: MutableMap<String, P>,
+    start: Parser<T>
+): P {
     if (expr !in cache) {
         cache[expr] = try {
-            start.parse(expr).result().rootPattern()
+            start.parse(expr).result().rootPattern() as P
         } catch (_: NoSuchElementException) {
             throw MalformedExpressionException("Pattern expression '$expr' is malformed")
         }

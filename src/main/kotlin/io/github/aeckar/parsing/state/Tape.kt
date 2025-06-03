@@ -1,5 +1,7 @@
 package io.github.aeckar.parsing.state
 
+private const val lookaheadSize = 20
+
 /**
  * Applies an offset to a character sequence.
  *
@@ -41,14 +43,29 @@ internal class Tape(
 
     /** Returns the original sequence, truncated and prepended with ellipses if the offset is greater than 0. */
     override fun toString(): String {
-        return (offset - 10..offset + 10).mapNotNull { index ->
+        val subSequence = (offset - lookaheadSize..offset + lookaheadSize).map { index ->
             if (index in original.indices) {
                 val c = original[index]
                 if (index == offset) "[$c]" else c
             } else {
                 null
             }
-        }.joinToString("")
+        }
+        return buildString {
+            val truncatedSequence = subSequence.filterNotNull().joinToString("")
+            if (truncatedSequence.length - 2 /* brackets */ == original.length) {
+                append(truncatedSequence)
+                return@buildString
+            }
+            if (subSequence.first() != null && offset - lookaheadSize != 0) {
+                append("...")
+            }
+            append(truncatedSequence)
+            if (subSequence.last() != null && offset + lookaheadSize != original.lastIndex) {
+                append("...")
+            }
+        }
+
     }
 
     /**
