@@ -2,20 +2,20 @@ package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.Transform
-import io.github.aeckar.parsing.context.TransformContext
-import io.github.aeckar.parsing.newTransform
+import io.github.aeckar.parsing.TransformContext
+import io.github.aeckar.parsing.generateTransform
 import kotlin.reflect.typeOf
 
 /**
  * When provided with an [MapScope], returns an action conforming to the given output type.
- * @see mapOn
+ * @see mapBy
  */
 public typealias MapFactory<R> = (scope: MapScope<R>) -> Transform<R>
 
 /**
  * Provides a scope, evaluated at runtime, to describe how an input should be transformed according to each match
  * and when the children of a syntax tree node should be visited.
- * @see mapOn
+ * @see mapBy
  */
 public typealias MapScope<R> = TransformContext<R>.() -> R
 
@@ -27,7 +27,7 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  *
  * Binding a map to a [Parser] using [with] overwrites the previous transform.
  * ```kotlin
- * val map = mapOn<Output>()
+ * val map = mapBy<Output>()
  * val parser by rule {
  *     /* ... */
  * } with map { /* this: TransformContext<Output> */
@@ -35,16 +35,19 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  * }
  * ```
  * @param preOrder if true, [TransformContext.descend] is called before entering the scope
- * @see actionOn
+ * @see actionBy
  * @see with
  */
-public inline fun <reified R> mapOn(preOrder: Boolean = false): MapFactory<R> {
-    return { scope ->
-        newTransform(typeOf<R>()) {
-            if (preOrder) {
+public inline fun <reified R> mapBy(preOrder: Boolean = false): MapFactory<R> {
+    if (preOrder) {
+        return { scope ->
+            generateTransform(typeOf<R>()) {
                 descend()
+                scope()
             }
-            scope()
         }
+    }
+    return { scope ->
+        generateTransform(typeOf<R>()) { scope() }
     }
 }

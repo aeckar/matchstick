@@ -1,14 +1,12 @@
 package io.github.aeckar.parsing.patterns
 
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.context.MatcherContext
-import io.github.aeckar.parsing.context.RuleContext
-import io.github.aeckar.parsing.dsl.actionOn
-import io.github.aeckar.parsing.dsl.provideDelegate
-import io.github.aeckar.parsing.dsl.rule
-import io.github.aeckar.parsing.dsl.with
-import io.github.aeckar.parsing.state.removeLast
+import io.github.aeckar.parsing.MatcherContext
+import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.state.plusAssign
+import io.github.aeckar.parsing.state.removeLast
+import io.github.oshai.kotlinlogging.KotlinLogging.logger
 
 // todo document grammar
 // fixme rules after empty (inf. recursion)
@@ -28,7 +26,8 @@ public class CharExpression internal constructor() : Expression() {
 
     /** Holds the matchers used to parse character expressions. */
     public object Grammar {
-        private val action = actionOn<CharExpression>()
+        private val action = actionBy<CharExpression>()
+        private val rule = ruleBy(logger("CharExpression.Grammar"))
 
         private val textExpr by rule {
             TextExpression.Grammar.start

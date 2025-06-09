@@ -13,7 +13,8 @@ repositories {
 }
 
 dependencies {
-    implementation("net.sf.trove4j:core:3.1.0")
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.7")
+    testImplementation("ch.qos.logback:logback-classic:1.5.18")
     testImplementation(kotlin("test"))
 }
 

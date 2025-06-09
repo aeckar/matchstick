@@ -1,9 +1,6 @@
-import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.dsl.actionOn
+import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.dsl.provideDelegate
-import io.github.aeckar.parsing.dsl.rule
-import io.github.aeckar.parsing.dsl.ruleSeparatedBy
-import io.github.aeckar.parsing.dsl.with
+import io.github.aeckar.parsing.treeify
 import kotlin.test.Test
 
 // auto-download (cache) image links -- if bad status code, get from archived (mangle by URL)
@@ -21,8 +18,8 @@ import kotlin.test.Test
 //    }
 //
 //    companion object Grammar {
-//        private val action = actionOn<DoubleDown>()
-//        private val rule = ruleSeparatedBy(::whitespace)
+//        private val action = actionBy<DoubleDown>()
+//        private val rule = ruleBy(::whitespace)
 //
 //        val whitespace by rule { charIn(" \t\n\r\u000c") }
 //
@@ -156,7 +153,7 @@ class ParseTest {
     @Test
     fun test() {
         //println(DoubleDown.blockComment.treeify("/** hello */").resultOrNull()?.treeString())
-        val blockComment by rule { text("/*") * textBy("{!=%*/}+") * text("*/") }
+        val blockComment by newRule { text("/*") * textBy("{!=%*/}+") * text("*/") }
 
         println(blockComment.treeify("/** hello */").resultOrNull()?.treeString())
     }

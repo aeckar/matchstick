@@ -1,21 +1,21 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Transform
-import io.github.aeckar.parsing.context.TransformContext
-import io.github.aeckar.parsing.newTransform
+import io.github.aeckar.parsing.TransformContext
+import io.github.aeckar.parsing.generateTransform
 import io.github.aeckar.parsing.Parser
 import kotlin.reflect.typeOf
 
 /**
  * When provided with an [ActionScope], returns an action conforming to the given output type.
- * @see actionOn
+ * @see actionBy
  */
 public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
 
 /**
  * Provides a scope, evaluated at runtime, to describe how an input should be modified according to each match
  * and when the children of a syntax tree node should be visited.
- * @see actionOn
+ * @see actionBy
  */
 public typealias ActionScope<R> = TransformContext<R>.() -> Unit
 
@@ -27,7 +27,7 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  *
  * Binding an action to a [Parser] using [with] overwrites the previous transform.
  * ```kotlin
- * val action = actionOn<Output>()
+ * val action = actionBy<Output>()
  * val parser by rule {
  *     /* ... */
  * } with action { /* this: TransformContext<Output> */
@@ -35,15 +35,23 @@ public typealias ActionScope<R> = TransformContext<R>.() -> Unit
  * }
  * ```
  * @param preOrder if true, [TransformContext.descend] is called before entering the scope
- * @see mapOn
+ * @see mapBy
  * @see with
  */
-public inline fun <reified R> actionOn(preOrder: Boolean = false): ActionFactory<R> = { scope ->
-    newTransform(typeOf<R>()) {
-        if (preOrder) {
-            descend()
+public inline fun <reified R> actionBy(preOrder: Boolean = false): ActionFactory<R> {
+    if (preOrder) {
+        return { scope ->
+            generateTransform(typeOf<R>()) {
+                descend()
+                scope()
+                state
+            }
         }
-        scope()
-        state
+    }
+    return { scope ->
+        generateTransform(typeOf<R>()) {
+            scope()
+            state
+        }
     }
 }

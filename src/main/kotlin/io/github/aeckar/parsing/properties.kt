@@ -12,8 +12,8 @@ internal class MatcherProperty(
 
     constructor(id: String, value: Matcher) : this(id, value as RichMatcher)
 
-    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
-        return value.collectMatches(identity ?: this, matchState)
+    override fun collectMatches(identity: Matcher?, engine: Engine): Int {
+        return value.collectMatches(identity ?: this, engine)
     }
 }
 

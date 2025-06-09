@@ -1,19 +1,21 @@
 package io.github.aeckar.parsing.rules
 
-import io.github.aeckar.parsing.MatchState
+import io.github.aeckar.parsing.Engine
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.context.RuleContext
+import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.collectMatches
 import io.github.aeckar.parsing.fundamentalMatcher
 import io.github.aeckar.parsing.fundamentalString
 import io.github.aeckar.parsing.unnamedMatchInterrupt
+import io.github.oshai.kotlinlogging.KLogger
 
 internal class Repetition(
+    logger : KLogger?,
     context: RuleContext,
     subMatcher: Matcher,
     acceptsZero: Boolean,
     override val isContiguous: Boolean
-) : CompoundMatcher(context, listOf(subMatcher)), MaybeContiguous, MatcherModifier {
+) : CompoundMatcher(logger, context, listOf(subMatcher)), MaybeContiguous, MatcherModifier {
     override val subMatcher = subMatchers.single()
     private val minMatchCount = if (acceptsZero) 0 else 1
 
@@ -23,26 +25,26 @@ internal class Repetition(
         "${subMatcher.fundamentalMatcher().fundamentalString()}$modifier$symbol"
     }
 
-    override fun ruleLogic(matchState: MatchState) {
+    override fun captureSubstring(engine: Engine) {
         var separatorLength = 0
         var matchCount = 0
-        val leftAnchor = matchState.leftAnchor  // Enable smart-cast
+        val leftAnchor = engine.leftAnchor  // Enable smart-cast
         if (leftAnchor != null) {    // Use anchor as first match
             if (leftAnchor in leftRecursionsPerSubRule.single()) {
                 ++matchCount
-                separatorLength = collectSeparatorMatches(matchState)
+                separatorLength = collectSeparatorMatches(engine)
             } else {   // Greedy match fails
                 return
             }
         }
         while (true) {
-            if (subMatcher.collectMatches(subMatcher, matchState) <= 0) {  // Failure or empty match
+            if (subMatcher.collectMatches(subMatcher, engine) <= 0) {  // Failure or empty match
                 break
             }
             ++matchCount
-            separatorLength = collectSeparatorMatches(matchState)
+            separatorLength = collectSeparatorMatches(engine)
         }
-        matchState.tape.offset -= separatorLength   // Truncate separator in substring
+        engine.tape.offset -= separatorLength   // Truncate separator in substring
         if (matchCount < minMatchCount) {
             throw unnamedMatchInterrupt
         }
@@ -50,27 +52,29 @@ internal class Repetition(
 }
 
 internal class Option(
+    logger : KLogger?,
     context: RuleContext,
     subMatcher: Matcher
-) : CompoundMatcher(context, listOf(subMatcher)), MatcherModifier {
+) : CompoundMatcher(logger, context, listOf(subMatcher)), MatcherModifier {
     override val subMatcher = subMatchers.single()
     override val descriptiveString by lazy { "${subMatcher.fundamentalMatcher().fundamentalString()}?" }
 
-    override fun ruleLogic(matchState: MatchState) {
-        if (subMatcher.collectMatches(subMatcher, matchState) == -1) {
-            matchState.choice = -1
+    override fun captureSubstring(engine: Engine) {
+        if (subMatcher.collectMatches(subMatcher, engine) == -1) {
+            engine.choice = -1
         }
     }
 }
 
 internal class IdentityMatcher(
+    logger : KLogger?,
     context: RuleContext,
     subMatcher: Matcher
-) : CompoundMatcher(context, listOf(subMatcher)), MatcherModifier {
+) : CompoundMatcher(logger, context, listOf(subMatcher)), MatcherModifier {
     override val subMatcher = subMatchers.single()
     override val descriptiveString by lazy { "{${subMatcher.fundamentalMatcher().fundamentalString()}}" }
 
-    override fun ruleLogic(matchState: MatchState) {
-        subMatcher.collectMatches(subMatcher, matchState)
+    override fun captureSubstring(engine: Engine) {
+        subMatcher.collectMatches(subMatcher, engine)
     }
 }

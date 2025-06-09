@@ -1,8 +1,10 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.context.MatcherContext
 import io.github.aeckar.parsing.dsl.MatcherScope
+import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.addAtIndex
+import io.github.aeckar.parsing.state.findAtIndex
 import io.github.aeckar.parsing.state.readOnlyCopy
 
 // todo matchers per position
@@ -18,15 +20,16 @@ import io.github.aeckar.parsing.state.readOnlyCopy
  * the number of predicates currently being matched to the input
  */
 @PublishedApi
-internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
-    private val matchers = mutableListOf<Matcher>() // LIFO stack
+internal class Engine(val tape: Tape, private val matches: MutableList<Match>) {
     private val dependencies = mutableSetOf<MatchDependency>()
-    private val successCache = arrayOfNulls<MutableSet<MatchSuccess>>(tape.original.length)
-    private val failureCache = arrayOfNulls<MutableSet<MatchFailure>>(tape.original.length)
+    private val matchersPerIndex = arrayOfNulls<MutableList<Matcher>>(tape.original.length)
+    private val successesPerIndex = arrayOfNulls<MutableSet<MatchSuccess>>(tape.original.length)
+    private val failuresPerIndex = arrayOfNulls<MutableSet<MatchFailure>>(tape.original.length)
     private var choiceCounts = mutableListOf<Int>()
     private var isRecordingMatches = true
-    val failures = mutableListOf<MatchFailure>()
-    var depth = 0
+    private val matchers = mutableListOf<Matcher>()
+    private val failures = mutableListOf<MatchFailure>()
+    var depth = 0                                   // Expose to 'CompoundMatcher' during greedy parsing
 
     /** The rule to be appended to a greedy match, if successful. */
     var leftAnchor: Matcher? = null
@@ -44,31 +47,14 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
             choiceCounts += value
         }
 
-    /** Inserts the given value into the set at the specified index, creating a new one if one does not exist. */
-    @Suppress("UNCHECKED_CAST")
-    private fun <E> Array<MutableSet<E>?>.addAtIndex(index: Int, setValue: E) {
-        (this[index] ?: mutableSetOf<E>().also { this[index] = it }) += setValue
-    }
+    /** Returns a list of all matchers at the current index, in reverse order that they were invoked. */
+    fun matchersAtIndex() = matchersPerIndex[tape.offset]?.asReversed().orEmpty()
 
-    /**
-     * Returns the value in the set at the specified index that satisfies the given predicate.
-     * @return the found element, or null if the set does not exist or no element in the set satisfies the predicate
-     */
-    private inline fun <E> Array<out Set<E>?>.findAtIndex(index: Int, predicate: (E) -> Boolean): E? {
-        return this[index]?.find(predicate)
-    }
+    /** Returns a list of all matchers invoked, in the order they were invoked. */
+    fun matchers(): List<Matcher> = matchers
 
-    /** Returns true if the matcher is currently in use. */
-    operator fun contains(matcher: Matcher) = matchers.asReversed().any { it == matcher }
-
-    /**
-     * Returns [Int.MAX_VALUE] if the matcher is not currently in use
-     * @see contains
-     */
-    fun distanceTo(matcher: Matcher): Int {
-        val distance = matchers.asReversed().indexOf(matcher)
-        return if (distance == -1) Int.MAX_VALUE else distance
-    }
+    /** Returns a list of all chained failures */
+    fun failures(): List<MatchFailure> = failures
 
     /**
      * Adds the given rule as a dependency.
@@ -88,7 +74,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
             return
         }
         if ((matcher as RichMatcher).isCacheable) {
-            successCache.addAtIndex(begin, MatchSuccess(match, dependencies.readOnlyCopy()))
+            successesPerIndex.addAtIndex(begin, MatchSuccess(match, dependencies.readOnlyCopy()))
         }
     }
 
@@ -96,13 +82,14 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
      * Attempts to capture a substring using the given matcher, whose logic is given by [scope].
      * Searches for viable cached results beforehand, and caches the result if possible.
      */
-    fun matcherLogic(matcher: Matcher, scope: MatcherScope, context: MatcherContext): Int {
+    fun captureSubstring(matcher: Matcher, scope: MatcherScope, context: MatcherContext): Int {
         val originalOffset = tape.offset
         val originalMatchCount = matches.size
-        matchers += matcher
+        matchers += matcher as RichMatcher
+        matchersPerIndex.addAtIndex(originalOffset, matcher)
         choiceCounts += 0
         ++depth
-        matcher as RichMatcher
+        matcher.logger?.debug { "Attempting match to $matcher" }
         return try {
             try {
                 if (matcher.isCacheable) {
@@ -126,7 +113,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
                 addMatch(matcher, originalOffset)
                 val length = tape.offset - originalOffset
                 if (matcher.isCacheable) {
-                    successCache.addAtIndex(originalOffset, MatchSuccess(matches.last(), dependencies.readOnlyCopy()))
+                    successesPerIndex.addAtIndex(originalOffset, MatchSuccess(matches.last(), dependencies.readOnlyCopy()))
                 }
                 length
             } finally {
@@ -136,7 +123,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
             val failure = MatchFailure(e.lazyCause, tape.offset, matcher, dependencies.readOnlyCopy())
             failures += failure
             if (matcher.isCacheable) {
-                failureCache.addAtIndex(originalOffset, failure)
+                failuresPerIndex.addAtIndex(originalOffset, failure)
             }
             dependencies.retainAll { it.depth <= depth }
             tape.offset -= tape.offset - originalOffset
@@ -144,6 +131,7 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
             -1
         } finally {
             matchers.removeLast()
+            matchersPerIndex[originalOffset]!!.removeLast()
             choiceCounts.removeLast()
             --depth
         }
@@ -167,10 +155,10 @@ internal class MatchState(val tape: Tape, val matches: MutableList<Match>) {
 
     private fun matchResultOf(matcher: Matcher): Any? {
         val originalOffset = tape.offset
-        val hit = successCache.findAtIndex(originalOffset) { (match, dependencies) ->
+        val hit = successesPerIndex.findAtIndex(originalOffset) { (match, dependencies) ->
             matcher == match.matcher && this.dependencies.all { it in dependencies }
         }
-        return hit ?: failureCache.findAtIndex(originalOffset) { failure ->
+        return hit ?: failuresPerIndex.findAtIndex(originalOffset) { failure ->
             matcher == failure.matcher && this.dependencies.all { it in failure.dependencies }
         }
     }

@@ -1,15 +1,16 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.context.RuleContext
+import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.emptySeparator
-import io.github.aeckar.parsing.newRule
+import io.github.aeckar.parsing.generateRule
+import io.github.oshai.kotlinlogging.KLogger
 
 /**
  * When provided with an [RuleScope], returns a rule-based matcher with a specific separator.
- * @see ruleSeparatedBy
+ * @see ruleBy
  */
-public typealias RuleFactory = (Boolean, RuleScope) -> Matcher
+public typealias RuleFactory = (greedy: Boolean, scope: RuleScope) -> Matcher
 
 /**
  * Provides a scope, evaluated once, to describe the behavior of a rule.
@@ -21,10 +22,15 @@ public operator fun RuleFactory.invoke(scope: RuleScope): Matcher = this(false, 
 
 /**
  * Configures and returns a rule-based matcher whose separator is an empty string.
- * @see matcher
+ * @see newMatcher
  */
-public fun rule(greedy: Boolean = false, separator: () -> Matcher = ::emptySeparator, scope: RuleScope): Matcher {
-    return newRule(greedy, separator, scope)
+public fun newRule(
+    logger: KLogger? = null,
+    greedy: Boolean = false,
+    separator: () -> Matcher = ::emptySeparator,
+    scope: RuleScope
+): Matcher {
+    return ruleBy(logger, separator)(greedy, scope)
 }
 
 /**
@@ -40,11 +46,11 @@ public fun rule(greedy: Boolean = false, separator: () -> Matcher = ::emptySepar
  * }
  * ```
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
- * @see matcher
+ * @see matcherBy
  * @see RuleContext.plus
  * @see RuleContext.zeroOrSpread
  * @see RuleContext.oneOrSpread
  */
-public fun ruleSeparatedBy(separator: () -> Matcher): RuleFactory = { greedy, scope ->
-    newRule(greedy, separator, scope)
+public fun ruleBy(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator): RuleFactory {
+    return { greedy, scope -> generateRule(logger, greedy, separator, scope) }
 }

@@ -1,57 +1,59 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.context.MatcherContext
-import io.github.aeckar.parsing.context.RuleContext
-import io.github.aeckar.parsing.context.TransformContext
 import io.github.aeckar.parsing.dsl.MapScope
 import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.rules.IdentityMatcher
 import io.github.aeckar.parsing.state.unknownID
+import io.github.oshai.kotlinlogging.KLogger
 import kotlin.reflect.KType
 
 @PublishedApi
-internal fun newMatcher(
+internal fun generateMatcher(
+    logger: KLogger? = null,
     lazySeparator: () -> Matcher = ::emptySeparator,
-    scope: MatcherScope,
     descriptiveString: String? = null,
-    isCacheable: Boolean = false
+    isCacheable: Boolean = false,
+    scope: MatcherScope
 ): Matcher = object : AbstractMatcher() {
     override val separator by lazy(lazySeparator)
     override val isCacheable get() = isCacheable
     override val identity get() = this
+    override val logger get() = logger
 
     override fun toString() = descriptiveString ?: unknownID
 
-    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
-        return matchState.matcherLogic(identity ?: this, scope, MatcherContext(matchState, ::separator))
+    override fun collectMatches(identity: Matcher?, engine: Engine): Int {
+        return engine.captureSubstring(identity ?: this, scope, MatcherContext(logger, engine, ::separator))
     }
 }
 
 @PublishedApi
-internal fun newRule(
+internal fun generateRule(
+    logger: KLogger?,
     greedy: Boolean,
     lazySeparator: () -> Matcher = ::emptySeparator,
     scope: RuleScope
 ): Matcher = object : AbstractMatcher() {
-    val context = RuleContext(greedy, lazySeparator)
+    val context = RuleContext(logger, greedy, lazySeparator)
     override val separator get() = (identity as RichMatcher).separator
     override val isCacheable get() = true
+    override val logger get() = logger
 
     override val identity by lazy {
         val rule = context.run(scope)
-        if (rule.id === unknownID) rule else IdentityMatcher(context, rule)
+        if (rule.id === unknownID) rule else IdentityMatcher(logger, context, rule)
     }
 
     override fun toString() = identity.toString()
 
-    override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
-        return this.identity.collectMatches(identity ?: this.identity, matchState)
+    override fun collectMatches(identity: Matcher?, engine: Engine): Int {
+        return this.identity.collectMatches(identity ?: this.identity, engine)
     }
 }
 
 @PublishedApi
-internal fun <R> newTransform(
+internal fun <R> generateTransform(
     inputType: KType,
     scope: MapScope<R>
 ): Transform<R> = object : RichTransform<R> {

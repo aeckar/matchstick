@@ -1,5 +1,7 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.output.Match
+
 internal data class MatchDependency(val rule: Matcher, val depth: Int) {
     override fun equals(other: Any?) = other is MatchDependency && rule == other.rule
     override fun hashCode() = rule.hashCode()

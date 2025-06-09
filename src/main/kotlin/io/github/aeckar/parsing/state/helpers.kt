@@ -50,3 +50,31 @@ internal fun <T> initialStateOf(typeRef: KType): T {
         }
     }
 }
+
+/** Inserts the given value into the set at the specified index, creating a new one if one does not exist. */
+@Suppress("UNCHECKED_CAST")
+internal fun <E> Array<MutableSet<E>?>.addAtIndex(index: Int, setValue: E) {
+    (this[index] ?: mutableSetOf<E>().also { this[index] = it }) += setValue
+}
+
+/** Inserts the given value into the list at the specified index, creating a new one if one does not exist. */
+@Suppress("UNCHECKED_CAST")
+internal fun <E> Array<MutableList<E>?>.addAtIndex(index: Int, listValue: E) {
+    (this[index] ?: mutableListOf<E>().also { this[index] = it }) += listValue
+}
+
+/**
+ * Returns the value in the set at the specified index that satisfies the given predicate.
+ * @return the found element, or null if the set does not exist or no element in the set satisfies the predicate
+ */
+internal inline fun <E> Array<out Set<E>?>.findAtIndex(index: Int, predicate: (E) -> Boolean): E? {
+    return this[index]?.find(predicate)
+}
+
+/**
+ * Returns the value in the set at the specified index that satisfies the given predicate.
+ * @return the found element, or null if the set does not exist or no element in the list satisfies the predicate
+ */
+internal inline fun <E> Array<out List<E>?>.findAtIndex(index: Int, predicate: (E) -> Boolean): E? {
+    return this[index]?.find(predicate)
+}

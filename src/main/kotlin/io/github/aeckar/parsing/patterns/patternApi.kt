@@ -2,7 +2,7 @@ package io.github.aeckar.parsing.patterns
 
 import io.github.aeckar.parsing.MalformedExpressionException
 import io.github.aeckar.parsing.Parser
-import io.github.aeckar.parsing.context.RuleContext
+import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.parse
 import java.util.concurrent.ConcurrentHashMap
 

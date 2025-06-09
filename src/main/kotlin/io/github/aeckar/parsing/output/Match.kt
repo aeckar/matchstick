@@ -1,4 +1,6 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.output
+
+import io.github.aeckar.parsing.Matcher
 
 /**
  * A slice of input satisfying a matcher.

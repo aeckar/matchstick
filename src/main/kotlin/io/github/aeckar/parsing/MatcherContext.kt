@@ -1,19 +1,14 @@
-package io.github.aeckar.parsing.context
+package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.MatchInterrupt
-import io.github.aeckar.parsing.MatchState
-import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.collectMatches
-import io.github.aeckar.parsing.dsl.ParserComponentDSL
-import io.github.aeckar.parsing.dsl.matcher
+import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.patterns.charPatternOf
 import io.github.aeckar.parsing.patterns.textPatternOf
-import io.github.aeckar.parsing.unnamedMatchInterrupt
+import io.github.oshai.kotlinlogging.KLogger
 
 /**
- * Configures a [io.github.aeckar.parsing.Matcher] that is evaluated each time it is invoked,
+ * Configures a [Matcher] that is evaluated each time it is invoked,
  * whose behavior is described by a user-defined function.
  *
  * Matches captured by an invocation of [yield][MatcherContext.yield]
@@ -23,14 +18,16 @@ import io.github.aeckar.parsing.unnamedMatchInterrupt
  *
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
- * @see matcher
- * @see io.github.aeckar.parsing.RichMatcher.collectMatches
+ * @see newMatcher
+ * @see matcherBy
+ * @see RichMatcher.collectMatches
  */
 @ParserComponentDSL
 public class MatcherContext internal constructor(
-    internal val matchState: MatchState,
+    logger: KLogger?,
+    internal val engine: Engine,
     lazySeparator: () -> Matcher,
-) : RuleContext(false, lazySeparator), CharSequence by matchState.tape {
+) : RuleContext(logger, false, lazySeparator), CharSequence by engine.tape {
     internal var includePos = -1
         private set
 
@@ -38,7 +35,7 @@ public class MatcherContext internal constructor(
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
     public fun lengthOf(matcher: Matcher): Int {
-        return matchState.ignoringMatches { matcher.collectMatches(matcher, matchState) }
+        return engine.ignoringMatches { matcher.collectMatches(matcher, engine) }
     }
 
     /**
@@ -83,7 +80,7 @@ public class MatcherContext internal constructor(
      * @see CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
-        return if (charPatternOf(expr).accept(matchState.tape.original, matchState.tape.offset) == 1) 1 else -1
+        return if (charPatternOf(expr).accept(engine.tape.original, engine.tape.offset) == 1) 1 else -1
     }
 
     /**
@@ -92,7 +89,7 @@ public class MatcherContext internal constructor(
      * @see TextExpression.Grammar
      */
     public fun lengthByText(expr: String): Int {
-        return textPatternOf(expr).accept(matchState.tape.original, matchState.tape.offset)
+        return textPatternOf(expr).accept(engine.tape.original, engine.tape.offset)
     }
 
     /* ------------------------------ offset modification ------------------------------ */
@@ -115,11 +112,11 @@ public class MatcherContext internal constructor(
      */
     public fun yield(length: Int) {
         if (length < 0) {
-            throw MatchInterrupt { "Negative yield $length at offset ${matchState.tape.offset}" }
+            throw MatchInterrupt { "Negative yield $length at offset ${engine.tape.offset}" }
         }
         yieldRemaining()
         consume(length)
-        matchState.addMatch(null, matchState.tape.offset - length)
+        engine.addMatch(null, engine.tape.offset - length)
     }
 
     /**
@@ -131,10 +128,10 @@ public class MatcherContext internal constructor(
      */
     public fun include(length: Int) {
         if (length < 0) {
-            throw MatchInterrupt { "Negative yield $length at offset ${matchState.tape.offset}" }
+            throw MatchInterrupt { "Negative yield $length at offset ${engine.tape.offset}" }
         }
         if (includePos == -1) {
-            includePos = matchState.tape.offset
+            includePos = engine.tape.offset
         }
         applyOffset(length)
     }
@@ -144,7 +141,7 @@ public class MatcherContext internal constructor(
         if (includePos == -1) {
             return
         }
-        matchState.addMatch(null, includePos)
+        engine.addMatch(null, includePos)
         includePos = -1
     }
 
@@ -152,7 +149,7 @@ public class MatcherContext internal constructor(
         if (length < 0) {
             return
         }
-        val tape = matchState.tape
+        val tape = engine.tape
         if (tape.offset + length > tape.original.length) {
             throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.original.length}" }
         }
@@ -162,7 +159,7 @@ public class MatcherContext internal constructor(
     /* ------------------------------ misc. ------------------------------ */
 
     /** Returns an iterator returning the remaining characters in the input, regardless of the current offset. */
-    public fun remaining(): CharIterator = matchState.tape.remaining()
+    public fun remaining(): CharIterator = engine.tape.remaining()
 
     /** Fails the current match. */
     public fun fail(): Nothing = throw unnamedMatchInterrupt

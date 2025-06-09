@@ -1,16 +1,18 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.AbstractMatcher
-import io.github.aeckar.parsing.MatchState
+import io.github.aeckar.parsing.Engine
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.context.RuleContext
+import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.UnrecoverableRecursionException
 import io.github.aeckar.parsing.collectMatches
 import io.github.aeckar.parsing.emptySeparator
-import io.github.aeckar.parsing.newMatcher
+import io.github.aeckar.parsing.generateMatcher
 import io.github.aeckar.parsing.state.unknownID
+import io.github.oshai.kotlinlogging.KLogger
 
 internal sealed class CompoundMatcher(
+    final override val logger: KLogger?,
     private val context: RuleContext,
     val subMatchers: List<Matcher>
 ) : AbstractMatcher(), Recursive {
@@ -94,7 +96,7 @@ internal sealed class CompoundMatcher(
         }
     }
 
-    protected abstract fun ruleLogic(matchState: MatchState)
+    protected abstract fun captureSubstring(engine: Engine)
     final override fun equals(other: Any?) = super.equals(other)
     final override fun hashCode() = super.hashCode()
     final override fun toString() = if (id !== unknownID) id else descriptiveString
@@ -113,33 +115,33 @@ internal sealed class CompoundMatcher(
         isInitialized = true
     }
 
-    final override fun collectMatches(identity: Matcher?, matchState: MatchState): Int {
+    final override fun collectMatches(identity: Matcher?, engine: Engine): Int {
         val trueIdentity = identity ?: this
         initialize()
-        return newMatcher(scope = {
-            ruleLogic(matchState)
+        return generateMatcher {
+            captureSubstring(engine)
             if (context.isGreedy && leftRecursionsPerSubRule[0] != setOf(this)) {
                 var madeGreedyMatch = false
-                --matchState.depth
+                --engine.depth
                 while (true) {
-                    matchState.leftAnchor = this@CompoundMatcher
-                    if (collectMatches(trueIdentity, matchState) <= 0) {
+                    engine.leftAnchor = this@CompoundMatcher
+                    if (collectMatches(trueIdentity, engine) <= 0) {
                         madeGreedyMatch = true
                     } else {
                         break
                     }
                 }
                 if (!madeGreedyMatch) {
-                    ++matchState.depth
+                    ++engine.depth
                 }
             }
-        }).collectMatches(trueIdentity, matchState)
+        }.collectMatches(trueIdentity, engine)
     }
 
-    protected fun collectSeparatorMatches(matchState: MatchState): Int {
+    protected fun collectSeparatorMatches(engine: Engine): Int {
         if (separator === emptySeparator) {
             return 0
         }
-        return separator.collectMatches(separator, matchState)
+        return separator.collectMatches(separator, engine)
     }
 }

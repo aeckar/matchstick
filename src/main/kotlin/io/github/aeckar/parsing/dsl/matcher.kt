@@ -1,11 +1,12 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.context.MatcherContext
+import io.github.aeckar.parsing.MatcherContext
+import io.github.oshai.kotlinlogging.KLogger
 
 /**
  * When provided with an [MatcherScope], returns an explicitly defined matcher with a specific separator.
- * @see matcherAround
+ * @see matcherBy
  */
 public typealias MatcherFactory = (MatcherScope) -> Matcher
 
@@ -17,11 +18,11 @@ public typealias MatcherScope = MatcherContext.() -> Unit
 
 /**
  * Configures and returns a matcher whose behavior is explicitly defined and whose separator is an empty string.
- * @see rule
- * @see io.github.aeckar.parsing.context.RuleContext.separator
+ * @see newRule
+ * @see RuleContext.separator
  */
-public fun matcher(separator: () -> Matcher = ::emptySeparator, scope: MatcherScope): Matcher {
-    return newMatcher(separator, scope)
+public fun newMatcher(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator, scope: MatcherScope): Matcher {
+    return matcherBy(logger, separator)(scope)
 }
 
 /**
@@ -37,7 +38,9 @@ public fun matcher(separator: () -> Matcher = ::emptySeparator, scope: MatcherSc
  * }
  * ```
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
- * @see rule
- * @see io.github.aeckar.parsing.context.RuleContext.separator
+ * @see ruleBy
+ * @see RuleContext.separator
  */
-public fun matcherAround(separator: () -> Matcher): MatcherFactory = { scope -> newMatcher(separator, scope) }
+public fun matcherBy(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator): MatcherFactory {
+    return { scope -> newMatcher(logger, separator, scope) }
+}

@@ -1,20 +1,20 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.context.MatcherContext
-import io.github.aeckar.parsing.context.RuleContext
-import io.github.aeckar.parsing.dsl.matcher
-import io.github.aeckar.parsing.dsl.rule
+import io.github.aeckar.parsing.dsl.newMatcher
+import io.github.aeckar.parsing.output.Match
+import io.github.aeckar.parsing.output.SyntaxTreeNode
 import io.github.aeckar.parsing.rules.Aggregation
 import io.github.aeckar.parsing.rules.CompoundMatcher
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
+import io.github.oshai.kotlinlogging.KLogger
 
-internal val emptySeparator = matcher {}
+internal val emptySeparator = generateMatcher {}
 
 @PublishedApi
-internal fun Matcher.collectMatches(identity: Matcher?, matchState: MatchState): Int {
-    return (this as RichMatcher).collectMatches(identity, matchState)
+internal fun Matcher.collectMatches(identity: Matcher?, engine: Engine): Int {
+    return (this as RichMatcher).collectMatches(identity, engine)
 }
 
 /**
@@ -57,10 +57,10 @@ internal fun Matcher.fundamentalMatcher(): Matcher {
  */
 public fun Matcher.match(sequence: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
-    val matchState = MatchState(Tape(sequence), matches)
-    collectMatches(this, matchState)
+    val engine = Engine(Tape(sequence), matches)
+    collectMatches(this, engine)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
-    return if (matches.isEmpty()) Result(matchState.failures) else Result(matchState.failures, matches)
+    return if (matches.isEmpty()) Result(engine.failures()) else Result(engine.failures(), matches)
 }
 
 /**
@@ -94,8 +94,8 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  * or [matches][RuleContext.char] a substring in an input.
  *
  * Matchers are equivalent according to their matching logic.
- * @see matcher
- * @see rule
+ * @see newMatcher
+ * @see generateRule
  * @see RuleContext
  * @see MatcherContext
  * @see Transform
@@ -112,10 +112,11 @@ internal interface RichMatcher : Matcher {
     val separator: Matcher
     val identity: Matcher
     val isCacheable: Boolean
+    val logger: KLogger?
 
     /**
      * Returns the size of the matching substring at the beginning
      * of the remaining input, or -1 if one was not found.
      */
-    fun collectMatches(identity: Matcher?, matchState: MatchState): Int
+    fun collectMatches(identity: Matcher?, engine: Engine): Int
 }

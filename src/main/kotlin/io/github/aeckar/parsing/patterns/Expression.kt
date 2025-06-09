@@ -1,18 +1,18 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.context.MatcherContext
+import io.github.aeckar.parsing.MatcherContext
 import io.github.aeckar.parsing.Parser
-import io.github.aeckar.parsing.context.RuleContext
-import io.github.aeckar.parsing.dsl.actionOn
-import io.github.aeckar.parsing.dsl.rule
+import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.dsl.actionBy
+import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.state.plusAssign
 
 @Suppress("UnusedReceiverParameter")
 internal fun RuleContext.charOrEscape(forbiddenChars: String): Parser<Expression> {
-    return rule {
+    return newRule {
         charNotIn(forbiddenChars) or char('%') * charIn(forbiddenChars)
-    } with (actionOn<Expression>()) {
+    } with (actionBy<Expression>()) {
         state.charData += substring[choice]
     }
 }

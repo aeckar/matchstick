@@ -1,6 +1,7 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.output
 
-import io.github.aeckar.parsing.context.TransformContext
+import io.github.aeckar.parsing.consumeMatches
+import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
@@ -10,7 +11,7 @@ private val syntaxTreePlaceholder = syntaxTreeOf("", emptyList())
 
 /**
  * Returns a new syntax tree according to the matched substrings.
- * @throws NoSuchMatchException a match cannot be made to the input
+ * @throws io.github.aeckar.parsing.NoSuchMatchException a match cannot be made to the input
  */
 public fun syntaxTreeOf(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
     return SyntaxTreeNode(input, matches.toMutableList())
@@ -29,7 +30,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     public val substring: String
 
     /** The matcher that captured the [substring], if present. */
-    public val matcher: Matcher?
+    public val matcher: io.github.aeckar.parsing.Matcher?
 
     /**
      * The index of the sub-matcher that the [substring] satisfies.
@@ -45,7 +46,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         val match = try {
             matches.removeLast()
         } catch (_: NoSuchElementException) {
-            throw NoSuchMatchException("Expected a match")
+            throw _root_ide_package_.io.github.aeckar.parsing.NoSuchMatchException("Expected a match")
         }
         substring = input.substring(match.begin, match.endExclusive)
         matcher = match.matcher
@@ -63,16 +64,16 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     /**
      * Returns true if [matcher] is not null.
      *
-     * If false is returned, this node holds an [explicitly][io.github.aeckar.parsing.context.MatcherContext] captured substring.
+     * If false is returned, this node holds an [explicitly][io.github.aeckar.parsing.MatcherContext] captured substring.
      */
     public fun isYield(): Boolean = matcher != null
 
     /**
      * Returns the [matcher] attributed to this node.
-     * @throws NoSuchElementException this node contains an [explicitly][io.github.aeckar.parsing.context.MatcherContext] captured substring
+     * @throws NoSuchElementException this node contains an [explicitly][io.github.aeckar.parsing.MatcherContext] captured substring
      * @see isYield
      */
-    public fun matcher(): Matcher {
+    public fun matcher(): io.github.aeckar.parsing.Matcher {
         return matcher ?: throw NoSuchElementException("Substring was not derived from a matcher")
     }
 
@@ -81,19 +82,27 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
      *
      * The transforms are encountered during post-order traversal of the syntax tree whose root is this node.
      */
-    public fun <R> walk(initialState: R): R = walk(TransformContext(syntaxTreePlaceholder, initialState))
+    public fun <R> walk(initialState: R): R = walk(
+        _root_ide_package_.io.github.aeckar.parsing.TransformContext(
+            syntaxTreePlaceholder,
+            initialState
+        )
+    )
 
     @Suppress("UNCHECKED_CAST")
-    private fun <R> walk(outerContext: TransformContext<R>): R {
+    private fun <R> walk(outerContext: io.github.aeckar.parsing.TransformContext<R>): R {
         val state = outerContext.state
-        if (matcher !is Transform<*>) {
+        if (matcher !is io.github.aeckar.parsing.Transform<*>) {
             return state
         }
-        matcher as RichTransform<R>
+        matcher as io.github.aeckar.parsing.RichTransform<R>
         return if (state instanceOf matcher.inputType) {
-            matcher.consumeMatches(TransformContext(this, state))   // Invokes this function recursively
+            matcher.consumeMatches(_root_ide_package_.io.github.aeckar.parsing.TransformContext(this, state))   // Invokes this function recursively
         } else {
-            val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.inputType))
+            val subParserContext = _root_ide_package_.io.github.aeckar.parsing.TransformContext(
+                this,
+                initialStateOf<Any?>(matcher.inputType)
+            )
             val result = matcher.consumeMatches(subParserContext) // Visit sub-transform
             if (matcher.id === unknownID) {
                 subParserContext.resultsBySubParser.forEach { (key, value) ->
