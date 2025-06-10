@@ -35,7 +35,14 @@ public class MatcherContext internal constructor(
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
     public fun lengthOf(matcher: Matcher): Int {
-        return driver.ignoringMatches { matcher.collectMatches(matcher, driver) }
+        val isRecording = driver.isRecordingMatches
+        driver.isRecordingMatches = false
+        val length = matcher.collectMatches(matcher, driver)
+        driver.isRecordingMatches = isRecording
+        if (length != -1) {
+            driver.tape.offset -= length    // Reset tape to original position
+        }
+        return length
     }
 
     /**

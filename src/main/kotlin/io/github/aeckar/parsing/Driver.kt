@@ -23,9 +23,9 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     private val successesPerIndex = arrayOfNulls<MutableSet<MatchSuccess>>(tape.original.length + 1)
     private val failuresPerIndex = arrayOfNulls<MutableSet<MatchFailure>>(tape.original.length + 1)
     private var choiceCounts = mutableListOf<Int>()
-    private var isRecordingMatches = true
     private val matchers = mutableListOf<Matcher>()
     private val failures = mutableListOf<MatchFailure>()
+    var isRecordingMatches = true
     var depth = 0                                   // Expose to 'CompoundMatcher' during greedy parsing
 
     /** The rule to be appended to a greedy match, if successful. */
@@ -61,12 +61,12 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
      */
     fun addDependency(rule: Matcher) { dependencies += MatchDependency(rule, depth) }
 
-    /** Pushes a match at the current depth and ending at the current offset. */
+    /** Pushes a match at the current depth and ending at the current offset, if recording matches. */
     fun addMatch(matcher: Matcher?, begin: Int) {
-        val match = Match(matcher, depth, begin, tape.offset, choiceCounts.last())
-        if (isRecordingMatches) {
-            matches += match
+        if (!isRecordingMatches) {
+            return
         }
+        matches += Match(matcher, depth, begin, tape.offset, choiceCounts.last())
     }
 
     /**
@@ -116,7 +116,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                 context.yieldRemaining()
                 addMatch(matcher, begin)
                 logger?.debug {
-                    val substring = tape.original.substring(matches.last().begin, matches.last().endExclusive)
+                    val substring = tape.original.substring(begin, tape.offset) // 'matches' may be empty here
                     "Match to $matcher succeeded ('$substring') @ $begin"
                 }
                 val length = tape.offset - begin
@@ -150,23 +150,10 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
         }
     }
 
-    /**
-     * After collecting the matches within the block, the resulting matches are not recorded and
-     * the [tape] is returned to its original offset before this function was invoked.
-     *
-     * **Implementation Note:** Use of [isRecordingMatches] requires `internal`
-     */
-    internal inline fun ignoringMatches(matchLength: () -> Int): Int {
-        isRecordingMatches = false
-        val length = matchLength()
-        isRecordingMatches = true
-        if (length != -1) {
-            tape.offset -= length
+    private fun lookupMatchResult(matcher: Matcher): MatchResult? {
+        if (matches.isEmpty()) {
+            return null
         }
-        return length
-    }
-
-    private fun lookupMatchResult(matcher: Matcher): Any? {
         val beginOffset = tape.offset
         val hit = successesPerIndex.lookup(beginOffset) { (matches, dependencies) ->
             matcher == matches.last().matcher && this.dependencies.all { it in dependencies }

@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.UnrecoverableRecursionException
 import io.github.aeckar.parsing.collectMatches
 import io.github.aeckar.parsing.emptySeparator
-import io.github.aeckar.parsing.generateMatcher
+import io.github.aeckar.parsing.newBaseMatcher
 import io.github.aeckar.parsing.state.unknownID
 import io.github.oshai.kotlinlogging.KLogger
 
@@ -118,7 +118,7 @@ internal sealed class CompoundMatcher(
     final override fun collectMatches(identity: Matcher?, driver: Driver): Int {
         val trueIdentity = identity ?: this
         initialize()
-        return generateMatcher {
+        return newBaseMatcher {
             captureSubstring(driver)
             if (context.isGreedy && leftRecursionsPerSubRule[0] != setOf(this)) {
                 var madeGreedyMatch = false

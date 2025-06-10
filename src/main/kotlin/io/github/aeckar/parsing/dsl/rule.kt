@@ -3,7 +3,7 @@ package io.github.aeckar.parsing.dsl
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.emptySeparator
-import io.github.aeckar.parsing.generateRule
+import io.github.aeckar.parsing.newBaseRule
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
@@ -52,5 +52,5 @@ public fun newRule(
  * @see RuleContext.oneOrSpread
  */
 public fun ruleBy(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator): RuleFactory {
-    return { greedy, scope -> generateRule(logger, greedy, separator, scope) }
+    return { greedy, scope -> newBaseRule(logger, greedy, separator, scope) }
 }

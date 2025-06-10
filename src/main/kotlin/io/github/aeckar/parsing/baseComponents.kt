@@ -9,7 +9,7 @@ import io.github.oshai.kotlinlogging.KLogger
 import kotlin.reflect.KType
 
 @PublishedApi
-internal fun generateMatcher(
+internal fun newBaseMatcher(
     logger: KLogger? = null,
     lazySeparator: () -> Matcher = ::emptySeparator,
     descriptiveString: String? = null,
@@ -29,7 +29,7 @@ internal fun generateMatcher(
 }
 
 @PublishedApi
-internal fun generateRule(
+internal fun newBaseRule(
     logger: KLogger?,
     greedy: Boolean,
     lazySeparator: () -> Matcher = ::emptySeparator,
@@ -54,7 +54,7 @@ internal fun generateRule(
 }
 
 @PublishedApi
-internal fun <R> generateTransform(
+internal fun <R> newBaseTransform(
     inputType: KType,
     scope: MapScope<R>
 ): Transform<R> = object : RichTransform<R> {

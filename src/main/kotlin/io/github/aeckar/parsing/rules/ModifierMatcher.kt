@@ -9,13 +9,17 @@ import io.github.aeckar.parsing.specified
 import io.github.aeckar.parsing.unnamedMatchInterrupt
 import io.github.oshai.kotlinlogging.KLogger
 
+internal sealed interface ModifierMatcher : Matcher {
+    val subMatcher: Matcher
+}
+
 internal class Repetition(
     logger : KLogger?,
     context: RuleContext,
     subMatcher: Matcher,
     acceptsZero: Boolean,
     override val isContiguous: Boolean
-) : CompoundMatcher(logger, context, listOf(subMatcher)), MaybeContiguous, MatcherModifier {
+) : CompoundMatcher(logger, context, listOf(subMatcher)), SequenceMatcher, ModifierMatcher {
     override val subMatcher = subMatchers.single()
     private val minMatchCount = if (acceptsZero) 0 else 1
 
@@ -55,7 +59,7 @@ internal class Option(
     logger : KLogger?,
     context: RuleContext,
     subMatcher: Matcher
-) : CompoundMatcher(logger, context, listOf(subMatcher)), MatcherModifier {
+) : CompoundMatcher(logger, context, listOf(subMatcher)), ModifierMatcher {
     override val subMatcher = subMatchers.single()
     override val descriptiveString by lazy { "${subMatcher.fundamentalIdentity().specified()}?" }
 
@@ -70,7 +74,7 @@ internal class IdentityMatcher(
     logger : KLogger?,
     context: RuleContext,
     subMatcher: Matcher
-) : CompoundMatcher(logger, context, listOf(subMatcher)), MatcherModifier {
+) : CompoundMatcher(logger, context, listOf(subMatcher)), ModifierMatcher {
     override val subMatcher = subMatchers.single()
     override val descriptiveString by lazy { "{${subMatcher.fundamentalIdentity().specified()}}" }
 

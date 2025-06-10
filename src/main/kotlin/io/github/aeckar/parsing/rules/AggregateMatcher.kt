@@ -11,6 +11,8 @@ import io.github.aeckar.parsing.unnamedMatchInterrupt
 import io.github.oshai.kotlinlogging.KLogger
 import kotlin.collections.iterator
 
+internal sealed interface AggregateMatcher : Recursive, Matcher
+
 internal class Concatenation(
     logger: KLogger?,
     context: RuleContext,
@@ -21,7 +23,7 @@ internal class Concatenation(
     logger,
     context,
     subMatcher1.group<Concatenation>(isContiguous) + subMatcher2.group<Concatenation>(isContiguous)
-), Aggregation, MaybeContiguous {
+), AggregateMatcher, SequenceMatcher {
     override val descriptiveString by lazy {
         val symbol = if (isContiguous) "&" else "~&"
         subMatchers.joinToString(" $symbol ") { it.fundamentalIdentity().specified() }
@@ -63,7 +65,7 @@ internal class Alternation(
     logger,
     context,
     subRule1.group<Alternation>() + subRule2.group<Alternation>()
-), Aggregation {
+), AggregateMatcher {
     override val descriptiveString by lazy {
         subMatchers.joinToString(" | ") {
             val subMatcher = it.fundamentalIdentity()

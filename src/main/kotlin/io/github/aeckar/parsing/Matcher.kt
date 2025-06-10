@@ -4,16 +4,15 @@ import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
-import io.github.aeckar.parsing.rules.Aggregation
+import io.github.aeckar.parsing.rules.AggregateMatcher
 import io.github.aeckar.parsing.rules.CompoundMatcher
-import io.github.aeckar.parsing.rules.MaybeContiguous
+import io.github.aeckar.parsing.rules.SequenceMatcher
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
-import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.oshai.kotlinlogging.KLogger
 
-internal val emptySeparator = generateMatcher {}
+internal val emptySeparator = newBaseMatcher {}
 
 @PublishedApi
 internal fun Matcher.collectMatches(identity: Matcher?, driver: Driver): Int {
@@ -25,7 +24,7 @@ internal fun Matcher.collectMatches(identity: Matcher?, driver: Driver): Int {
  * Otherwise, returns a list containing itself.
  */
 internal inline fun <reified T: CompoundMatcher> Matcher.group(isContiguous: Boolean = false): List<Matcher> {
-    if (this !is T || this is MaybeContiguous && this.isContiguous == isContiguous) {
+    if (this !is T || this is SequenceMatcher && this.isContiguous != isContiguous) {
         return listOf(this)
     }
     return subMatchers
@@ -38,7 +37,7 @@ internal inline fun <reified T: CompoundMatcher> Matcher.group(isContiguous: Boo
  */
 internal fun Matcher.specified(): String {
     return when (this) {
-        is Aggregation -> "($this)"
+        is AggregateMatcher -> "($this)"
         is CompoundMatcher -> toString()
         else -> toString()
     }
@@ -116,7 +115,7 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  * @see MatcherContext
  * @see Transform
  */
-public sealed interface Matcher : Unique
+public interface Matcher : Unique
 
 /**
  * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],

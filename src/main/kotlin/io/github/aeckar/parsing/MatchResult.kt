@@ -2,16 +2,9 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.output.Match
 
-internal data class MatchDependency(val rule: Matcher, val depth: Int) {
-    override fun equals(other: Any?) = other is MatchDependency && rule == other.rule
-    override fun hashCode() = rule.hashCode()
-    override fun toString() = "$rule @ $depth"
-}
+internal sealed interface MatchResult
 
-internal data class MatchSuccess(
-    val matches: List<Match>,
-    val dependencies: Set<MatchDependency>
-)
+internal data class MatchSuccess(val matches: List<Match>, val dependencies: Set<MatchDependency>) : MatchResult
 
 /**
  * Describes why a match at a specific location in an input failed.
@@ -24,7 +17,7 @@ public class MatchFailure internal constructor(
     public val offset: Int,
     public val matcher: Matcher,
     internal val dependencies: Set<MatchDependency>
-) {
+): MatchResult {
     /** A description of the failure provided by the implementor. */
     public val cause: String? by lazy(lazyCause)
 

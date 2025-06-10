@@ -33,13 +33,18 @@ public open class RuleContext @PublishedApi internal constructor(
 
     /** Returns a copy of this parser that will not reuse the existing state when visited. */
     public fun Parser<*>.unique(): Matcher {
-        return with(generateTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
+        return with(newBaseTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
     }
 
-    private val singleChar = cacheableMatcher(".") { yield(1) }
+    private val singleChar = newCacheableMatcher(".") { yield(1) }
 
-    private fun cacheableMatcher(descriptiveString: String, scope: MatcherScope): Matcher {
-        return generateMatcher(logger, ::emptySeparator, descriptiveString, true, scope)
+    private inline fun newCacheableMatcher(descriptiveString: String, crossinline scope: MatcherScope): Matcher {
+        return newBaseMatcher(logger, ::emptySeparator, descriptiveString, isCacheable = true) {
+            val isRecording = driver.isRecordingMatches
+            driver.isRecordingMatches = false
+            scope()
+            driver.isRecordingMatches = isRecording
+        }
     }
 
     /* ------------------------------ rule factories ------------------------------ */
@@ -48,10 +53,10 @@ public open class RuleContext @PublishedApi internal constructor(
     public fun char(): Matcher = singleChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = cacheableMatcher("'$c'") { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = newCacheableMatcher("'$c'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
-    public fun text(substring: String): Matcher = cacheableMatcher("\"$substring\"") { yield(lengthOf(substring)) }
+    public fun text(substring: String): Matcher = newCacheableMatcher("\"$substring\"") { yield(lengthOf(substring)) }
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: String): Matcher = charIn(chars.toList())
@@ -59,7 +64,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: Collection<Char>): Matcher {
         val logicString = "[${chars.joinToString("")}]"
-        return cacheableMatcher(logicString) { yield(lengthOfFirst(chars)) }
+        return newCacheableMatcher(logicString) { yield(lengthOfFirst(chars)) }
     }
 
     /** Returns a rule matching any character not in the given string. */
@@ -68,7 +73,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching any character not in the given collection. */
     public fun charNotIn(chars: Collection<Char>): Matcher {
         val logicString = "![${chars.joinToString("")}]"
-        return cacheableMatcher(logicString) {
+        return newCacheableMatcher(logicString) {
             if (lengthOfFirst(chars) != -1) {
                 fail()
             }
@@ -79,7 +84,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching the first acceptable substring. */
     public fun textIn(substrings: Collection<String>): Matcher {
         val logicString = substrings.joinToString(" | ", "(", ")") { "\"$it\"" }
-        return cacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
+        return newCacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
     }
 
     /**
@@ -91,7 +96,7 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = newCacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
 
     /**
      * Returns a rule matching text satisfying the newPattern given by the expression.
@@ -102,7 +107,7 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = newCacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
 
     /**
      * Returns a rule matching this one, then the [separator][match], then the other.

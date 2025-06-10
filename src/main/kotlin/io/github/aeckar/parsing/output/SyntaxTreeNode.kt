@@ -93,7 +93,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     internal fun <R> walk(outerContext: TransformContext<R>): R {
         val state = outerContext.state
         if (matcher !is Transform<*>) {
-            children.forEach { it.walk(this) }  // Invoke child transforms directly
+            children.forEach { it.walk(outerContext) }  // Invoke child transforms directly
             return state
         }
         matcher as RichTransform<R>
