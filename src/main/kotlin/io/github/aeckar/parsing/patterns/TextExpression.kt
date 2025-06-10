@@ -15,40 +15,38 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
  * @see MatcherContext.lengthByText
  */
 public class TextExpression internal constructor() : Expression() {
-    override fun clearCharData() {
+    override fun clearTemporaryData() {
         charData.clear()
     }
 
     /** Holds the matchers used to parse text expressions. */
     public object Grammar {
-        private val action = actionBy<TextExpression>()
+        private val action = actionBy<TextExpression>(preOrder = true)
         private val rule = ruleBy(logger("TextExpression.Grammar"))
 
         private val modifiers = mapOf(
             '+' to { subPattern: Pattern ->
-                val failureValue = subPattern.failureValue()
-                textPattern("{$subPattern}+") { s, i ->
+                newPattern("{$subPattern}+") { s, i ->
                     var offset = 0
                     var matchCount = 0
-                    generateSequence { subPattern.accept(s, i) }
-                        .onEach { if (it != failureValue) ++matchCount }
-                        .takeWhile { i + offset < s.length && it != failureValue }
+                    generateSequence { subPattern(s, i) }
+                        .onEach { if (it != -1) ++matchCount }
+                        .takeWhile { i + offset < s.length && it != -1 }
                         .forEach { offset += it }
                     if (matchCount == 0) -1 else offset
                 }
             },
             '*' to { subPattern: Pattern ->
-                val failureValue = subPattern.failureValue()
-                textPattern("{$subPattern}*") { s, i ->
+                newPattern("{$subPattern}*") { s, i ->
                     var offset = 0
-                    generateSequence { subPattern.accept(s, i) }
-                        .takeWhile { i + offset < s.length && it != failureValue }
+                    generateSequence { subPattern(s, i) }
+                        .takeWhile { i + offset < s.length && it != -1 }
                         .forEach { offset += it }
                     offset
                 }
             },
             '?' to { subPattern: Pattern ->
-                textPattern("{$subPattern}?") { s, i -> subPattern.accept(s, i).coerceAtLeast(0) }
+                newPattern("{$subPattern}?") { s, i -> subPattern(s, i).coerceAtLeast(0) }
             }
         )
 
@@ -56,8 +54,8 @@ public class TextExpression internal constructor() : Expression() {
             CharExpression.Grammar.start
         } with action {
             val charPattern = resultsOf(CharExpression.Grammar.start).single().rootPattern()
-            state.patterns += textPattern(charPattern.toString()) { s, i ->
-                if (charPattern.accept(s, i) == 1) 1 else -1
+            state.patterns += newPattern(charPattern.toString()) { s, i ->
+                if (charPattern(s, i) == 1) 1 else -1
             }
         }
 
@@ -68,27 +66,27 @@ public class TextExpression internal constructor() : Expression() {
             state.patterns += if (children[3].choice == 0) {
                 modifiers.getValue(children[3].substring.single())(pattern)
             } else {
-                textPattern("{$pattern}", pattern)
+                newPattern("{$pattern}", pattern)
             }
         }
 
         public val substring: Matcher by rule {
-            oneOrMore(charOrEscape("|{}+*?"))
+            oneOrMore(charOrEscape(rule, "|{}+*?"))
         } with action {
             val substring = state.charData.toString()
-            state.patterns += textPattern(substring) { s, i -> if (s.startsWith(substring, i)) substring.length else -1 }
-            state.clearCharData()
+            state.patterns += newPattern(substring) { s, i -> if (s.startsWith(substring, i)) substring.length else -1 }
+            state.clearTemporaryData()
         }
 
-        public val concatenation: Matcher by rule {
+        public val sequence: Matcher by rule {
             oneOrMore(textExpr)
         } with action {
-            val patterns = state.patterns.removeLast(children[0].children.size)
-            state.patterns += textPattern(patterns.joinToString("")) { s, i ->
+            val patterns = state.patterns.removeLast(children.size)
+            state.patterns += newPattern(patterns.joinToString("")) { s, i ->
                 var offset = 0
                 var matchCount = 0
                 patterns.asSequence()
-                    .map { it.accept(s, i) }
+                    .map { it(s, i) }
                     .onEach { if (it != -1) ++matchCount }
                     .takeWhile { i + offset < s.length && it != -1 }
                     .forEach { offset += it }
@@ -100,16 +98,16 @@ public class TextExpression internal constructor() : Expression() {
             textExpr * char('|') * textExpr * zeroOrMore(char('|') * textExpr)
         } with action {
             val patterns = state.patterns.removeLast(2 + children[3].children.size)
-            state.patterns += textPattern(patterns.joinToString("|")) { s, i ->
+            state.patterns += newPattern(patterns.joinToString("|")) { s, i ->
                 patterns.asSequence()
-                    .map { it.accept(s, i) }
+                    .map { it(s, i) }
                     .firstOrNull { it != -1 } ?: -1
             }
         }
 
         public val textExpr: Matcher by rule {
             union or
-                    concatenation or
+                    sequence or
                     substring or
                     captureGroup
         }

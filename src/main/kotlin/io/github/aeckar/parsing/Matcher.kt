@@ -1,34 +1,42 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.newMatcher
+import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 import io.github.aeckar.parsing.rules.Aggregation
 import io.github.aeckar.parsing.rules.CompoundMatcher
+import io.github.aeckar.parsing.rules.MaybeContiguous
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.oshai.kotlinlogging.KLogger
 
 internal val emptySeparator = generateMatcher {}
 
 @PublishedApi
-internal fun Matcher.collectMatches(identity: Matcher?, engine: Engine): Int {
-    return (this as RichMatcher).collectMatches(identity, engine)
+internal fun Matcher.collectMatches(identity: Matcher?, driver: Driver): Int {
+    return (this as RichMatcher).collectMatches(identity, driver)
 }
 
 /**
- * If this matcher is of the given type, returns its sub-rules.
+ * If this matcher is of the given type and is of the same contiguosity, returns its sub-rules.
  * Otherwise, returns a list containing itself.
  */
-internal inline fun <reified T: CompoundMatcher> Matcher.subRulesOrSelf() = if (this is T) subMatchers else listOf(this)
+internal inline fun <reified T: CompoundMatcher> Matcher.group(isContiguous: Boolean = false): List<Matcher> {
+    if (this !is T || this is MaybeContiguous && this.isContiguous == isContiguous) {
+        return listOf(this)
+    }
+    return subMatchers
+}
 
 /**
  * Returns the string representation of this matcher as a sub-rule.
  *
  * As such, this function parenthesizes this rule if it comprises multiple other rules.
  */
-internal fun Matcher.fundamentalString(): String {
+internal fun Matcher.specified(): String {
     return when (this) {
         is Aggregation -> "($this)"
         is CompoundMatcher -> toString()
@@ -37,14 +45,22 @@ internal fun Matcher.fundamentalString(): String {
 }
 
 /** Returns the most fundamental [identity][RichMatcher.identity] of this matcher. */
-internal fun Matcher.fundamentalMatcher(): Matcher {
-    var prev = this
-    var cur = (this as RichMatcher).identity
-    while (cur !== prev) {
-        prev = cur
-        cur = (cur as RichMatcher).identity
+internal fun Matcher.fundamentalIdentity(): Matcher {
+    if (this !== (this as RichMatcher).identity) {
+        return identity.fundamentalIdentity()
     }
-    return cur
+    return this
+}
+
+/** Returns the matcher that this one delegates its matching logic to. */
+internal fun Matcher.fundamentalMatcher(): Matcher {
+    if (this is MatcherProperty) {
+        return value.fundamentalMatcher()
+    }
+    if (this is AbstractMatcher && this !== identity) {
+        return identity.fundamentalMatcher()
+    }
+    return this
 }
 
 /**
@@ -57,10 +73,10 @@ internal fun Matcher.fundamentalMatcher(): Matcher {
  */
 public fun Matcher.match(sequence: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
-    val engine = Engine(Tape(sequence), matches)
-    collectMatches(this, engine)
+    val driver = Driver(Tape(sequence), matches)
+    collectMatches(this, driver)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
-    return if (matches.isEmpty()) Result(engine.failures()) else Result(engine.failures(), matches)
+    return if (matches.isEmpty()) Result(driver.failures()) else Result(driver.failures(), matches)
 }
 
 /**
@@ -95,7 +111,7 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  *
  * Matchers are equivalent according to their matching logic.
  * @see newMatcher
- * @see generateRule
+ * @see newRule
  * @see RuleContext
  * @see MatcherContext
  * @see Transform
@@ -110,13 +126,15 @@ public sealed interface Matcher : Unique
  */
 internal interface RichMatcher : Matcher {
     val separator: Matcher
-    val identity: Matcher
     val isCacheable: Boolean
     val logger: KLogger?
+
+    /** The identity assigned to this matcher during debugging. */
+    val identity: Matcher
 
     /**
      * Returns the size of the matching substring at the beginning
      * of the remaining input, or -1 if one was not found.
      */
-    fun collectMatches(identity: Matcher?, engine: Engine): Int
+    fun collectMatches(identity: Matcher?, driver: Driver): Int
 }

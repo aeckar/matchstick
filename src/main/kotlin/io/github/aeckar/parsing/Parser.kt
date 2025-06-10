@@ -46,5 +46,5 @@ public sealed interface Parser<out T> : Matcher, Transform<T>
  *
  * All implementors of [Parser] also implement this interface.
  */
-internal interface RichParser<T> : Parser<T>, RichMatcher, RichTransform<T>
+internal interface  RichParser<T> : Parser<T>, RichMatcher, RichTransform<T>
 

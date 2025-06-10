@@ -6,51 +6,51 @@ import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.parse
 import java.util.concurrent.ConcurrentHashMap
 
-private val charPatternCache: MutableMap<String, CharPattern> = ConcurrentHashMap<String, CharPattern>()
+/**
+ * When matched to a character in a sequence, returns
+ * the length of the subsequence satisfying some condition.
+ */
+public typealias Pattern = (CharSequence, Int) -> Int
+
+private val charPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
     .apply { put("") { _, _ -> 0 } }
 
-private val textPatternCache: MutableMap<String, TextPattern> = ConcurrentHashMap<String, TextPattern>()
+private val textPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
     .apply { put("") { _, _ -> 0 } }
 
 /* ------------------------------ factories ------------------------------ */
 
-/** The returned pattern must return 0 on failure. */
-internal inline fun charPattern(
+internal inline fun newPredicate(
     descriptiveString: String,
     crossinline predicate: (sequence: CharSequence, index: Int) -> Boolean
-): Pattern {
-    return object : CharPattern by ({ s: CharSequence, i: Int -> if (predicate(s, i)) 1 else 0 }) {
-        override fun toString(): String = descriptiveString
-    }
+): Pattern = object : Pattern by ({ s: CharSequence, i: Int -> if (predicate(s, i)) 1 else -1 }) {
+    override fun toString(): String = descriptiveString
 }
 
-/** The returned pattern must return -1 on failure. */
-internal fun textPattern(
+internal fun newPattern(
     descriptiveString: String,
-    pattern: Pattern
-): Pattern {
-    return object : TextPattern by pattern {
-        override fun toString() = descriptiveString
-    }
+    pattern: (sequence: CharSequence, index: Int) -> Int
+): Pattern = object : Pattern by pattern {
+    override fun toString(): String = descriptiveString
 }
 
 /**
- * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
+ * Returns the pre-compiled character newPattern, or a new one if the newPattern has not yet been cached.
  * @see RuleContext.charBy
  */
-internal fun charPatternOf(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
+internal fun lookupCharPattern(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
 
 /**
- * Returns the pre-compiled text pattern, or a new one if the pattern has not yet been cached.
+ * Returns the pre-compiled text newPattern, or a new one if the newPattern has not yet been cached.
  * @see RuleContext.textBy
  */
-internal fun textPatternOf(expr: String) = patternOf(expr, textPatternCache, TextExpression.Grammar.start)
+internal fun lookupTextPattern(expr: String) = patternOf(expr, textPatternCache, TextExpression.Grammar.start)
 
 /**
- * Returns the text pattern specified by the given expression.
+ * Returns the text newPattern specified by the given expression.
  * @see TextExpression.Grammar
  */
-public fun pattern(expr: String): Pattern = textPatternOf(expr)
+public fun pattern(expr: String): Pattern = lookupTextPattern(expr)
 
 @Suppress("UNCHECKED_CAST")
 private inline fun <reified T : Expression, P : Pattern> patternOf(
@@ -65,23 +65,3 @@ private inline fun <reified T : Expression, P : Pattern> patternOf(
     }
     return cache.getValue(expr)
 }
-
-/* ------------------------------ pattern operations ------------------------------ */
-
-internal fun Pattern.failureValue(): Int {
-    return if (this is CharPattern) 0 else -1
-}
-
-/* ------------------------------ pattern classes ------------------------------ */
-
-/**
- * When [matched][invoke] to a character in a sequence, returns
- * the length of the subsequence satisfying some condition.
- */
-public fun interface Pattern {
-    /** Returns the length of the subsequence satisfying some condition. */
-    public fun accept(sequence: CharSequence, index: Int): Int
-}
-
-internal fun interface CharPattern : Pattern
-internal fun interface TextPattern : Pattern

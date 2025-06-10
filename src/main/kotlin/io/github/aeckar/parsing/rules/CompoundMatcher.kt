@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.AbstractMatcher
-import io.github.aeckar.parsing.Engine
+import io.github.aeckar.parsing.Driver
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.UnrecoverableRecursionException
@@ -96,7 +96,7 @@ internal sealed class CompoundMatcher(
         }
     }
 
-    protected abstract fun captureSubstring(engine: Engine)
+    protected abstract fun captureSubstring(driver: Driver)
     final override fun equals(other: Any?) = super.equals(other)
     final override fun hashCode() = super.hashCode()
     final override fun toString() = if (id !== unknownID) id else descriptiveString
@@ -115,33 +115,33 @@ internal sealed class CompoundMatcher(
         isInitialized = true
     }
 
-    final override fun collectMatches(identity: Matcher?, engine: Engine): Int {
+    final override fun collectMatches(identity: Matcher?, driver: Driver): Int {
         val trueIdentity = identity ?: this
         initialize()
         return generateMatcher {
-            captureSubstring(engine)
+            captureSubstring(driver)
             if (context.isGreedy && leftRecursionsPerSubRule[0] != setOf(this)) {
                 var madeGreedyMatch = false
-                --engine.depth
+                --driver.depth
                 while (true) {
-                    engine.leftAnchor = this@CompoundMatcher
-                    if (collectMatches(trueIdentity, engine) <= 0) {
+                    driver.leftAnchor = this@CompoundMatcher
+                    if (collectMatches(trueIdentity, driver) <= 0) {
                         madeGreedyMatch = true
                     } else {
                         break
                     }
                 }
                 if (!madeGreedyMatch) {
-                    ++engine.depth
+                    ++driver.depth
                 }
             }
-        }.collectMatches(trueIdentity, engine)
+        }.collectMatches(trueIdentity, driver)
     }
 
-    protected fun collectSeparatorMatches(engine: Engine): Int {
+    protected fun collectSeparatorMatches(driver: Driver): Int {
         if (separator === emptySeparator) {
             return 0
         }
-        return separator.collectMatches(separator, engine)
+        return separator.collectMatches(separator, driver)
     }
 }

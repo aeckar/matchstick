@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing.rules
 
-import io.github.aeckar.parsing.Engine
+import io.github.aeckar.parsing.Driver
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.collectMatches
@@ -15,15 +15,15 @@ internal class ProximityMatcher(
 ) : CompoundMatcher(logger, context, emptyList()) {
     override val descriptiveString by lazy { candidates.joinToString(prefix = "[", postfix = "]") }
 
-    override fun captureSubstring(engine: Engine) {
-        if (engine.leftAnchor != null) {
+    override fun captureSubstring(driver: Driver) {
+        if (driver.leftAnchor != null) {
             return
         }
         val nearestRule = candidates.minBy { candidate ->
-            val distance = engine.matchers().asReversed().indexOf(candidate)
+            val distance = driver.matchers().asReversed().indexOf(candidate)
             if (distance == -1) Int.MAX_VALUE else distance
         }
-        if (nearestRule !in engine.matchers() || nearestRule.collectMatches(nearestRule, engine) == -1) {
+        if (nearestRule !in driver.matchers() || nearestRule.collectMatches(nearestRule, driver) == -1) {
             throw unnamedMatchInterrupt
         }
     }

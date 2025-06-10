@@ -3,8 +3,8 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
-import io.github.aeckar.parsing.patterns.charPatternOf
-import io.github.aeckar.parsing.patterns.textPatternOf
+import io.github.aeckar.parsing.patterns.lookupCharPattern
+import io.github.aeckar.parsing.patterns.lookupTextPattern
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
@@ -25,9 +25,9 @@ import io.github.oshai.kotlinlogging.KLogger
 @ParserComponentDSL
 public class MatcherContext internal constructor(
     logger: KLogger?,
-    internal val engine: Engine,
+    internal val driver: Driver,
     lazySeparator: () -> Matcher,
-) : RuleContext(logger, false, lazySeparator), CharSequence by engine.tape {
+) : RuleContext(logger, false, lazySeparator), CharSequence by driver.tape {
     internal var includePos = -1
         private set
 
@@ -35,7 +35,7 @@ public class MatcherContext internal constructor(
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
     public fun lengthOf(matcher: Matcher): Int {
-        return engine.ignoringMatches { matcher.collectMatches(matcher, engine) }
+        return driver.ignoringMatches { matcher.collectMatches(matcher, driver) }
     }
 
     /**
@@ -75,21 +75,21 @@ public class MatcherContext internal constructor(
     }
 
     /**
-     * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
+     * Returns 1 if a character satisfying the newPattern prefixes the offset input, or -1 if one is not found.
      * @see charBy
      * @see CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
-        return if (charPatternOf(expr).accept(engine.tape.original, engine.tape.offset) == 1) 1 else -1
+        return lookupCharPattern(expr)(driver.tape.original, driver.tape.offset)
     }
 
     /**
-     * Returns 1 if a string satisfying the pattern prefixes the offset input, or -1 if one is not found.
+     * Returns 1 if a string satisfying the newPattern prefixes the offset input, or -1 if one is not found.
      * @see textBy
      * @see TextExpression.Grammar
      */
     public fun lengthByText(expr: String): Int {
-        return textPatternOf(expr).accept(engine.tape.original, engine.tape.offset)
+        return lookupTextPattern(expr)(driver.tape.original, driver.tape.offset)
     }
 
     /* ------------------------------ offset modification ------------------------------ */
@@ -112,11 +112,11 @@ public class MatcherContext internal constructor(
      */
     public fun yield(length: Int) {
         if (length < 0) {
-            throw MatchInterrupt { "Negative yield $length at offset ${engine.tape.offset}" }
+            throw MatchInterrupt { "Negative yield $length at offset ${driver.tape.offset}" }
         }
         yieldRemaining()
         consume(length)
-        engine.addMatch(null, engine.tape.offset - length)
+        driver.addMatch(null, driver.tape.offset - length)
     }
 
     /**
@@ -128,10 +128,10 @@ public class MatcherContext internal constructor(
      */
     public fun include(length: Int) {
         if (length < 0) {
-            throw MatchInterrupt { "Negative yield $length at offset ${engine.tape.offset}" }
+            throw MatchInterrupt { "Negative yield $length at offset ${driver.tape.offset}" }
         }
         if (includePos == -1) {
-            includePos = engine.tape.offset
+            includePos = driver.tape.offset
         }
         applyOffset(length)
     }
@@ -141,7 +141,7 @@ public class MatcherContext internal constructor(
         if (includePos == -1) {
             return
         }
-        engine.addMatch(null, includePos)
+        driver.addMatch(null, includePos)
         includePos = -1
     }
 
@@ -149,7 +149,7 @@ public class MatcherContext internal constructor(
         if (length < 0) {
             return
         }
-        val tape = engine.tape
+        val tape = driver.tape
         if (tape.offset + length > tape.original.length) {
             throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.original.length}" }
         }
@@ -159,7 +159,7 @@ public class MatcherContext internal constructor(
     /* ------------------------------ misc. ------------------------------ */
 
     /** Returns an iterator returning the remaining characters in the input, regardless of the current offset. */
-    public fun remaining(): CharIterator = engine.tape.remaining()
+    public fun remaining(): CharIterator = driver.tape.remaining()
 
     /** Fails the current match. */
     public fun fail(): Nothing = throw unnamedMatchInterrupt

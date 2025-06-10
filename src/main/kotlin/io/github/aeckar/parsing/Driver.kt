@@ -3,12 +3,9 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.state.Tape
-import io.github.aeckar.parsing.state.addAtIndex
-import io.github.aeckar.parsing.state.findAtIndex
+import io.github.aeckar.parsing.state.insert
+import io.github.aeckar.parsing.state.lookup
 import io.github.aeckar.parsing.state.readOnlyCopy
-
-// todo matchers per position
-// todo debugging
 
 /**
  * Collects matches in an input using a matcher.
@@ -20,11 +17,11 @@ import io.github.aeckar.parsing.state.readOnlyCopy
  * the number of predicates currently being matched to the input
  */
 @PublishedApi
-internal class Engine(val tape: Tape, private val matches: MutableList<Match>) {
+internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     private val dependencies = mutableSetOf<MatchDependency>()
-    private val matchersPerIndex = arrayOfNulls<MutableList<Matcher>>(tape.original.length)
-    private val successesPerIndex = arrayOfNulls<MutableSet<MatchSuccess>>(tape.original.length)
-    private val failuresPerIndex = arrayOfNulls<MutableSet<MatchFailure>>(tape.original.length)
+    private val matchersPerIndex = arrayOfNulls<MutableList<Matcher>>(tape.original.length + 1)
+    private val successesPerIndex = arrayOfNulls<MutableSet<MatchSuccess>>(tape.original.length + 1)
+    private val failuresPerIndex = arrayOfNulls<MutableSet<MatchFailure>>(tape.original.length + 1)
     private var choiceCounts = mutableListOf<Int>()
     private var isRecordingMatches = true
     private val matchers = mutableListOf<Matcher>()
@@ -70,12 +67,6 @@ internal class Engine(val tape: Tape, private val matches: MutableList<Match>) {
         if (isRecordingMatches) {
             matches += match
         }
-        if (matcher == null) {
-            return
-        }
-        if ((matcher as RichMatcher).isCacheable) {
-            successesPerIndex.addAtIndex(begin, MatchSuccess(match, dependencies.readOnlyCopy()))
-        }
     }
 
     /**
@@ -83,21 +74,34 @@ internal class Engine(val tape: Tape, private val matches: MutableList<Match>) {
      * Searches for viable cached results beforehand, and caches the result if possible.
      */
     fun captureSubstring(matcher: Matcher, scope: MatcherScope, context: MatcherContext): Int {
-        val originalOffset = tape.offset
-        val originalMatchCount = matches.size
-        matchers += matcher as RichMatcher
-        matchersPerIndex.addAtIndex(originalOffset, matcher)
+        val begin = tape.offset
+        val beginMatchCount = matches.size
+        val logger = (matcher as RichMatcher).logger
+        matchers += matcher
+        matchersPerIndex.insert(begin, matcher)
         choiceCounts += 0
         ++depth
-        matcher.logger?.debug { "Attempting match to $matcher" }
+        logger?.debug {
+            buildString {
+                append("Attempting match to $matcher")
+                val unique = matcher.fundamentalMatcher()
+                if (unique !== matcher) {
+                    append(" ($unique)")
+                }
+                append(" @ $begin")
+            }
+        }
         return try {
             try {
                 if (matcher.isCacheable) {
-                    val result = matchResultOf(matcher)
+                    val result = lookupMatchResult(matcher)
                     if (result is MatchSuccess) {
-                        tape.offset += result.match.length
-                        return result.match.length
+                        tape.offset += result.matches.last().length
+                        matches += result.matches
+                        logger?.debug { "Match previously succeeded" }
+                        return result.matches.last().length
                     } else if (result is MatchFailure) {
+                        logger?.debug { "Match previously failed" }
                         throw MatchInterrupt {
                             val message = StringBuilder()
                             if (result.cause != null) {
@@ -110,28 +114,37 @@ internal class Engine(val tape: Tape, private val matches: MutableList<Match>) {
                 }
                 context.apply(scope)
                 context.yieldRemaining()
-                addMatch(matcher, originalOffset)
-                val length = tape.offset - originalOffset
+                addMatch(matcher, begin)
+                logger?.debug {
+                    val substring = tape.original.substring(matches.last().begin, matches.last().endExclusive)
+                    "Match to $matcher succeeded ('$substring') @ $begin"
+                }
+                val length = tape.offset - begin
                 if (matcher.isCacheable) {
-                    successesPerIndex.addAtIndex(originalOffset, MatchSuccess(matches.last(), dependencies.readOnlyCopy()))
+                    val success = MatchSuccess(matches.readOnlyCopy(), dependencies.readOnlyCopy())
+                    successesPerIndex.insert(begin, success)
+                    logger?.debug { "Cached success" }
                 }
                 length
             } finally {
                 failures.clear()
             }
         } catch (e: MatchInterrupt) {
+            logger?.debug { "Match to $matcher failed @ $begin" }
             val failure = MatchFailure(e.lazyCause, tape.offset, matcher, dependencies.readOnlyCopy())
             failures += failure
             if (matcher.isCacheable) {
-                failuresPerIndex.addAtIndex(originalOffset, failure)
+                failuresPerIndex.insert(begin, failure)
+                logger?.debug { "Cached failure" }
             }
             dependencies.retainAll { it.depth <= depth }
-            tape.offset -= tape.offset - originalOffset
-            matches.subList(originalMatchCount, matches.size).clear()
+            logger?.debug { "Current dependencies: $dependencies" }
+            tape.offset -= tape.offset - begin
+            matches.subList(beginMatchCount, matches.size).clear()
             -1
         } finally {
             matchers.removeLast()
-            matchersPerIndex[originalOffset]!!.removeLast()
+            matchersPerIndex[begin]!!.removeLast()
             choiceCounts.removeLast()
             --depth
         }
@@ -153,12 +166,12 @@ internal class Engine(val tape: Tape, private val matches: MutableList<Match>) {
         return length
     }
 
-    private fun matchResultOf(matcher: Matcher): Any? {
-        val originalOffset = tape.offset
-        val hit = successesPerIndex.findAtIndex(originalOffset) { (match, dependencies) ->
-            matcher == match.matcher && this.dependencies.all { it in dependencies }
+    private fun lookupMatchResult(matcher: Matcher): Any? {
+        val beginOffset = tape.offset
+        val hit = successesPerIndex.lookup(beginOffset) { (matches, dependencies) ->
+            matcher == matches.last().matcher && this.dependencies.all { it in dependencies }
         }
-        return hit ?: failuresPerIndex.findAtIndex(originalOffset) { failure ->
+        return hit ?: failuresPerIndex.lookup(beginOffset) { failure ->
             matcher == failure.matcher && this.dependencies.all { it in failure.dependencies }
         }
     }

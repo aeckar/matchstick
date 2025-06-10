@@ -23,8 +23,8 @@ internal fun generateMatcher(
 
     override fun toString() = descriptiveString ?: unknownID
 
-    override fun collectMatches(identity: Matcher?, engine: Engine): Int {
-        return engine.captureSubstring(identity ?: this, scope, MatcherContext(logger, engine, ::separator))
+    override fun collectMatches(identity: Matcher?, driver: Driver): Int {
+        return driver.captureSubstring(identity ?: this, scope, MatcherContext(logger, driver, ::separator))
     }
 }
 
@@ -42,13 +42,14 @@ internal fun generateRule(
 
     override val identity by lazy {
         val rule = context.run(scope)
+        // Ensure original and new transforms (if provided) are both invoked
         if (rule.id === unknownID) rule else IdentityMatcher(logger, context, rule)
     }
 
     override fun toString() = identity.toString()
 
-    override fun collectMatches(identity: Matcher?, engine: Engine): Int {
-        return this.identity.collectMatches(identity ?: this.identity, engine)
+    override fun collectMatches(identity: Matcher?, driver: Driver): Int {
+        return this.identity.collectMatches(identity ?: this.identity, driver)
     }
 }
 

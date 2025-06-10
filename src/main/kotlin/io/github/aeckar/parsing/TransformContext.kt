@@ -1,15 +1,18 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.actionBy
+import io.github.aeckar.parsing.dsl.mapBy
 import io.github.aeckar.parsing.dsl.with
+import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 
 /**
  * Configures and returns a transform.
  *
  * Itself represents the captured substring.
- * @see io.github.aeckar.parsing.dsl.mapBy
- * @see io.github.aeckar.parsing.dsl.actionBy
+ * @see mapBy
+ * @see actionBy
  * @see RichTransform.consumeMatches
  */
 @ParserComponentDSL
@@ -60,7 +63,7 @@ public class TransformContext<R> @PublishedApi internal constructor(
 
     /**
      * The index of the sub-matcher that the [substring] satisfies.
-     * @see io.github.aeckar.parsing.output.Match.choice
+     * @see Match.choice
      */
     public val choice: Int get() = root.choice
 
@@ -78,7 +81,7 @@ public class TransformContext<R> @PublishedApi internal constructor(
         if (isChildrenVisited) {
             throw MalformedTransformException("descend() called more than once")
         }
-        children.forEach { state = it.walk(state) }
+        children.forEach { state = it.walk(this) }
         isChildrenVisited = true
     }
 

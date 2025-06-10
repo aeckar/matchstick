@@ -83,7 +83,7 @@ public open class RuleContext @PublishedApi internal constructor(
     }
 
     /**
-     * Returns a rule matching a single character satisfying the pattern given by the expression.
+     * Returns a rule matching a single character satisfying the newPattern given by the expression.
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
@@ -94,7 +94,7 @@ public open class RuleContext @PublishedApi internal constructor(
     public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
 
     /**
-     * Returns a rule matching text satisfying the pattern given by the expression.
+     * Returns a rule matching text satisfying the newPattern given by the expression.
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
@@ -117,7 +117,7 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see plus
      */
     public operator fun Matcher.times(other: Matcher): Matcher {
-        return Concatenation(logger, this@RuleContext, this, other, true)
+        return Concatenation(logger, this@RuleContext, this, other, isContiguous = true)
     }
 
     /** Returns a rule matching this one or the other. */
@@ -141,13 +141,17 @@ public open class RuleContext @PublishedApi internal constructor(
      * Returns a rule matching the given rule one or more times successively.
      * @see oneOrMore
      */
-    public fun oneOrSpread(subRule: Matcher): Matcher = Repetition(logger, this@RuleContext, subRule, false, true)
+    public fun oneOrSpread(subRule: Matcher): Matcher {
+        return Repetition(logger, this@RuleContext, subRule, false, isContiguous = true)
+    }
 
     /**
      * Returns a rule matching the given rule zero or more times successively.
      * @see zeroOrMore
      */
-    public fun zeroOrSpread(subRule: Matcher): Matcher = Repetition(logger, this@RuleContext, subRule, true, true)
+    public fun zeroOrSpread(subRule: Matcher): Matcher {
+        return Repetition(logger, this@RuleContext, subRule, acceptsZero = true, isContiguous = true)
+    }
 
     /** Returns a rule matching the given rule zero or one time. */
     public fun maybe(subRule: Matcher): Matcher = Option(logger, this@RuleContext, subRule)

@@ -21,7 +21,11 @@ public typealias MatcherScope = MatcherContext.() -> Unit
  * @see newRule
  * @see RuleContext.separator
  */
-public fun newMatcher(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator, scope: MatcherScope): Matcher {
+public fun newMatcher(
+    logger: KLogger? = null,
+    separator: () -> Matcher = ::emptySeparator,
+    scope: MatcherScope
+): Matcher {
     return matcherBy(logger, separator)(scope)
 }
 
@@ -32,7 +36,7 @@ public fun newMatcher(logger: KLogger? = null, separator: () -> Matcher = ::empt
  *     /* ... */
  * }
  *
- * val matcher = matcherIgnoring { whitespace }
+ * val matcher = matcherBy { whitespace }
  * val parser by matcher {
  *     /* Using 'whitespace' as separator... */
  * }

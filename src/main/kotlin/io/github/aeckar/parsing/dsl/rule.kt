@@ -40,7 +40,7 @@ public fun newRule(
  *     /* ... */
  * }
  *
- * val rule = ruleIgnoring { whitespace }
+ * val rule = ruleBy { whitespace }
  * val parser by rule {
  *     /* Using 'whitespace' as separator... */
  * }
