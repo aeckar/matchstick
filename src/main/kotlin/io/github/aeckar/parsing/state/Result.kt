@@ -64,7 +64,7 @@ public data class Result<R> @PublishedApi internal constructor(
     /** Returns the result of the operation, or null if the operation failed. */
     @Suppress("UNCHECKED_CAST")
     public fun resultOrNull(): R? {
-        return takeIf { isFailure() }?.result as R
+        return takeIf { isSuccess() }?.result as R
     }
 
     /**

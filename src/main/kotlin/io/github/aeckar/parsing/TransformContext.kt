@@ -25,13 +25,7 @@ public class TransformContext<R> @PublishedApi internal constructor(
 
     /** Some state, whose final value is the output. */
     public var state: R = state
-        private set
-
-    // Isolate to function in order to apply @PublishedApi annotation
-    @PublishedApi
-    internal fun setState(value: R) {
-        state = value
-    }
+        internal set
 
     internal fun <R> addResult(subParser: Transform<R>, result: R) {
         if (subParser !in resultsBySubParser) {
@@ -85,7 +79,6 @@ public class TransformContext<R> @PublishedApi internal constructor(
         isChildrenVisited = true
     }
 
-    @PublishedApi
     internal fun finalState(): R {
         if (!isChildrenVisited) {
             descend()

@@ -6,11 +6,10 @@ import io.github.aeckar.parsing.NoSuchMatchException
 import io.github.aeckar.parsing.RichTransform
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
-import io.github.aeckar.parsing.consumeMatches
 import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
-import io.github.aeckar.parsing.state.unknownID
+import io.github.aeckar.parsing.state.UNKNOWN_ID
 
 private val syntaxTreePlaceholder = syntaxTreeOf("", listOf(Match(null, 0, 0, 0, 0)))
 
@@ -53,7 +52,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         } catch (_: NoSuchElementException) {
             throw NoSuchMatchException("Expected a match")
         }
-        substring = input.substring(match.begin, match.endExclusive)
+        substring = if (match.begin < input.length) input.substring(match.begin, match.endExclusive) else ""
         matcher = match.matcher
         choice = match.choice
 
@@ -102,7 +101,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         } else {
             val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.inputType))
             val result = matcher.consumeMatches(subParserContext) // Visit sub-transform
-            if (matcher.id === unknownID) {
+            if (matcher.id === UNKNOWN_ID) {
                 subParserContext.resultsBySubParser.forEach { (key, value) -> outerContext.addResult(key, value) }
             } else {
                 outerContext.addResult(matcher, result)

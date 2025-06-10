@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.dsl.MapScope
 import io.github.aeckar.parsing.dsl.actionBy
 import io.github.aeckar.parsing.dsl.mapBy
 import io.github.aeckar.parsing.state.Unique
@@ -7,11 +8,6 @@ import io.github.aeckar.parsing.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
-
-@PublishedApi
-internal fun <R> Transform<R>.consumeMatches(context: TransformContext<R>): R {
-    return (this as RichTransform<R>).consumeMatches(context)
-}
 
 /** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */
 public operator fun <R> Transform<R>.provideDelegate(
@@ -21,6 +17,19 @@ public operator fun <R> Transform<R>.provideDelegate(
     return ParserProperty(property.name, this as Parser<R>).toReadOnlyProperty()
 }
 
+@PublishedApi   // Inlined in 'actionBy' and 'mapBy'
+internal fun <R> newTransform(
+    inputType: KType,
+    scope: MapScope<R>
+): Transform<R> = object : RichTransform<R> {
+    override val inputType = inputType
+    override val scope: TransformContext<R>.() -> R = scope
+
+    override fun consumeMatches(context: TransformContext<R>): R {
+        context.state = context.run(scope)
+        return context.finalState()
+    }
+}
 
 /**
  * Transforms an input value according to a syntax tree in list form.

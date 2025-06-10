@@ -1,18 +1,17 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.Driver
-import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.RuleContext
-import io.github.aeckar.parsing.collectMatches
 import io.github.aeckar.parsing.unnamedMatchInterrupt
 import io.github.oshai.kotlinlogging.KLogger
 import kotlin.Int
 
-internal class ProximityMatcher(
+internal class ProximityRule(
     logger: KLogger?,
     context: RuleContext,
-    private val candidates: List<Matcher>
-) : CompoundMatcher(logger, context, emptyList()) {
+    private val candidates: List<RichMatcher>
+) : CompoundRule(logger, context, emptyList()) {
     override val descriptiveString by lazy { candidates.joinToString(prefix = "[", postfix = "]") }
 
     override fun captureSubstring(driver: Driver) {

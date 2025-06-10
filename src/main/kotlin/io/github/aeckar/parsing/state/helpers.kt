@@ -32,7 +32,7 @@ internal infix fun <T> T.instanceOf(type: KType): Boolean {
 }
 
 @Suppress("UNCHECKED_CAST")
-@PublishedApi
+@PublishedApi   // Inlined in 'parse'
 internal fun <T> initialStateOf(typeRef: KType): T {
     val classRef = typeRef.classifier as KClass<T>
     return try {

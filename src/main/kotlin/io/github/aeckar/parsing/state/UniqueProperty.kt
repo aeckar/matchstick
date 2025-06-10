@@ -3,18 +3,6 @@ package io.github.aeckar.parsing.state
 import io.github.aeckar.parsing.provideDelegate
 
 /**
- * Returns the string representation of this object followed by
- * that of the value wrapped by it if it is a [UniqueProperty].
- * Otherwise, returns the string representation of the same instance.
- */
-internal fun Any?.exposedString(): String {
-    if (this !is UniqueProperty) {
-        return toString()
-    }
-    return "$this ($value)"
-}
-
-/**
  * An object named using delegation.
  * @param value the original object, which may be named
  * @see provideDelegate

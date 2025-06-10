@@ -27,22 +27,22 @@ public class TextExpression internal constructor() : Expression() {
         private val modifiers = mapOf(
             '+' to { subPattern: Pattern ->
                 newPattern("{$subPattern}+") { s, i ->
-                    var offset = 0
+                    var length = 0
                     var matchCount = 0
-                    generateSequence { subPattern(s, i) }
+                    generateSequence { subPattern(s, i + length) }
                         .onEach { if (it != -1) ++matchCount }
-                        .takeWhile { i + offset < s.length && it != -1 }
-                        .forEach { offset += it }
-                    if (matchCount == 0) -1 else offset
+                        .takeWhile { i + length < s.length && it != -1 }
+                        .forEach { length += it }
+                    if (matchCount == 0) -1 else length
                 }
             },
             '*' to { subPattern: Pattern ->
                 newPattern("{$subPattern}*") { s, i ->
-                    var offset = 0
-                    generateSequence { subPattern(s, i) }
-                        .takeWhile { i + offset < s.length && it != -1 }
-                        .forEach { offset += it }
-                    offset
+                    var length = 0
+                    generateSequence { subPattern(s, i + length) }
+                        .takeWhile { i + length < s.length && it != -1 }
+                        .forEach { length += it }
+                    length
                 }
             },
             '?' to { subPattern: Pattern ->

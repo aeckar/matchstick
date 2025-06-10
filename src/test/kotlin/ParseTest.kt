@@ -1,6 +1,10 @@
+import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.UnrecoverableRecursionException
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.dsl.provideDelegate
+import io.github.aeckar.parsing.match
 import io.github.aeckar.parsing.treeify
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
 
 // auto-download (cache) image links -- if bad status code, get from archived (mangle by URL)
@@ -151,10 +155,34 @@ import kotlin.test.Test
 
 class ParseTest {
     @Test
-    fun test() {
+    fun textExpressionToTree() {
         //println(DoubleDown.blockComment.treeify("/** hello */").resultOrNull()?.treeString())
         val blockComment by newRule { text("/*") * textBy("{!=%*/}+") * text("*/") }
 
-        println(blockComment.treeify("/** hello */").resultOrNull()?.treeString())
+        println(blockComment.treeify("/* hello */").resultOrNull()?.treeString())
+    }
+
+    @Test
+    fun catchUnrecoverableRecursion() {
+        val grammar = object {
+            val rule1: Matcher = newRule { rule2 * char() }
+            val rule2 = newRule { rule1 * char() }
+        }
+        val directGrammar = object {
+            val rule1: Matcher = newRule { rule2 }
+            val rule2 = newRule { rule1 }
+        }
+        val enumGrammar = object {
+            val rule1: Matcher by newRule { rule2 * char() }
+            val rule2 by newRule { rule1 * char() }
+        }
+        val directEnumGrammar = object {
+            val rule1: Matcher by newRule { rule2 }
+            val rule2 by newRule { rule1 }
+        }
+        assertThrows<UnrecoverableRecursionException> { println(grammar.rule1.match("")) }
+        assertThrows<UnrecoverableRecursionException> { println(directGrammar.rule1.match("")) }
+        assertThrows<UnrecoverableRecursionException> { println(enumGrammar.rule1.match("")) }
+        assertThrows<UnrecoverableRecursionException> { println(directEnumGrammar.rule1.match("")) }
     }
 }

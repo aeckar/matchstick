@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.rules.CompoundMatcher
+import io.github.aeckar.parsing.rules.CompoundRule
 
 /**
  * Thrown when a newPattern expression is malformed.
@@ -22,7 +22,7 @@ public class StateInitializerException @PublishedApi internal constructor(
 ) : RuntimeException(message)
 
 /**
- * Thrown when a left-recursion is found in a [CompoundMatcher] that is not guarded by an [alternation][RuleContext.or].
+ * Thrown when a left-recursion is found in a [CompoundRule] that is not guarded by an [alternation][RuleContext.or].
  *
  * Raising this exception ensures that rules in this form are caught early during parser development.
  */

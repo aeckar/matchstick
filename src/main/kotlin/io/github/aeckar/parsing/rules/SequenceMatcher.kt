@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing.rules
 
-import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.RichMatcher
 
-internal sealed interface SequenceMatcher : Matcher {
+internal sealed interface SequenceMatcher : RichMatcher {
     val isContiguous: Boolean
 }

@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing.state
 
-private const val lookaheadSize = 20
+private const val LOOKAHEAD_SIZE = 20
 
 /**
  * Applies an offset to a character sequence.
@@ -8,9 +8,8 @@ private const val lookaheadSize = 20
  * Offsets exceeding the length of the original sequence are allowed, however,
  * negative offsets are not.
  */
-@PublishedApi
 internal class Tape(
-    val original: CharSequence,
+    val input: CharSequence,
     offset: Int = 0
 ) : CharSequence {
     var offset: Int = offset
@@ -21,11 +20,11 @@ internal class Tape(
             field = value
         }
 
-    override val length: Int get() = original.length - offset
+    override val length: Int get() = input.length - offset
 
     init {
-        if (original is Tape) {
-            throw IllegalArgumentException("Sequence '${original.original}' has an offset of ${original.offset}")
+        if (input is Tape) {
+            throw IllegalArgumentException("Sequence '${input.input}' has an offset of ${input.offset}")
         }
         require(offset >= 0) { "Offset $offset is negative" }
     }
@@ -34,18 +33,18 @@ internal class Tape(
     fun remaining(): CharIterator = object : CharIterator() {
         var index = offset
 
-        override fun nextChar() = original[index++]
-        override fun hasNext() = index < original.length
+        override fun nextChar() = input[index++]
+        override fun hasNext() = index < input.length
     }
 
-    override fun get(index: Int): Char = original[index + offset]
-    override fun hashCode(): Int = 31 * original.hashCode() + offset
+    override fun get(index: Int): Char = input[index + offset]
+    override fun hashCode(): Int = 31 * input.hashCode() + offset
 
     /** Returns the original sequence, truncated and prepended with ellipses if the offset is greater than 0. */
     override fun toString(): String {
-        val subSequence = (offset - lookaheadSize..offset + lookaheadSize).map { index ->
-            if (index in original.indices) {
-                val c = original[index]
+        val subSequence = (offset - LOOKAHEAD_SIZE..offset + LOOKAHEAD_SIZE).map { index ->
+            if (index in input.indices) {
+                val c = input[index]
                 if (index == offset) "[$c]" else c
             } else {
                 null
@@ -53,15 +52,15 @@ internal class Tape(
         }
         return buildString {
             val truncatedSequence = subSequence.filterNotNull().joinToString("")
-            if (truncatedSequence.length - 2 /* brackets */ == original.length) {
+            if (truncatedSequence.length - 2 /* brackets */ == input.length) {
                 append(truncatedSequence)
                 return@buildString
             }
-            if (subSequence.first() != null && offset - lookaheadSize != 0) {
+            if (subSequence.first() != null && offset - LOOKAHEAD_SIZE != 0) {
                 append("...")
             }
             append(truncatedSequence)
-            if (subSequence.last() != null && offset + lookaheadSize != original.lastIndex) {
+            if (subSequence.last() != null && offset + LOOKAHEAD_SIZE != input.lastIndex) {
                 append("...")
             }
         }
@@ -92,13 +91,13 @@ internal class Tape(
 
         require(startIndex <= endIndex) { "Start index $startIndex exceeds end index $endIndex" }
         val actualStartIndex = startIndex + offset
-        if (endIndex == original.length) {
-            return Tape(original, actualStartIndex)
+        if (endIndex == input.length) {
+            return Tape(input, actualStartIndex)
         }
-        return LazySubSequence(original, actualStartIndex, endIndex + offset)
+        return LazySubSequence(input, actualStartIndex, endIndex + offset)
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is Tape && other.original == original && other.offset == offset
+        return other is Tape && other.input == input && other.offset == offset
     }
 }

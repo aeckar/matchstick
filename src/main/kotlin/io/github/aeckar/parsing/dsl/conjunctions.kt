@@ -21,12 +21,7 @@ public operator fun <R> Parser<R>.provideDelegate(
 
 /** Returns a parser with the given matcher and transform. */
 public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
-    return object : AbstractMatcher(), RichParser<R>, RichMatcher by this, RichTransform<R> by transform {
-        override val id get() = this@with.id
-        override val identity get() = (this@with as RichMatcher).identity
-
-        override fun toString() = this@with.toString()
-    }
+    return UniqueParser(this as RichMatcher, transform as RichTransform)
 }
 
 /** Returns a parser with the given matcher and an action that does nothing. */

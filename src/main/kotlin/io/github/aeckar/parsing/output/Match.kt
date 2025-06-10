@@ -7,6 +7,7 @@ import io.github.aeckar.parsing.Matcher
  *
  * Substrings are evaluated lazily upon conversion to a [SyntaxTreeNode] of the same matcher.
  * @param begin the offset of the full sequence where the matched substring begins
+ * This value may exceed the bounds of the original input
  * @param endExclusive one past the last index containing a character in the matched substring
  * @param choice if [matcher] requires choosing between multiple rules, represents the index of the option chosen.
  * If the matcher failed to match its sub-rule, is -1. Otherwise, is 0.
@@ -26,9 +27,8 @@ public class Match internal constructor(
     public var matcher: Matcher? = matcher
         internal set
 
-    /** Returns a string in the form "`begin`..`endExclusive` @ `matcher`(`depth`)".  */
     override fun toString(): String {
-        val predicateOrEmpty = if (matcher != null) "$matcher " else ""
-        return "$begin..<$endExclusive @ $predicateOrEmpty($depth)"
+        val matcherOrEmpty = if (matcher != null) " @ $matcher" else ""
+        return "$begin..<$endExclusive$matcherOrEmpty"
     }
 }

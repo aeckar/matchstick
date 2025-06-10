@@ -8,11 +8,8 @@ plugins {
 group = "io.github.aeckar"
 version = "1.0.0"
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
+    implementation("com.github.aeckar:kansi:0.0.1")
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.7")
     testImplementation("ch.qos.logback:logback-classic:1.5.18")
     testImplementation(kotlin("test"))

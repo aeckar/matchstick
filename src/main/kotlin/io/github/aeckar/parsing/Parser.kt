@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.ansi.yellow
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
@@ -14,8 +15,11 @@ import kotlin.reflect.typeOf
  * @throws NoSuchMatchException a match cannot be made to the input
  * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
  */
-public fun <R> Parser<R>.parse(sequence: CharSequence, initialState: R): Result<R> {
-    return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>).walk(initialState) }
+public fun <R> Parser<R>.parse(input: CharSequence, initialState: R): Result<R> {
+    return match(input).mapResult {
+        (this as RichMatcher).logger?.debug { "Walking syntax tree of ${yellow("'$input'")}" }
+        SyntaxTreeNode(input, it as MutableList<Match>).walk(initialState)
+    }
 }
 
 /**
@@ -26,8 +30,8 @@ public fun <R> Parser<R>.parse(sequence: CharSequence, initialState: R): Result<
  * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
  * @throws StateInitializerException the nullary constructor of [R] is inaccessible
  */
-public inline fun <reified R> Parser<R>.parse(sequence: CharSequence): Result<R> {
-    return parse(sequence, initialStateOf(typeOf<R>()))
+public inline fun <reified R> Parser<R>.parse(input: CharSequence): Result<R> {
+    return parse(input, initialStateOf(typeOf<R>()))
 }
 
 /* ------------------------------ parser classes ------------------------------ */

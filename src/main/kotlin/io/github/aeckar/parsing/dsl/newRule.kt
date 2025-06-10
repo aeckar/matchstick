@@ -1,9 +1,10 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.RichMatcher
+import io.github.aeckar.parsing.Rule
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.emptySeparator
-import io.github.aeckar.parsing.newBaseRule
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
@@ -51,6 +52,7 @@ public fun newRule(
  * @see RuleContext.zeroOrSpread
  * @see RuleContext.oneOrSpread
  */
+@Suppress("UNCHECKED_CAST")
 public fun ruleBy(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator): RuleFactory {
-    return { greedy, scope -> newBaseRule(logger, greedy, separator, scope) }
+    return { greedy, scope -> Rule(logger, greedy, separator as () -> RichMatcher, scope) }
 }

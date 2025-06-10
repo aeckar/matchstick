@@ -3,7 +3,7 @@ package io.github.aeckar.parsing.dsl
 import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
-import io.github.aeckar.parsing.newBaseTransform
+import io.github.aeckar.parsing.newTransform
 import kotlin.reflect.typeOf
 
 /**
@@ -41,13 +41,13 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
 public inline fun <reified R> mapBy(preOrder: Boolean = false): MapFactory<R> {
     if (preOrder) {
         return { scope ->
-            newBaseTransform(typeOf<R>()) {
+            newTransform(typeOf<R>()) {
                 descend()
                 scope()
             }
         }
     }
     return { scope ->
-        newBaseTransform(typeOf<R>()) { scope() }
+        newTransform(typeOf<R>()) { scope() }
     }
 }

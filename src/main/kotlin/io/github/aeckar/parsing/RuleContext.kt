@@ -24,7 +24,7 @@ import kotlin.reflect.typeOf
 public open class RuleContext @PublishedApi internal constructor(
     private val logger: KLogger?,
     greedy: Boolean,
-    lazySeparator: () -> Matcher
+    lazySeparator: () -> RichMatcher
 ) {
     internal val isGreedy = greedy
 
@@ -33,17 +33,20 @@ public open class RuleContext @PublishedApi internal constructor(
 
     /** Returns a copy of this parser that will not reuse the existing state when visited. */
     public fun Parser<*>.unique(): Matcher {
-        return with(newBaseTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
+        return with(newTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
     }
 
     private val singleChar = newCacheableMatcher(".") { yield(1) }
 
     private inline fun newCacheableMatcher(descriptiveString: String, crossinline scope: MatcherScope): Matcher {
-        return newBaseMatcher(logger, ::emptySeparator, descriptiveString, isCacheable = true) {
+        return ExplicitMatcher(logger, ::emptySeparator, descriptiveString, isCacheable = true) {
             val isRecording = driver.isRecordingMatches
-            driver.isRecordingMatches = false
-            scope()
-            driver.isRecordingMatches = isRecording
+            driver.isRecordingMatches = false   // Do not track yields
+            try {
+                scope()
+            } finally { // Restore recording state on interrupt
+                driver.isRecordingMatches = isRecording
+            }
         }
     }
 
@@ -169,8 +172,9 @@ public open class RuleContext @PublishedApi internal constructor(
      *
      * Rules of the returned type will always fail if a greedy match is attempted.
      */
+    @Suppress("UNCHECKED_CAST")
     public fun nearestOf(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
-        return ProximityMatcher(logger, this@RuleContext, listOf(subRule1, subRule2) + others)
+        return ProximityRule(logger, this@RuleContext, (listOf(subRule1, subRule2) + others) as List<RichMatcher>)
     }
 
     /* ------------------------------ utility ------------------------------ */

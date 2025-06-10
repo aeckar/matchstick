@@ -26,7 +26,7 @@ import io.github.oshai.kotlinlogging.KLogger
 public class MatcherContext internal constructor(
     logger: KLogger?,
     internal val driver: Driver,
-    lazySeparator: () -> Matcher,
+    lazySeparator: () -> RichMatcher,
 ) : RuleContext(logger, false, lazySeparator), CharSequence by driver.tape {
     internal var includePos = -1
         private set
@@ -37,12 +37,15 @@ public class MatcherContext internal constructor(
     public fun lengthOf(matcher: Matcher): Int {
         val isRecording = driver.isRecordingMatches
         driver.isRecordingMatches = false
-        val length = matcher.collectMatches(matcher, driver)
-        driver.isRecordingMatches = isRecording
-        if (length != -1) {
-            driver.tape.offset -= length    // Reset tape to original position
+        try {   // Restore recording state on interrupt
+            val length = (matcher as RichMatcher).collectMatches(matcher, driver)
+            if (length != -1) {
+                driver.tape.offset -= length    // Reset tape to original position
+            }
+            return length
+        } finally {
+            driver.isRecordingMatches = isRecording
         }
-        return length
     }
 
     /**
@@ -87,7 +90,7 @@ public class MatcherContext internal constructor(
      * @see CharExpression.Grammar
      */
     public fun lengthByChar(expr: String): Int {
-        return lookupCharPattern(expr)(driver.tape.original, driver.tape.offset)
+        return lookupCharPattern(expr)(driver.tape.input, driver.tape.offset)
     }
 
     /**
@@ -96,7 +99,7 @@ public class MatcherContext internal constructor(
      * @see TextExpression.Grammar
      */
     public fun lengthByText(expr: String): Int {
-        return lookupTextPattern(expr)(driver.tape.original, driver.tape.offset)
+        return lookupTextPattern(expr)(driver.tape.input, driver.tape.offset)
     }
 
     /* ------------------------------ offset modification ------------------------------ */
@@ -157,8 +160,8 @@ public class MatcherContext internal constructor(
             return
         }
         val tape = driver.tape
-        if (tape.offset + length > tape.original.length) {
-            throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.original.length}" }
+        if (tape.offset + length > tape.input.length) {
+            throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.input.length}" }
         }
         tape.offset += length
     }

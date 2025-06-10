@@ -45,6 +45,7 @@ public fun newMatcher(
  * @see ruleBy
  * @see RuleContext.separator
  */
+@Suppress("UNCHECKED_CAST")
 public fun matcherBy(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator): MatcherFactory {
-    return { scope -> newMatcher(logger, separator, scope) }
+    return { scope -> ExplicitMatcher(logger, separator as () -> RichMatcher, null, false, scope) }
 }
