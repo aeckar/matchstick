@@ -1,9 +1,7 @@
 package io.github.aeckar.parsing.state
 
 import io.github.aeckar.parsing.StateInitializerException
-import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
 import kotlin.reflect.KType
 
 internal fun <E> MutableList<E>.removeLast(count: Int): List<E> {
@@ -23,15 +21,14 @@ internal infix fun <T> T.instanceOf(type: KType): Boolean {
 @PublishedApi   // Inlined in 'parse'
 internal fun <T> initialStateOf(typeRef: KType): T {
     val classRef = typeRef.classifier as KClass<T>
+    if (classRef.java.declaredConstructors.none { it.parameters.isEmpty() } && typeRef.isMarkedNullable) {
+        return null as T
+    }
     return try {
         // Use Java reflection, does not require extra dependency
         classRef.java.getDeclaredConstructor().newInstance()
     } catch (e: Exception) {
-        if (typeRef.isMarkedNullable) {
-            null as T
-        } else {
-            throw StateInitializerException("Nullary constructor of type ${classRef.qualifiedName} is inaccessible", e)
-        }
+        throw StateInitializerException("Nullary constructor of type ${classRef.qualifiedName} is inaccessible", e)
     }
 }
 

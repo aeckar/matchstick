@@ -5,17 +5,9 @@ import io.github.aeckar.parsing.state.Enumerated
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-/** Returns an equivalent matcher whose [ID][Enumerated.id] is the name of the property. */
-public operator fun Matcher.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Matcher> {
-    return ReadOnlyProperty { _, _ -> named(property.name) }
-}
-
 /** Returns an equivalent parser whose [ID][Enumerated.id] is the name of the property. */
-public operator fun <R> Parser<R>.provideDelegate(
-    thisRef: Any?,
-    property: KProperty<*>
-): ReadOnlyProperty<Any?, Parser<R>> {
-    return ReadOnlyProperty<Any?, Parser<R>> { _, _ -> named(property.name) }
+public operator fun <T : Matcher> T.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, T> {
+    return ReadOnlyProperty { _, _ -> named(property.name) as T }
 }
 
 /** Returns a parser with the given matcher and transform. */
@@ -36,7 +28,10 @@ public infix fun <R> Matcher.with(map: MapFactory<R>): Parser<R> {
 }
 
 /** Returns an equivalent parser whose [ID][Enumerated.id] is as given. */
-public infix fun <R> Parser<R>.named(id: String): Parser<R> = ParserProperty(id, this as RichParser<R>)
-
-/** Returns an equivalent matcher whose [ID][Enumerated.id] is as given. */
-public infix fun Matcher.named(id: String): Matcher = MatcherProperty(id, this as RichMatcher)
+@Suppress("UNCHECKED_CAST")
+public infix fun <T : Matcher> T.named(id: String): T {
+    if (this is Parser<*>) {    // Parsers should always return a parserf
+        return ParserProperty(id, this as RichParser<*>) as T
+    }
+    return MatcherProperty(id, this as RichMatcher) as T
+}

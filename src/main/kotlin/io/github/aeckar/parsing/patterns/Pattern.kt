@@ -1,9 +1,6 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.MalformedExpressionException
-import io.github.aeckar.parsing.Parser
-import io.github.aeckar.parsing.RuleContext
-import io.github.aeckar.parsing.parse
+import io.github.aeckar.parsing.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -59,9 +56,14 @@ private inline fun <reified T : Expression, P : Pattern> lookupPattern(
     start: Parser<T>
 ): P {
     if (expr !in cache) {
-        start.parse(expr)
-            .onSuccess { result -> cache[expr] = result.rootPattern() as P }
-            .onFailure { failures -> throw MalformedExpressionException("Pattern '$expr' is malformed") }
+        try {
+            start.parse(expr, complete = true)
+                .onSuccess { result -> cache[expr] = result.rootPattern() as P }
+                .onFailure { failures -> throw MalformedExpressionException("Pattern '$expr' is malformed") }
+        } catch (_: NoSuchMatchException) { // Incomplete match
+            throw MalformedExpressionException("Pattern '$expr' is malformed")
+        }
+
     }
     return cache.getValue(expr)
 }

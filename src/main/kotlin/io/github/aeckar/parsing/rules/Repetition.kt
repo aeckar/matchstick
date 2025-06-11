@@ -1,13 +1,6 @@
 package io.github.aeckar.parsing.rules
 
-import io.github.aeckar.parsing.Driver
-import io.github.aeckar.parsing.MatchInterrupt
-import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.ModifierMatcher
-import io.github.aeckar.parsing.RuleContext
-import io.github.aeckar.parsing.SequenceMatcher
-import io.github.aeckar.parsing.fundamentalIdentity
-import io.github.aeckar.parsing.specified
+import io.github.aeckar.parsing.*
 import io.github.oshai.kotlinlogging.KLogger
 
 internal class Repetition(

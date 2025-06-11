@@ -1,16 +1,10 @@
 package io.github.aeckar.parsing.dsl
 
+import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
-import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.UniqueTransform
 import kotlin.reflect.typeOf
-
-/**
- * When provided with an [ActionScope], returns an action conforming to the given output type.
- * @see actionBy
- */
-public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
 
 /**
  * Provides a scope, evaluated at runtime, to describe how an input should be modified according to each match
@@ -18,6 +12,12 @@ public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
  * @see actionBy
  */
 public typealias ActionScope<R> = TransformContext<R>.() -> Unit
+
+/**
+ * When provided with an [ActionScope], returns an action conforming to the given output type.
+ * @see actionBy
+ */
+public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
 
 /**
  * Returns an action factory that conforms to the given output type.

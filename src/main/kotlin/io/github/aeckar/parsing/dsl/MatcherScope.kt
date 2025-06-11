@@ -1,14 +1,7 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.MatcherContext
 import io.github.oshai.kotlinlogging.KLogger
-
-/**
- * When provided with an [MatcherScope], returns an explicitly defined matcher with a specific separator.
- * @see matcherBy
- */
-public typealias MatcherFactory = (MatcherScope) -> Matcher
 
 /**
  * Provides a scope, evaluated at runtime, to
@@ -17,13 +10,19 @@ public typealias MatcherFactory = (MatcherScope) -> Matcher
 public typealias MatcherScope = MatcherContext.() -> Unit
 
 /**
+ * When provided with an [MatcherScope], returns an explicitly defined matcher with a specific separator.
+ * @see matcherBy
+ */
+public typealias MatcherFactory = (MatcherScope) -> Matcher
+
+/**
  * Configures and returns a matcher whose behavior is explicitly defined and whose separator is an empty string.
  * @see newRule
  * @see RuleContext.separator
  */
 public fun newMatcher(
     logger: KLogger? = null,
-    separator: () -> Matcher = ::emptySeparator,
+    separator: () -> Matcher = ExplicitMatcher::EMPTY,
     scope: MatcherScope
 ): Matcher {
     return matcherBy(logger, separator)(scope)
@@ -46,6 +45,6 @@ public fun newMatcher(
  * @see RuleContext.separator
  */
 @Suppress("UNCHECKED_CAST")
-public fun matcherBy(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator): MatcherFactory {
+public fun matcherBy(logger: KLogger? = null, separator: () -> Matcher = ExplicitMatcher::EMPTY): MatcherFactory {
     return { scope -> ExplicitMatcher(logger, separator as () -> RichMatcher, null, false, scope) }
 }

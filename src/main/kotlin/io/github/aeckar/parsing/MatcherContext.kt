@@ -1,6 +1,8 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.*
+import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.matcherBy
+import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.patterns.lookupCharPattern

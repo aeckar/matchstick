@@ -13,10 +13,12 @@ public class MalformedExpressionException internal constructor(message: String) 
 public class MalformedTransformException internal constructor(message: String) : RuntimeException(message)
 
 /** Thrown when there exists no matches from which to derive a syntax tree from. */
-public class NoSuchMatchException internal constructor(message: String) : RuntimeException(message)
+public class NoSuchMatchException @PublishedApi internal constructor( // Inlined in 'parse'
+    message: String
+) : RuntimeException(message)
 
 /** Thrown when an initial state cannot be created using the nullary constructor of a class. */
-public class StateInitializerException @PublishedApi internal constructor(
+public class StateInitializerException @PublishedApi internal constructor(  // Inlined in 'initialStateOf'
     message: String,
     override val cause: Throwable?
 ) : RuntimeException(message)

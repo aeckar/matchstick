@@ -2,15 +2,13 @@ package io.github.aeckar.parsing.state
 
 import io.github.aeckar.parsing.MatchFailure
 
-private val resultPlaceholder = Any()
-
 /**
- * @param failures the matches
+ * todo document
+ * @param failures todo document
  */
-@ConsistentCopyVisibility
-public data class Result<R> @PublishedApi internal constructor(
+public class Result<R> @PublishedApi internal constructor(
     public val failures: List<MatchFailure>,
-    private val result: Any? = resultPlaceholder
+    private val result: Any? = RESULT_PLACEHOLDER
 ) {
     private val trace by lazy {
         if (isSuccess()) {
@@ -78,5 +76,9 @@ public data class Result<R> @PublishedApi internal constructor(
             return this as Result<T>
         }
         return Result(failures, transform(result()))
+    }
+
+    private companion object {
+        val RESULT_PLACEHOLDER = Any()
     }
 }

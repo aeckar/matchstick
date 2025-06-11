@@ -132,6 +132,7 @@ public class CharExpression internal constructor() : Expression() {
                 range.first == range.last -> predicate(descriptiveString) { s, i -> s[i] == range.first }
                 else -> predicate(descriptiveString) { s, i -> s[i] in range }
             }
+            state.clearTemporaryData()
         }
 
         public val suffix: Matcher by rule {
@@ -166,6 +167,7 @@ public class CharExpression internal constructor() : Expression() {
         } with action {
             val c = state.charData.single()
             state.patterns += predicate(substring) { s, i -> s[i] == c }
+            state.clearTemporaryData()
         }
 
         public val charExpr: Matcher by rule {

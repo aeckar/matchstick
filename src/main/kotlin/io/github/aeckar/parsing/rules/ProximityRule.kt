@@ -5,7 +5,6 @@ import io.github.aeckar.parsing.MatchInterrupt
 import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.RuleContext
 import io.github.oshai.kotlinlogging.KLogger
-import kotlin.Int
 
 internal class ProximityRule(
     logger: KLogger?,

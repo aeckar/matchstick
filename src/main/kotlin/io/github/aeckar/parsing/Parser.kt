@@ -5,6 +5,7 @@ import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 import io.github.aeckar.parsing.state.Result
+import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.initialStateOf
 import kotlin.reflect.typeOf
 
@@ -12,26 +13,30 @@ import kotlin.reflect.typeOf
 
 /**
  * Generates an output using [initialState] according to the syntax tree produced from the input.
+ *
+ * If not provided, the initial state is given by the nullary constructor of the concrete class [R].
+ * Alternatively, if the given type is nullable and no nullary constructor is found, `null` is used as the initial state.
+ *
+ * If [complete] is true, [NoSuchMatchException] is thrown if a match cannot be made to the entire input.
  * @throws NoSuchMatchException a match cannot be made to the input
  * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
+ * @throws StateInitializerException the initial state is not provided, and the nullary constructor of [R] is inaccessible
  */
-public fun <R> Parser<R>.parse(input: CharSequence, initialState: R): Result<R> {
-    return match(input).mapResult {
+public inline fun <reified R> Parser<R>.parse(
+    input: CharSequence,
+    initialState: R = initialStateOf(typeOf<R>()),
+    complete: Boolean = false
+): Result<R> {
+    return match(input).mapResult { matches ->
+        if (complete) {
+            val matchLength = matches.last().length
+            if (matchLength != input.length) {
+                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input '${Tape(input)}'")
+            }
+        }
         (this as RichMatcher).logger?.debug { "Walking syntax tree of ${yellow("'$input'")}" }
-        SyntaxTreeNode(input, it as MutableList<Match>).walk(initialState)
+        SyntaxTreeNode(input, matches as MutableList<Match>).walk(initialState)
     }
-}
-
-/**
- * Generates an output according to the syntax tree produced from the input.
- *
- * The initial state is given by the nullary constructor of the concrete class [R].
- * If the given type is nullable and no nullary constructor is found, `null` is used as the initial state.
- * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
- * @throws StateInitializerException the nullary constructor of [R] is inaccessible
- */
-public inline fun <reified R> Parser<R>.parse(input: CharSequence): Result<R> {
-    return parse(input, initialStateOf(typeOf<R>()))
 }
 
 /* ------------------------------ parser classes ------------------------------ */

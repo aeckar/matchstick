@@ -1,7 +1,6 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.ansi.yellow
-import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.dsl.newRule
@@ -9,10 +8,10 @@ import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.rules.IdentityRule
-import io.github.aeckar.parsing.state.Result
-import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.Enumerated
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
+import io.github.aeckar.parsing.state.Result
+import io.github.aeckar.parsing.state.Tape
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
@@ -73,7 +72,6 @@ internal fun RichMatcher.fundamentalLogic(): RichMatcher {
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
  *
  * If the returned list is empty, this sequence does not match the matcher with the given separator.
- *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  */
 public fun Matcher.match(input: CharSequence): Result<List<Match>> {
@@ -82,7 +80,7 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     (this as RichMatcher).logger?.debug { "Received input ${yellow("'$input'")}"}
     collectMatches(driver)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
-    return if (matches.isEmpty()) Result(driver.failures()) else Result(emptyList(), matches)
+    return if (matches.isEmpty()) Result<List<Match>>(driver.failures()) else Result(emptyList(), matches)
 }
 
 /**
@@ -130,6 +128,7 @@ public interface Matcher : Enumerated
  *
  * All implementors of [Matcher] also implement this interface.
  */
+@PublishedApi   // Inlined by 'parse'
 internal interface RichMatcher : Matcher {
     val separator: RichMatcher
     val isCacheable: Boolean

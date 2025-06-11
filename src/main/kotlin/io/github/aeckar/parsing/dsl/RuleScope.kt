@@ -1,22 +1,18 @@
 package io.github.aeckar.parsing.dsl
 
-import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.RichMatcher
-import io.github.aeckar.parsing.SingularRule
-import io.github.aeckar.parsing.RuleContext
-import io.github.aeckar.parsing.emptySeparator
+import io.github.aeckar.parsing.*
 import io.github.oshai.kotlinlogging.KLogger
+
+/**
+ * Provides a scope, evaluated once, to describe the behavior of a rule.
+ */
+public typealias RuleScope = RuleContext.() -> Matcher
 
 /**
  * When provided with an [RuleScope], returns a rule-based matcher with a specific separator.
  * @see ruleBy
  */
 public typealias RuleFactory = (greedy: Boolean, scope: RuleScope) -> Matcher
-
-/**
- * Provides a scope, evaluated once, to describe the behavior of a rule.
- */
-public typealias RuleScope = RuleContext.() -> Matcher
 
 /** Returns a reluctant matcher. */
 public operator fun RuleFactory.invoke(scope: RuleScope): Matcher = this(false, scope)
@@ -28,7 +24,7 @@ public operator fun RuleFactory.invoke(scope: RuleScope): Matcher = this(false, 
 public fun newRule(
     logger: KLogger? = null,
     greedy: Boolean = false,
-    separator: () -> Matcher = ::emptySeparator,
+    separator: () -> Matcher = ExplicitMatcher::EMPTY,
     scope: RuleScope
 ): Matcher {
     return ruleBy(logger, separator)(greedy, scope)
@@ -53,6 +49,6 @@ public fun newRule(
  * @see RuleContext.oneOrSpread
  */
 @Suppress("UNCHECKED_CAST")
-public fun ruleBy(logger: KLogger? = null, separator: () -> Matcher = ::emptySeparator): RuleFactory {
+public fun ruleBy(logger: KLogger? = null, separator: () -> Matcher = ExplicitMatcher::EMPTY): RuleFactory {
     return { greedy, scope -> SingularRule(logger, greedy, separator as () -> RichMatcher, scope) }
 }

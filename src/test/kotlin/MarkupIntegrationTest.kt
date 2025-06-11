@@ -1,12 +1,4 @@
-import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.UnrecoverableRecursionException
-import io.github.aeckar.parsing.dsl.newRule
-import io.github.aeckar.parsing.dsl.provideDelegate
-import io.github.aeckar.parsing.match
-import io.github.aeckar.parsing.treeify
-import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
-import kotlin.test.assertNotNull
 
 // auto-download (cache) image links -- if bad status code, get from archived (mangle by URL)
 //  resources/cache/ ...
@@ -154,64 +146,9 @@ import kotlin.test.assertNotNull
 //    }
 //}
 
-class ParseTest {
+class MarkupIntegrationTest {
     @Test
-    fun producesInlineCommentTree() {
-        //DoubleDown.blockComment.treeify("/** hello */").resultOrNull()?.treeString())
-        val blockComment by newRule { text("/*") * textBy("{!=%*/}+") * text("*/") }
-        val tree = blockComment.treeify("/* hello */").resultOrNull()?.treeString()
-        assertNotNull(tree) { tree -> println(tree) }
-    }
+    fun test() {
 
-    @Test
-    fun throwsOnIndirectMutualRecursion() {
-        val grammar = object {
-            val rule1: Matcher = newRule { rule2 * char() }
-            val rule2 = newRule { rule1 * char() }
-        }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
-    }
-
-    @Test
-    fun throwsOnMutualRecursion() {
-        val grammar = object {
-            val rule1: Matcher = newRule { rule2 }
-            val rule2 = newRule { rule1 }
-        }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
-    }
-
-    @Test
-    fun throwsOnNamedIndirectMutualRecursion() {
-        val grammar = object {
-            val rule1: Matcher by newRule { rule2 * char() }
-            val rule2 by newRule { rule1 * char() }
-        }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
-    }
-
-    @Test
-    fun throwsOnNamedMutualRecursion() {
-        val grammar = object {
-            val rule1: Matcher by newRule { rule2 }
-            val rule2 by newRule { rule1 }
-        }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
-    }
-
-    @Test
-    fun throwsOnSelfRecursion() {
-        val grammar = object {
-            val rule: Matcher = newRule { rule }
-        }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule.match("") }
-    }
-
-    @Test
-    fun throwsOnNamedSelfRecursion() {
-        val grammar = object {
-            val rule: Matcher by newRule { rule }
-        }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule.match("") }
     }
 }

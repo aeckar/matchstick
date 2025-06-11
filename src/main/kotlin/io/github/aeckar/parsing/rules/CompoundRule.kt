@@ -1,11 +1,8 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.ExplicitMatcher
 import io.github.aeckar.parsing.state.Recursive
 import io.github.oshai.kotlinlogging.KLogger
-
-// todo extract, match leftmost atoms to reduce parsing time
 
 internal sealed class CompoundRule(
     final override val logger: KLogger?,

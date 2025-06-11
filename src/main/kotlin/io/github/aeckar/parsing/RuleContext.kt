@@ -31,15 +31,15 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Used to identify meaningless characters between captured substrings, such as whitespace. */
     public val separator: Matcher by lazy(lazySeparator)
 
-    /** Returns a copy of this parser that will not reuse the existing state when visited. */
-    public fun Parser<*>.unique(): Matcher {
-        return with(UniqueTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
-    }
-
     private val singleChar = cacheableMatcher(".") { yield(1) }
 
+    /** Returns a copy of this parser that will not reuse the existing state when visited. */
+    public fun unique(parser: Parser<*>): Matcher {
+        return parser.with(UniqueTransform(typeOf<Intangible>(), (parser as RichTransform<*>).scope))
+    }
+
     private inline fun cacheableMatcher(descriptiveString: String, crossinline scope: MatcherScope): RichMatcher {
-        return ExplicitMatcher(logger, ::emptySeparator, descriptiveString, isCacheable = true) {
+        return ExplicitMatcher(logger, ExplicitMatcher::EMPTY, descriptiveString, isCacheable = true) {
             val isRecording = driver.isRecordingMatches
             driver.isRecordingMatches = false   // Do not track yields
             try {

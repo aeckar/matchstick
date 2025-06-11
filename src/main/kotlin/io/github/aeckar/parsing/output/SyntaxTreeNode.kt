@@ -1,15 +1,10 @@
 package io.github.aeckar.parsing.output
 
-import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.MatcherContext
-import io.github.aeckar.parsing.NoSuchMatchException
-import io.github.aeckar.parsing.RichTransform
-import io.github.aeckar.parsing.Transform
-import io.github.aeckar.parsing.TransformContext
+import io.github.aeckar.parsing.*
+import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
-import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
@@ -76,7 +71,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
      *
      * The transforms are encountered during post-order traversal of the syntax tree whose root is this node.
      */
-    public fun <R> walk(initialState: R): R = walk(TransformContext(syntaxTreePlaceholder, initialState))
+    public fun <R> walk(initialState: R): R = walk(TransformContext(ROOT_PLACEHOLDER, initialState))
 
     @Suppress("UNCHECKED_CAST")
     internal fun <R> walk(outerContext: TransformContext<R>): R {
@@ -116,7 +111,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
             return SyntaxTreeNode(input, matches.toMutableList())
         }
 
-        private val syntaxTreePlaceholder = of("", listOf(Match(null, 0, 0, 0, 0)))
+        private val ROOT_PLACEHOLDER = of("", listOf(Match(null, 0, 0, 0, 0)))
     }
 }
 
