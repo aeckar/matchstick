@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.aeckar.parsing.state.UniqueProperty
-import io.github.aeckar.parsing.state.UNKNOWN_ID
 
 internal open class MatcherProperty(
     id: String,

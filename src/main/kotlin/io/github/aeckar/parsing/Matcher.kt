@@ -11,8 +11,8 @@ import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
-import io.github.aeckar.parsing.state.UNKNOWN_ID
 import io.github.aeckar.parsing.state.Enumerated
+import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.oshai.kotlinlogging.KLogger
 
 /**

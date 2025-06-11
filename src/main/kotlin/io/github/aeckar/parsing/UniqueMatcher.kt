@@ -4,7 +4,7 @@ import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.rules.IdentityRule
-import io.github.aeckar.parsing.state.UNKNOWN_ID
+import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.oshai.kotlinlogging.KLogger
 
 internal val emptySeparator: RichMatcher = ExplicitMatcher {}
