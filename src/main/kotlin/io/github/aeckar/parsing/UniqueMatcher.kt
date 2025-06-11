@@ -10,10 +10,9 @@ import io.github.oshai.kotlinlogging.KLogger
 internal val emptySeparator: RichMatcher = ExplicitMatcher {}
 
 internal abstract class UniqueMatcher() : RichMatcher {
-    // Keep open so 'UniqueParser' can override by delegation
     override val identity: RichMatcher get() = this
 
-    override fun hashCode() = identity.id.hashCode()
+    override fun hashCode() = id.hashCode()
 
     override fun equals(other: Any?): Boolean {
         return this === other || other is RichMatcher && other.fundamentalLogic() === fundamentalLogic()

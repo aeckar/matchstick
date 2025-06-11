@@ -3,7 +3,7 @@ package io.github.aeckar.parsing.state
 internal val UNKNOWN_ID: String = "<unknown>".intern()
 
 /** An object with an [id]. */
-public interface Unique {
+public interface Enumerated {
     /**
      * A unique identifier.
      *

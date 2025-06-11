@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.provideDelegate
  * @param value the original object, which may be named
  * @see provideDelegate
  */
-internal abstract class UniqueProperty : Unique {
+internal abstract class UniqueProperty : Enumerated {
     abstract val value: Any?
 
     final override fun hashCode(): Int = value.hashCode()

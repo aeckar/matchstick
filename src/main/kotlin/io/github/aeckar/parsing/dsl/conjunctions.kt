@@ -1,16 +1,16 @@
 package io.github.aeckar.parsing.dsl
 
 import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.Enumerated
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-/** Returns an equivalent matcher whose [ID][Unique.id] is the name of the property. */
+/** Returns an equivalent matcher whose [ID][Enumerated.id] is the name of the property. */
 public operator fun Matcher.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Matcher> {
     return ReadOnlyProperty { _, _ -> named(property.name) }
 }
 
-/** Returns an equivalent parser whose [ID][Unique.id] is the name of the property. */
+/** Returns an equivalent parser whose [ID][Enumerated.id] is the name of the property. */
 public operator fun <R> Parser<R>.provideDelegate(
     thisRef: Any?,
     property: KProperty<*>
@@ -35,8 +35,8 @@ public infix fun <R> Matcher.with(map: MapFactory<R>): Parser<R> {
     return this with map { state }
 }
 
-/** Returns an equivalent parser whose [ID][Unique.id] is as given. */
+/** Returns an equivalent parser whose [ID][Enumerated.id] is as given. */
 public infix fun <R> Parser<R>.named(id: String): Parser<R> = ParserProperty(id, this as RichParser<R>)
 
-/** Returns an equivalent matcher whose [ID][Unique.id] is as given. */
+/** Returns an equivalent matcher whose [ID][Enumerated.id] is as given. */
 public infix fun Matcher.named(id: String): Matcher = MatcherProperty(id, this as RichMatcher)

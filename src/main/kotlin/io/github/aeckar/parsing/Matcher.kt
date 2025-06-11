@@ -12,7 +12,7 @@ import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.UNKNOWN_ID
-import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.Enumerated
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
@@ -135,7 +135,7 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  * @see MatcherContext
  * @see Transform
  */
-public interface Matcher : Unique
+public interface Matcher : Enumerated
 
 /**
  * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],

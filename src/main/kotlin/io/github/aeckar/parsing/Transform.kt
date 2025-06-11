@@ -2,7 +2,7 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.actionBy
 import io.github.aeckar.parsing.dsl.mapBy
-import io.github.aeckar.parsing.state.Unique
+import io.github.aeckar.parsing.state.Enumerated
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
@@ -23,7 +23,7 @@ public operator fun <R> Transform<R>.provideDelegate(
  * @see TransformContext
  * @see Matcher
  */
-public sealed interface Transform<out R> : Unique
+public sealed interface Transform<out R> : Enumerated
 
 /**
  * Extends [Transform] with [match consumption][consumeMatches] and [state verification][inputType].
