@@ -38,13 +38,13 @@ internal fun pattern(
  * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
  * @see RuleContext.charBy
  */
-internal fun lookupCharPattern(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
+internal fun lookupCharPattern(expr: String) = lookupPattern(expr, charPatternCache, CharExpression.Grammar.start)
 
 /**
  * Returns the pre-compiled text pattern, or a new one if the pattern has not yet been cached.
  * @see RuleContext.textBy
  */
-internal fun lookupTextPattern(expr: String) = patternOf(expr, textPatternCache, TextExpression.Grammar.start)
+internal fun lookupTextPattern(expr: String) = lookupPattern(expr, textPatternCache, TextExpression.Grammar.start)
 
 /**
  * Returns the text pattern specified by the given expression.
@@ -53,7 +53,7 @@ internal fun lookupTextPattern(expr: String) = patternOf(expr, textPatternCache,
 public fun pattern(expr: String): Pattern = lookupTextPattern(expr)
 
 @Suppress("UNCHECKED_CAST")
-private inline fun <reified T : Expression, P : Pattern> patternOf(
+private inline fun <reified T : Expression, P : Pattern> lookupPattern(
     expr: String,
     cache: MutableMap<String, P>,
     start: Parser<T>
