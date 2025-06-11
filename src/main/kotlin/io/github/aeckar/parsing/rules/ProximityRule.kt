@@ -14,7 +14,7 @@ internal class ProximityRule(
 ) : CompoundRule(logger, context, emptyList()) {
     override val descriptiveString by lazy { candidates.joinToString(prefix = "[", postfix = "]") }
 
-    override fun captureSubstring(driver: Driver) {
+    override fun collectSubMatches(driver: Driver) {
         if (driver.leftAnchor != null) {
             return
         }
@@ -22,7 +22,7 @@ internal class ProximityRule(
             val distance = driver.matchers().asReversed().indexOf(candidate)
             if (distance == -1) Int.MAX_VALUE else distance
         }
-        if (nearestRule !in driver.matchers() || nearestRule.collectMatches(nearestRule, driver) == -1) {
+        if (nearestRule !in driver.matchers() || nearestRule.collectMatches(driver) == -1) {
             throw unnamedMatchInterrupt
         }
     }

@@ -3,7 +3,7 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.rules.CompoundRule
 
 /**
- * Thrown when a newPattern expression is malformed.
+ * Thrown when a pattern expression is malformed.
  * @see RuleContext.charBy
  * @see RuleContext.textBy
  */

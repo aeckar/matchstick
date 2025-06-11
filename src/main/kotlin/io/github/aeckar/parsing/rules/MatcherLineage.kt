@@ -1,5 +1,6 @@
 package io.github.aeckar.parsing.rules
 
+import io.github.aeckar.parsing.state.Recursive
 import io.github.aeckar.parsing.RichMatcher
 
 internal data class MatcherLineage(val matcher: RichMatcher, val parent: MatcherLineage?) : Recursive {
@@ -11,4 +12,6 @@ internal data class MatcherLineage(val matcher: RichMatcher, val parent: Matcher
         }
         return other is RichMatcher && matcher == other
     }
+
+    override fun toString() = "$matcher <- $parent"
 }

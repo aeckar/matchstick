@@ -6,28 +6,27 @@ import io.github.aeckar.parsing.state.UNKNOWN_ID
 internal open class MatcherProperty(
     id: String,
     override val value: RichMatcher
-) : UniqueProperty(), RichMatcher by value {
+) : UniqueProperty(), RichMatcher by value, ModifierMatcher {
+    override val subMatcher get() = value
     override val id = if (id == UNKNOWN_ID) id.intern() else id
     override val identity get() = this
 
-    constructor(id: String, value: Matcher) : this(id, value as RichMatcher)
-
-    override fun collectMatches(identity: RichMatcher?, driver: Driver): Int {
-        return try {
-            value.collectMatches(identity ?: this, driver)
-        } catch (_: UnrecoverableRecursionException) {
-            throw UnrecoverableRecursionException("Recursion of <unknown> in $this will never terminate")
+    override fun collectMatches(driver: Driver): Int {
+        return rootMatches(driver) {
+            if (value.collectMatches(driver) == -1) {
+                throw unnamedMatchInterrupt
+            }
         }
     }
 }
 
-@Suppress("DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE")
 internal class ParserProperty<R>(
     id: String,
     override val value: RichParser<R>
-) : MatcherProperty(id, value), RichParser<R> by value {
+) : MatcherProperty(id, value), RichParser<R>, RichTransform<R> by value {
     override val id = if (id == UNKNOWN_ID) id.intern() else id
     override val identity get() = this
-
-    constructor(id: String, value: Parser<R>) : this(id, value as RichParser<R>)
+    override val isCacheable get() = value.isCacheable
+    override val logger get() = value.logger
+    override val separator get() = value.separator
 }

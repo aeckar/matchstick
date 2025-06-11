@@ -5,28 +5,18 @@ import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.UNKNOWN_ID
-import io.github.aeckar.parsing.state.UniqueProperty
 import io.github.oshai.kotlinlogging.KLogger
 
 internal val emptySeparator: RichMatcher = ExplicitMatcher {}
 
 internal abstract class UniqueMatcher() : RichMatcher {
-    /** The backing field for [identity]. */
-    internal var identifier: RichMatcher? = null
-
     // Keep open so 'UniqueParser' can override by delegation
-    override val identity: RichMatcher get() {
-        identifier?.let { return it }
-        initializeIdentity(mutableListOf())
-        return identifier!!
-    }
+    override val identity: RichMatcher get() = this
 
     override fun hashCode() = identity.id.hashCode()
 
     override fun equals(other: Any?): Boolean {
-        return other === this || other is RichMatcher && other.identity === identity ||
-                other is UniqueProperty && other.value is RichMatcher &&
-                (other.value as RichMatcher).identity === identity
+        return this === other || other is RichMatcher && other.fundamentalLogic() === fundamentalLogic()
     }
 }
 
@@ -40,14 +30,13 @@ internal class ExplicitMatcher(
     override val separator by lazy(lazySeparator)
 
     override fun toString() = descriptiveString ?: UNKNOWN_ID
-    override fun initializeIdentity(recursions: MutableList<RichMatcher>) { identifier = this }
 
-    override fun collectMatches(identity: RichMatcher?, driver: Driver): Int {
-        return driver.captureSubstring(identity ?: this, scope, MatcherContext(logger, driver, ::separator))
+    override fun collectMatches(driver: Driver): Int {
+        return driver.captureSubstring(this, scope, MatcherContext(logger, driver, ::separator))
     }
 }
 
-internal class Rule(
+internal class SingularRule(
     override val logger: KLogger?,
     greedy: Boolean,
     lazySeparator: () -> RichMatcher = ::emptySeparator,
@@ -56,45 +45,54 @@ internal class Rule(
     val context = RuleContext(logger, greedy, lazySeparator)
     override val separator get() = identity.separator
     override val isCacheable get() = true
+    private var isInitializingIdentity = false
+    private var matcher: RichMatcher? = null
+
+    override val identity: RichMatcher get() {
+        matcher?.let { return it }
+        if (isInitializingIdentity) {
+            throw UnrecoverableRecursionException("Recursion of <unknown> will never terminate")
+        }
+        var field = context.run(scope) as RichMatcher
+        isInitializingIdentity = true
+        checkUnresolvableRecursion(field)
+        isInitializingIdentity = false
+        if (field.id !== UNKNOWN_ID) {  // Ensure original and new transforms (if provided) are both invoked
+            field = IdentityRule(logger, context, field)
+        }
+        matcher = field
+        return field
+    }
 
     override fun toString() = identity.toString()
 
-    override fun initializeIdentity(recursions: MutableList<RichMatcher>) {
-        val matcher = context.run(scope) as RichMatcher
-        if (this in recursions) {
-            // IMPORTANT: Do not resolve 'toString' of infinitely recursive matchers
-            throw UnrecoverableRecursionException("Recursion of $id will never terminate")
-        }
-        recursions += this
-
-        // Ensure original and new transforms (if provided) are both invoked
-        identifier = if (matcher.id === UNKNOWN_ID) {
-            if (matcher == this) {
-                throw UnrecoverableRecursionException("Recursion of ${matcher.id} will never terminate")
-            }
-            val uniqueMatcher = matcher.uniqueMatcher()
-            if (uniqueMatcher.identifier == null) {
-                uniqueMatcher.initializeIdentity(recursions)    // Check for unrecoverable recursions
-            }
-            matcher
-        } else {
-            IdentityRule(logger, context, matcher)
-        }
-        recursions.removeLast()
+    override fun collectMatches(driver: Driver): Int {
+        (identity as? CompoundRule)?.initialize()
+        return identity.collectMatches(driver)
     }
 
-    override fun collectMatches(identity: RichMatcher?, driver: Driver): Int {
-        (identity as? CompoundRule)?.initialize()
-        return this.identity.collectMatches(identity ?: this.identity, driver)
+    private fun checkUnresolvableRecursion(matcher: RichMatcher) {
+        when (matcher) {
+            is MatcherProperty -> checkUnresolvableRecursion(matcher.value)
+            is SingularRule -> checkUnresolvableRecursion(matcher.identity) // Checks if initializing identity
+        }
     }
 }
 
-@Suppress("DELEGATED_MEMBER_HIDES_SUPERTYPE_OVERRIDE")
 internal class UniqueParser<R>(
-    private val matcher: RichMatcher,
+    override val subMatcher: RichMatcher,
     transform: RichTransform<R>
-) : UniqueMatcher(), RichParser<R>, RichMatcher by matcher, RichTransform<R> by transform {
-    override val id = matcher.id
+) : UniqueMatcher(), RichParser<R>, RichMatcher by subMatcher, RichTransform<R> by transform, ModifierMatcher {
+    override val id get() = subMatcher.id
+    override val identity get() = subMatcher.identity
 
-    override fun toString() = matcher.toString()
+    override fun toString() = subMatcher.toString()
+
+    override fun collectMatches(driver: Driver): Int {
+        return rootMatches(driver) {
+            if (subMatcher.collectMatches(driver) == -1) {
+                throw unnamedMatchInterrupt
+            }
+        }
+    }
 }

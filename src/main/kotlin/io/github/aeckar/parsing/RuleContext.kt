@@ -36,9 +36,9 @@ public open class RuleContext @PublishedApi internal constructor(
         return with(UniqueTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
     }
 
-    private val singleChar = newCacheableMatcher(".") { yield(1) }
+    private val singleChar = cacheableMatcher(".") { yield(1) }
 
-    private inline fun newCacheableMatcher(descriptiveString: String, crossinline scope: MatcherScope): Matcher {
+    private inline fun cacheableMatcher(descriptiveString: String, crossinline scope: MatcherScope): RichMatcher {
         return ExplicitMatcher(logger, ::emptySeparator, descriptiveString, isCacheable = true) {
             val isRecording = driver.isRecordingMatches
             driver.isRecordingMatches = false   // Do not track yields
@@ -56,10 +56,10 @@ public open class RuleContext @PublishedApi internal constructor(
     public fun char(): Matcher = singleChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = newCacheableMatcher("'$c'") { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = cacheableMatcher("'$c'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
-    public fun text(substring: String): Matcher = newCacheableMatcher("\"$substring\"") { yield(lengthOf(substring)) }
+    public fun text(substring: String): Matcher = cacheableMatcher("\"$substring\"") { yield(lengthOf(substring)) }
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: String): Matcher = charIn(chars.toList())
@@ -67,7 +67,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: Collection<Char>): Matcher {
         val logicString = "[${chars.joinToString("")}]"
-        return newCacheableMatcher(logicString) { yield(lengthOfFirst(chars)) }
+        return cacheableMatcher(logicString) { yield(lengthOfFirst(chars)) }
     }
 
     /** Returns a rule matching any character not in the given string. */
@@ -76,7 +76,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching any character not in the given collection. */
     public fun charNotIn(chars: Collection<Char>): Matcher {
         val logicString = "![${chars.joinToString("")}]"
-        return newCacheableMatcher(logicString) {
+        return cacheableMatcher(logicString) {
             if (lengthOfFirst(chars) != -1) {
                 fail()
             }
@@ -87,11 +87,11 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching the first acceptable substring. */
     public fun textIn(substrings: Collection<String>): Matcher {
         val logicString = substrings.joinToString(" | ", "(", ")") { "\"$it\"" }
-        return newCacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
+        return cacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
     }
 
     /**
-     * Returns a rule matching a single character satisfying the newPattern given by the expression.
+     * Returns a rule matching a single character satisfying the pattern given by the expression.
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
@@ -99,10 +99,10 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = newCacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
 
     /**
-     * Returns a rule matching text satisfying the newPattern given by the expression.
+     * Returns a rule matching text satisfying the pattern given by the expression.
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
@@ -110,7 +110,7 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = newCacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
 
     /**
      * Returns a rule matching this one, then the [separator][match], then the other.

@@ -29,6 +29,6 @@ public class Match internal constructor(
 
     override fun toString(): String {
         val matcherOrEmpty = if (matcher != null) " @ $matcher" else ""
-        return "$begin..<$endExclusive$matcherOrEmpty"
+        return "$begin..<$endExclusive$matcherOrEmpty ($depth)"
     }
 }

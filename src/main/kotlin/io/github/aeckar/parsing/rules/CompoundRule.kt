@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.state.UNKNOWN_ID
+import io.github.aeckar.parsing.state.Recursive
 import io.github.oshai.kotlinlogging.KLogger
 
 // todo extract, match leftmost atoms to reduce parsing time
@@ -20,7 +20,7 @@ internal sealed class CompoundRule(
     val subMatchers = subMatchers as List<RichMatcher>
 
     /** For each sub-matcher, keeps a set of all rules containing left recursions of this one in that branch. */
-    protected lateinit var leftRecursionsPerSubRule: List<Set<Matcher>>
+    protected lateinit var leftRecursionsPerSubRule: List<Set<RichMatcher>>
         private set
 
     /**
@@ -34,57 +34,51 @@ internal sealed class CompoundRule(
     private lateinit var children: List<Recursive?>
 
     /** Recursively initializes this rule and all sub-matchers. */
-    private inner class Initializer(private val recursions: MutableList<Matcher>) {
-        /** Returns the sub-matcher tree given by the relation. */
+    private inner class Initializer(private val recursions: MutableList<RichMatcher>) {
+        /** Returns the sub-matcher tree given by the lineage. */
         private fun childrenOf(lineage: MatcherLineage): List<Recursive?> {
             val (matcher) = lineage
-            recursions += matcher as CompoundRule
-            return matcher.subMatchers.map { subRule ->
-                val funSubRule = subRule.uniqueMatcher()
-                if (funSubRule !is CompoundRule) {
+            recursions += matcher
+            return (matcher as CompoundRule).subMatchers.map { subMatcher ->
+                val logicalMatcher = subMatcher.fundamentalLogic()
+                if (logicalMatcher !is CompoundRule) {
                     return@map null
                 }
-                if (funSubRule !in recursions) {
-                    funSubRule.executeInitializer(recursions)
-                    funSubRule.children = childrenOf(MatcherLineage(funSubRule, null))
-                    funSubRule
+                if (logicalMatcher !in recursions) {
+                    logicalMatcher.executeInitializer(recursions)
+                    logicalMatcher
                 } else {
-                    MatcherLineage(funSubRule, lineage)
+                    MatcherLineage(logicalMatcher, lineage)
                 }
             }.also { recursions.removeLast() }
         }
 
-        private fun leftRecursionsOf(relation: MatcherLineage): Set<Matcher> {
-            var isGuarded = false
+        private fun leftRecursionsOf(lineage: MatcherLineage): Set<RichMatcher> {
+            var isGuarded = lineage.matcher is Alternation
             return buildSet {
-                add(relation.matcher)
-                var cur = relation.parent
-                while (cur != null) {    // Unwind recursion, keeping track of all steps including outer rule
-                    if (cur.matcher is Alternation) {
+                add(lineage.matcher)
+                var branch = lineage.parent
+                while (branch != null) {    // Unwind recursion, keeping track of all steps including outer rule
+                    if (branch.matcher is Alternation) {
                         isGuarded = true
                     }
-                    add(cur.matcher)
-                    cur = cur.parent
+                    add(branch.matcher)
+                    branch = branch.parent
                 }
                 if (!isGuarded) {
-                    relation.let { (matcher, parent) ->
-                        // IMPORTANT: Do not resolve 'toString' of infinitely recursive matchers
-                        throw UnrecoverableRecursionException("Recursion of ${matcher.id} in ${parent!!.matcher.id} will never terminate")
+                    lineage.let { (matcher, parent) ->
+                        throw UnrecoverableRecursionException("Recursion of ${matcher.safeString()} in ${parent!!.matcher.safeString()} will never terminate")
                     }
-
                 }
             }
         }
 
-        private fun leftRecursionsPerSubRuleOf(children: List<Any?>): List<Set<Matcher>> {
+        private fun leftRecursionsPerSubRuleOf(children: List<Any?>): List<Set<RichMatcher>> {
             return children.map { child ->
                 when (child) {
                     null -> emptySet()
                     is MatcherLineage -> leftRecursionsOf(child)
-                    else -> {
-                        (child as CompoundRule).leftRecursionsPerSubRule = leftRecursionsPerSubRuleOf(child.children)
-                        child.leftRecursionsPerSubRule.flatMapTo(mutableSetOf()) { it }
-                    }
+                    else -> (child as CompoundRule).leftRecursionsPerSubRule.flatMapTo(mutableSetOf()) { it }
                 }
             }
         }
@@ -93,15 +87,16 @@ internal sealed class CompoundRule(
             children = childrenOf(MatcherLineage(this@CompoundRule, null))
             leftRecursionsPerSubRule = leftRecursionsPerSubRuleOf(children)
         }
+
+        override fun toString() = "Initializer @ ${this@CompoundRule}"
     }
 
-    protected abstract fun captureSubstring(driver: Driver)
+    protected abstract fun collectSubMatches(driver: Driver)
     final override fun equals(other: Any?) = super.equals(other)
     final override fun hashCode() = super.hashCode()
-    final override fun toString() = if (id !== UNKNOWN_ID) id else descriptiveString
-    final override fun initializeIdentity(recursions: MutableList<RichMatcher>) { identifier = this }
+    final override fun toString() = descriptiveString
 
-    private fun executeInitializer(recursions: MutableList<Matcher>) {
+    private fun executeInitializer(recursions: MutableList<RichMatcher>) {
         if (isInitialized) {
             return
         }
@@ -119,17 +114,18 @@ internal sealed class CompoundRule(
         executeInitializer(mutableListOf())
     }
 
-    final override fun collectMatches(identity: RichMatcher?, driver: Driver): Int {
+    final override fun collectMatches(driver: Driver): Int {
         initialize()    // Must call here, as may be constructed in explicit matcher
-        val trueIdentity = identity ?: this
-        return ExplicitMatcher {
-            captureSubstring(driver)
+        return rootMatches(driver) {
+            collectSubMatches(driver)
             if (context.isGreedy && leftRecursionsPerSubRule[0] != setOf(this)) {
                 var madeGreedyMatch = false
                 --driver.depth
                 while (true) {
                     driver.leftAnchor = this@CompoundRule
-                    if (collectMatches(trueIdentity, driver) <= 0) {
+                    val begin = driver.tape.offset
+                    collectSubMatches(driver)
+                    if (driver.tape.offset - begin == 0) {  // Match failed or did not move cursor
                         madeGreedyMatch = true
                     } else {
                         break
@@ -139,13 +135,13 @@ internal sealed class CompoundRule(
                     ++driver.depth
                 }
             }
-        }.collectMatches(trueIdentity, driver)
+        }
     }
 
     protected fun collectSeparatorMatches(driver: Driver): Int {
         if (separator === emptySeparator) {
             return 0
         }
-        return separator.collectMatches(separator, driver)
+        return separator.collectMatches(driver)
     }
 }

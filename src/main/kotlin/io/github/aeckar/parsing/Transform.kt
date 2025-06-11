@@ -3,7 +3,6 @@ package io.github.aeckar.parsing
 import io.github.aeckar.parsing.dsl.actionBy
 import io.github.aeckar.parsing.dsl.mapBy
 import io.github.aeckar.parsing.state.Unique
-import io.github.aeckar.parsing.state.toReadOnlyProperty
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
@@ -13,7 +12,7 @@ public operator fun <R> Transform<R>.provideDelegate(
     thisRef: Any?,
     property: KProperty<*>
 ): ReadOnlyProperty<Any?, Transform<R>> {
-    return ParserProperty(property.name, this as Parser<R>).toReadOnlyProperty()
+    return ReadOnlyProperty { _, _ -> ParserProperty(property.name, this as RichParser<R>) }
 }
 
 /**

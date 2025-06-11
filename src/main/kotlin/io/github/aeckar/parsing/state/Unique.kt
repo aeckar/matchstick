@@ -2,9 +2,6 @@ package io.github.aeckar.parsing.state
 
 internal val UNKNOWN_ID: String = "<unknown>".intern()
 
-/** Returns the ID of this object, or `"<unknown>"` if the receiver is null. */
-public val Unique?.id get() = this?.id ?: UNKNOWN_ID
-
 /** An object with an [id]. */
 public interface Unique {
     /**

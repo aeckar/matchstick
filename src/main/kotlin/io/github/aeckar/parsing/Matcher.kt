@@ -1,22 +1,25 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.ansi.yellow
+import io.github.aeckar.parsing.dsl.MatcherScope
+import io.github.aeckar.parsing.dsl.RuleScope
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
-import io.github.aeckar.parsing.rules.AggregateMatcher
 import io.github.aeckar.parsing.rules.CompoundRule
-import io.github.aeckar.parsing.rules.SequenceMatcher
+import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.UNKNOWN_ID
 import io.github.aeckar.parsing.state.Unique
 import io.github.oshai.kotlinlogging.KLogger
-import io.github.aeckar.parsing.dsl.RuleScope
 
 /**
  * If this matcher is of the given type and is of the same contiguosity, returns its sub-rules.
  * Otherwise, returns a list containing itself.
+ *
+ * Operates over regular [matchers][Matcher] to be later typecast by [CompoundRule].
  */
 internal inline fun <reified T: CompoundRule> Matcher.group(isContiguous: Boolean = false): List<Matcher> {
     if (this !is T || this is SequenceMatcher && this.isContiguous != isContiguous) {
@@ -31,30 +34,52 @@ internal inline fun <reified T: CompoundRule> Matcher.group(isContiguous: Boolea
  * As such, this function parenthesizes this rule if it comprises multiple other rules.
  */
 internal fun RichMatcher.specified(): String {
-    return when (this) {
-        is AggregateMatcher -> "($this)"
-        is CompoundRule -> toString()
-        else -> toString()
+    if (this is AggregateMatcher) {
+        return "($this)"
     }
+    return toString()   // Descriptive string or ID
+}
+
+internal fun RichMatcher.safeString(): String {
+    if (id !== UNKNOWN_ID) {
+        return id
+    }
+    if (this is ExplicitMatcher) {
+        return toString()
+    }
+    return "<unknown>"
 }
 
 /** Returns the most fundamental [identity][RichMatcher.identity] of this matcher. */
-internal fun RichMatcher.uniqueIdentity(): RichMatcher {
-    if (this !== identity) {
-        return identity.uniqueIdentity()
+internal fun RichMatcher.fundamentalIdentity(): RichMatcher {
+    if (this is SingularRule) {
+        return identity.fundamentalIdentity()
     }
     return this
 }
 
-/** Returns the matcher that this one delegates its matching logic to. */
-internal fun RichMatcher.uniqueMatcher(): UniqueMatcher {
-    if (this is MatcherProperty) {
-        return value.uniqueMatcher()
+/** Returns the matcher that this one delegates its matching logic to, and so forth. */
+internal fun RichMatcher.fundamentalLogic(): RichMatcher {
+    return when (this) {
+        is MatcherProperty -> value.fundamentalLogic()
+        is SingularRule -> identity.fundamentalLogic()
+        is UniqueParser<*> -> subMatcher.fundamentalLogic()
+        is IdentityRule -> subMatcher.fundamentalLogic()
+        else -> this
     }
-    if (this is UniqueMatcher && this !== identity) {
-        return identity.uniqueMatcher()
-    }
-    return this as UniqueMatcher
+}
+
+/**
+ * Wraps the scope in an [ExplicitMatcher] and uses it to collect matches,
+ * appending a match to this matcher afterward.
+ *
+ * This function is called for matchers consisting of sub-matchers that
+ * must also be appended to the syntax tree.
+ */
+internal inline fun RichMatcher.rootMatches(driver: Driver, crossinline scope: MatcherScope): Int {
+    driver.root = this  // Reflect syntax tree and ensure transform is invoked when walking it
+    return ExplicitMatcher { scope() }  // Wrap in 'ExplicitMatcher' to ensure proper depth, cleanup, etc.
+        .collectMatches(driver)
 }
 
 /**
@@ -68,7 +93,7 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
     val driver = Driver(Tape(input), matches)
     (this as RichMatcher).logger?.debug { "Received input ${yellow("'$input'")}"}
-    collectMatches(this, driver)
+    collectMatches(driver)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
     return if (matches.isEmpty()) Result(driver.failures()) else Result(emptyList(), matches)
 }
@@ -128,9 +153,7 @@ internal interface RichMatcher : Matcher {
      *
      * Because accessing this property for the first time may invoke a [RuleScope],
      * it must not be accessed before all dependent matchers are initialized.
-     *
-     * The value of this property is resolved using [initializeIdentity].
-     * @see Rule
+     * @see SingularRule
      */
     val identity: RichMatcher
 
@@ -138,8 +161,15 @@ internal interface RichMatcher : Matcher {
      * Returns the size of the matching substring at the beginning
      * of the remaining input, or -1 if one was not found.
      */
-    fun collectMatches(identity: RichMatcher?, driver: Driver): Int
-
-    /** Computes the identity of this matcher, storing the value so that it can be provided by [identity]. */
-    fun initializeIdentity(recursions: MutableList<RichMatcher>)
+    fun collectMatches(driver: Driver): Int
 }
+
+internal interface ModifierMatcher : RichMatcher {
+    val subMatcher: RichMatcher
+}
+
+internal interface SequenceMatcher : RichMatcher {
+    val isContiguous: Boolean
+}
+
+internal interface AggregateMatcher : RichMatcher

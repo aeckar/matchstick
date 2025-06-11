@@ -20,14 +20,14 @@ private val textPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<St
 
 /* ------------------------------ factories ------------------------------ */
 
-internal inline fun newPredicate(
+internal inline fun predicate(
     descriptiveString: String,
     crossinline predicate: (sequence: CharSequence, index: Int) -> Boolean
 ): Pattern = object : Pattern by ({ s: CharSequence, i: Int -> if (predicate(s, i)) 1 else -1 }) {
     override fun toString(): String = descriptiveString
 }
 
-internal fun newPattern(
+internal fun pattern(
     descriptiveString: String,
     pattern: (sequence: CharSequence, index: Int) -> Int
 ): Pattern = object : Pattern by pattern {
@@ -35,19 +35,19 @@ internal fun newPattern(
 }
 
 /**
- * Returns the pre-compiled character newPattern, or a new one if the newPattern has not yet been cached.
+ * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
  * @see RuleContext.charBy
  */
 internal fun lookupCharPattern(expr: String) = patternOf(expr, charPatternCache, CharExpression.Grammar.start)
 
 /**
- * Returns the pre-compiled text newPattern, or a new one if the newPattern has not yet been cached.
+ * Returns the pre-compiled text pattern, or a new one if the pattern has not yet been cached.
  * @see RuleContext.textBy
  */
 internal fun lookupTextPattern(expr: String) = patternOf(expr, textPatternCache, TextExpression.Grammar.start)
 
 /**
- * Returns the text newPattern specified by the given expression.
+ * Returns the text pattern specified by the given expression.
  * @see TextExpression.Grammar
  */
 public fun pattern(expr: String): Pattern = lookupTextPattern(expr)

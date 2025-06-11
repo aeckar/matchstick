@@ -37,17 +37,22 @@ public abstract class TreeNode {
 
         fun appendSubtree(style: TreeNodeStyle, lineSeparator: String, node: TreeNode): TreeStringBuilder {
             val children = node.children
-            treeStringBuilder += node.toString()  // Use implementor-defined string representation
-            treeStringBuilder += lineSeparator
+            treeStringBuilder.append(node.toString())
+            // Use implementor-defined string representation
+            treeStringBuilder.append(lineSeparator)
             if (children.isNotEmpty()) {
                 repeat(children.size.coerceAtLeast(1) - 1) { index ->
-                    branchLines.forEach { treeStringBuilder += if (it) "${style.vertical}   " else "    " }
+                    branchLines.forEach {
+                        treeStringBuilder.append(if (it) "${style.vertical}   " else "    ")
+                    }
                     treeStringBuilder.append(style.turnstile, style.horizontal, style.horizontal, ' ')
                     branchLines += true
                     appendSubtree(style, lineSeparator, children[index])
                     branchLines.removeAt(branchLines.size - 1)
                 }
-                branchLines.forEach { treeStringBuilder += if (it) "${style.vertical}   " else "    " }
+                branchLines.forEach {
+                    treeStringBuilder.append(if (it) "${style.vertical}   " else "    ")
+                }
                 treeStringBuilder.append(style.corner, style.horizontal, style.horizontal, ' ')
                 branchLines += false
                 appendSubtree(style, lineSeparator, children.last())

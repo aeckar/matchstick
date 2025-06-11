@@ -38,7 +38,7 @@ public class MatcherContext internal constructor(
         val isRecording = driver.isRecordingMatches
         driver.isRecordingMatches = false
         try {   // Restore recording state on interrupt
-            val length = (matcher as RichMatcher).collectMatches(matcher, driver)
+            val length = (matcher as RichMatcher).collectMatches(driver)
             if (length != -1) {
                 driver.tape.offset -= length    // Reset tape to original position
             }
@@ -85,7 +85,7 @@ public class MatcherContext internal constructor(
     }
 
     /**
-     * Returns 1 if a character satisfying the newPattern prefixes the offset input, or -1 if one is not found.
+     * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see charBy
      * @see CharExpression.Grammar
      */
@@ -94,7 +94,7 @@ public class MatcherContext internal constructor(
     }
 
     /**
-     * Returns 1 if a string satisfying the newPattern prefixes the offset input, or -1 if one is not found.
+     * Returns 1 if a string satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see textBy
      * @see TextExpression.Grammar
      */
