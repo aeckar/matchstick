@@ -26,8 +26,17 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     var isRecordingMatches = true
     var depth = 0                                   // Expose to 'CompoundMatcher' during greedy parsing
 
-    /** The matcher assigned to the match of highest depth on the next invocation of [captureSubstring]. */
+    /**
+     * The matcher assigned to the match of highest depth on the next invocation of [captureSubstring].
+     *
+     * If multiple non-null values are assigned to this property, only the first is kept.
+     */
     var root: RichMatcher? = null
+        set(value) {
+            if (value == null || field == null) {
+                field = value
+            }
+        }
 
     /** The rule to be appended to a greedy match, if successful. */
     var leftAnchor: RichMatcher? = null

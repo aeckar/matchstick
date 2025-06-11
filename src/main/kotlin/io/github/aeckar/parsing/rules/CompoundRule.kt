@@ -1,6 +1,7 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
+import io.github.aeckar.parsing.ExplicitMatcher
 import io.github.aeckar.parsing.state.Recursive
 import io.github.oshai.kotlinlogging.KLogger
 
@@ -116,7 +117,8 @@ internal sealed class CompoundRule(
 
     final override fun collectMatches(driver: Driver): Int {
         initialize()    // Must call here, as may be constructed in explicit matcher
-        return rootMatches(driver) {
+        driver.root = this
+        return ExplicitMatcher {
             collectSubMatches(driver)
             if (context.isGreedy && leftRecursionsPerSubRule[0] != setOf(this)) {
                 var madeGreedyMatch = false
@@ -135,7 +137,7 @@ internal sealed class CompoundRule(
                     ++driver.depth
                 }
             }
-        }
+        }.collectMatches(driver)
     }
 
     protected fun collectSeparatorMatches(driver: Driver): Int {

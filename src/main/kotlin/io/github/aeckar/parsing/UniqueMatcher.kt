@@ -88,10 +88,7 @@ internal class UniqueParser<R>(
     override fun toString() = subMatcher.toString()
 
     override fun collectMatches(driver: Driver): Int {
-        return rootMatches(driver) {
-            if (subMatcher.fundamentalIdentity().collectMatches(driver) == -1) {
-                throw MatchInterrupt.UNCONDITIONAL
-            }
-        }
+        driver.root = this
+        return subMatcher.collectMatches(driver)
     }
 }

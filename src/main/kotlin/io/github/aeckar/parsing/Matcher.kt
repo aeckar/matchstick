@@ -70,19 +70,6 @@ internal fun RichMatcher.fundamentalLogic(): RichMatcher {
 }
 
 /**
- * Wraps the scope in an [ExplicitMatcher] and uses it to collect matches,
- * appending a match to this matcher afterward.
- *
- * This function is called for matchers consisting of sub-matchers that
- * must also be appended to the syntax tree.
- */
-internal inline fun RichMatcher.rootMatches(driver: Driver, crossinline scope: MatcherScope): Int {
-    driver.root = this  // Reflect syntax tree and ensure transform is invoked when walking it
-    return ExplicitMatcher { scope() }  // Wrap in 'ExplicitMatcher' to ensure proper depth, cleanup, etc.
-        .collectMatches(driver)
-}
-
-/**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
  *
  * If the returned list is empty, this sequence does not match the matcher with the given separator.

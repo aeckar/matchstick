@@ -12,11 +12,8 @@ internal open class MatcherProperty(
     override val identity get() = this
 
     override fun collectMatches(driver: Driver): Int {
-        return rootMatches(driver) {
-            if (value.fundamentalIdentity().collectMatches(driver) == -1) {
-                throw MatchInterrupt.UNCONDITIONAL
-            }
-        }
+        driver.root = this
+        return value.collectMatches(driver)
     }
 }
 
