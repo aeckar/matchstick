@@ -30,7 +30,7 @@ internal inline fun <reified T: CompoundRule> Matcher.group(isContiguous: Boolea
  *
  * As such, this function parenthesizes this rule if it comprises multiple other rules.
  */
-internal fun Matcher.specified(): String {
+internal fun RichMatcher.specified(): String {
     return when (this) {
         is AggregateMatcher -> "($this)"
         is CompoundRule -> toString()
@@ -39,25 +39,23 @@ internal fun Matcher.specified(): String {
 }
 
 /** Returns the most fundamental [identity][RichMatcher.identity] of this matcher. */
-internal fun Matcher.fundamentalIdentity(): Matcher {
-    if (this !== (this as RichMatcher).identity) {
-        return identity.fundamentalIdentity()
+internal fun RichMatcher.uniqueIdentity(): RichMatcher {
+    if (this !== identity) {
+        return identity.uniqueIdentity()
     }
     return this
 }
 
 /** Returns the matcher that this one delegates its matching logic to. */
-internal fun Matcher.fundamentalMatcher(): Matcher {
+internal fun RichMatcher.uniqueMatcher(): UniqueMatcher {
     if (this is MatcherProperty) {
-        return value.fundamentalMatcher()
+        return value.uniqueMatcher()
     }
     if (this is UniqueMatcher && this !== identity) {
-        return identity.fundamentalMatcher()
+        return identity.uniqueMatcher()
     }
-    return this
+    return this as UniqueMatcher
 }
-
-
 
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
@@ -129,7 +127,9 @@ internal interface RichMatcher : Matcher {
      * The identity assigned to this matcher during debugging.
      *
      * Because accessing this property for the first time may invoke a [RuleScope],
-     * it must not be accessed before an input is [matched][match].
+     * it must not be accessed before all dependent matchers are initialized.
+     *
+     * The value of this property is resolved using [initializeIdentity].
      * @see Rule
      */
     val identity: RichMatcher
@@ -139,4 +139,7 @@ internal interface RichMatcher : Matcher {
      * of the remaining input, or -1 if one was not found.
      */
     fun collectMatches(identity: RichMatcher?, driver: Driver): Int
+
+    /** Computes the identity of this matcher, storing the value so that it can be provided by [identity]. */
+    fun initializeIdentity(recursions: MutableList<RichMatcher>)
 }

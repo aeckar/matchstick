@@ -13,7 +13,6 @@ internal sealed class CompoundRule(
 ) : UniqueMatcher(), Recursive {
     final override val separator get() = context.separator as RichMatcher
     final override val isCacheable get() = true
-    final override val identity get() = this
     internal abstract val descriptiveString: String
     private var isInitialized = false
 
@@ -41,7 +40,7 @@ internal sealed class CompoundRule(
             val (matcher) = lineage
             recursions += matcher as CompoundRule
             return matcher.subMatchers.map { subRule ->
-                val funSubRule = subRule.fundamentalMatcher()
+                val funSubRule = subRule.uniqueMatcher()
                 if (funSubRule !is CompoundRule) {
                     return@map null
                 }
@@ -68,7 +67,11 @@ internal sealed class CompoundRule(
                     cur = cur.parent
                 }
                 if (!isGuarded) {
-                    throw UnrecoverableRecursionException("Recursion of ${relation.matcher} in ${relation.parent} will never succeed")
+                    relation.let { (matcher, parent) ->
+                        // IMPORTANT: Do not resolve 'toString' of infinitely recursive matchers
+                        throw UnrecoverableRecursionException("Recursion of ${matcher.id} in ${parent!!.matcher.id} will never terminate")
+                    }
+
                 }
             }
         }
@@ -96,6 +99,7 @@ internal sealed class CompoundRule(
     final override fun equals(other: Any?) = super.equals(other)
     final override fun hashCode() = super.hashCode()
     final override fun toString() = if (id !== UNKNOWN_ID) id else descriptiveString
+    final override fun initializeIdentity(recursions: MutableList<RichMatcher>) { identifier = this }
 
     private fun executeInitializer(recursions: MutableList<Matcher>) {
         if (isInitialized) {

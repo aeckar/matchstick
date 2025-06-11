@@ -1,6 +1,5 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.MapScope
 import io.github.aeckar.parsing.dsl.actionBy
 import io.github.aeckar.parsing.dsl.mapBy
 import io.github.aeckar.parsing.state.Unique
@@ -15,20 +14,6 @@ public operator fun <R> Transform<R>.provideDelegate(
     property: KProperty<*>
 ): ReadOnlyProperty<Any?, Transform<R>> {
     return ParserProperty(property.name, this as Parser<R>).toReadOnlyProperty()
-}
-
-@PublishedApi   // Inlined in 'actionBy' and 'mapBy'
-internal fun <R> newTransform(
-    inputType: KType,
-    scope: MapScope<R>
-): Transform<R> = object : RichTransform<R> {
-    override val inputType = inputType
-    override val scope: TransformContext<R>.() -> R = scope
-
-    override fun consumeMatches(context: TransformContext<R>): R {
-        context.state = context.run(scope)
-        return context.finalState()
-    }
 }
 
 /**

@@ -18,7 +18,7 @@ internal class Concatenation(
 ), AggregateMatcher, SequenceMatcher {
     override val descriptiveString by lazy {
         val symbol = if (isContiguous) "&" else "~&"
-        subMatchers.joinToString(" $symbol ") { it.fundamentalIdentity().specified() }
+        subMatchers.joinToString(" $symbol ") { it.uniqueIdentity().specified() }
     }
 
     override fun captureSubstring(driver: Driver) {
@@ -60,7 +60,7 @@ internal class Alternation(
 ), AggregateMatcher {
     override val descriptiveString by lazy {
         subMatchers.joinToString(" | ") {
-            val subMatcher = it.fundamentalIdentity()
+            val subMatcher = it.uniqueIdentity()
             if (subMatcher is Concatenation) subMatcher.descriptiveString else subMatcher.specified()
         }
     }

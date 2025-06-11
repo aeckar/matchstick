@@ -33,7 +33,7 @@ public open class RuleContext @PublishedApi internal constructor(
 
     /** Returns a copy of this parser that will not reuse the existing state when visited. */
     public fun Parser<*>.unique(): Matcher {
-        return with(newTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
+        return with(UniqueTransform(typeOf<Intangible>(), (this as RichTransform<*>).scope))
     }
 
     private val singleChar = newCacheableMatcher(".") { yield(1) }

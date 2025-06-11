@@ -99,7 +99,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         return if (state instanceOf matcher.inputType) {
             matcher.consumeMatches(TransformContext(this, state))   // Invokes this function recursively
         } else {
-            val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.inputType))
+            val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.inputType) as R)
             val result = matcher.consumeMatches(subParserContext) // Visit sub-transform
             if (matcher.id === UNKNOWN_ID) {
                 subParserContext.resultsBySubParser.forEach { (key, value) -> outerContext.addResult(key, value) }

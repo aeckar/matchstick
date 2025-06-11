@@ -16,7 +16,7 @@ internal open class MatcherProperty(
         return try {
             value.collectMatches(identity ?: this, driver)
         } catch (_: UnrecoverableRecursionException) {
-            throw UnrecoverableRecursionException("Recursion of $identity in $this will never succeed")
+            throw UnrecoverableRecursionException("Recursion of <unknown> in $this will never terminate")
         }
     }
 }

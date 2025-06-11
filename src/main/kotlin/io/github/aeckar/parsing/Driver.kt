@@ -98,9 +98,9 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
         logger?.debug {
             buildString {
                 append("Attempting match to ${blue(matcher)}")
-                val funMatcher = matcher.fundamentalMatcher()
-                if (funMatcher !== matcher) {
-                    append(" ($funMatcher)")
+                val uniqueMatcher = matcher.uniqueMatcher()
+                if (uniqueMatcher !== matcher) {
+                    append(" ($uniqueMatcher)")
                 }
                 append(" " + indexMarker(begin))
             }

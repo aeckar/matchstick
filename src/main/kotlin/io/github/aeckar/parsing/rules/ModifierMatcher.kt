@@ -4,7 +4,7 @@ import io.github.aeckar.parsing.Driver
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.RuleContext
-import io.github.aeckar.parsing.fundamentalIdentity
+import io.github.aeckar.parsing.uniqueIdentity
 import io.github.aeckar.parsing.specified
 import io.github.aeckar.parsing.unnamedMatchInterrupt
 import io.github.oshai.kotlinlogging.KLogger
@@ -26,7 +26,7 @@ internal class Repetition(
     override val descriptiveString by lazy {
         val modifier = "~".takeIf { isContiguous }.orEmpty()
         val symbol = if (minMatchCount == 0) "*" else "+"
-        "${subMatcher.fundamentalIdentity().specified()}$modifier$symbol"
+        "${this.subMatcher.uniqueIdentity().specified()}$modifier$symbol"
     }
 
     override fun captureSubstring(driver: Driver) {
@@ -61,7 +61,7 @@ internal class Option(
     subMatcher: Matcher
 ) : CompoundRule(logger, context, listOf(subMatcher)), ModifierMatcher {
     override val subMatcher = subMatchers.single()
-    override val descriptiveString by lazy { "${subMatcher.fundamentalIdentity().specified()}?" }
+    override val descriptiveString by lazy { "${this.subMatcher.uniqueIdentity().specified()}?" }
 
     override fun captureSubstring(driver: Driver) {
         if (subMatcher.collectMatches(subMatcher, driver) == -1) {
@@ -76,7 +76,7 @@ internal class IdentityRule(
     subMatcher: Matcher
 ) : CompoundRule(logger, context, listOf(subMatcher)), ModifierMatcher {
     override val subMatcher = subMatchers.single()
-    override val descriptiveString by lazy { "{${subMatcher.fundamentalIdentity().specified()}}" }
+    override val descriptiveString by lazy { "{${this.subMatcher.uniqueIdentity().specified()}}" }
 
     override fun captureSubstring(driver: Driver) {
         subMatcher.collectMatches(subMatcher, driver)
