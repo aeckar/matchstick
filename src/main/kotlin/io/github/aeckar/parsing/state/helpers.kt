@@ -41,3 +41,23 @@ internal fun <E> Array<MutableSet<E>?>.getOrSet(index: Int): MutableSet<E> {
 internal fun <E> Array<MutableList<E>?>.getOrSet(index: Int): MutableList<E> {
     return this[index] ?: mutableListOf<E>().also { this[index] = it }
 }
+
+/** Returns a string with invisible characters replaced by their corresponding escape code. */
+@PublishedApi   // Inlined by 'parse'
+internal fun CharSequence.escaped() = buildString {
+    this@escaped.forEach { c ->
+        append(when {
+            c == '\\' -> "\\\\"
+            c == '\n' -> "\\n"
+            c == '\t' -> "\\t"
+            c == ' ' -> ' '
+            c.isWhitespace() || c.isISOControl() -> "\\u${c.code.toString(16).padStart(4, '0')}"
+            else -> c
+        })
+    }
+}
+
+@PublishedApi   // Inlined by 'parse'
+internal fun CharSequence.truncated(): String {
+    return Tape(this).toString().filter { it != Tape.BEGIN_CARET && it != Tape.END_CARET }
+}

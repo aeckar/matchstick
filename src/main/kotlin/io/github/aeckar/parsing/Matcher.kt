@@ -12,6 +12,8 @@ import io.github.aeckar.parsing.state.Enumerated
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.escaped
+import io.github.aeckar.parsing.state.truncated
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
@@ -77,7 +79,7 @@ internal fun RichMatcher.fundamentalLogic(): RichMatcher {
 public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
     val driver = Driver(Tape(input), matches)
-    (this as RichMatcher).logger?.debug { "Received input ${yellow("'$input'")}"}
+    (this as RichMatcher).logger?.debug { "Received input ${yellow("'${input.truncated().escaped()}'")}" }
     collectMatches(driver)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
     return if (matches.isEmpty()) Result<List<Match>>(driver.failures()) else Result(emptyList(), matches)

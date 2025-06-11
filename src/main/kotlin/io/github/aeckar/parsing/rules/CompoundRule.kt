@@ -138,7 +138,7 @@ internal sealed class CompoundRule(
     }
 
     protected fun collectSeparatorMatches(driver: Driver): Int {
-        if (separator === emptySeparator) {
+        if (separator === ExplicitMatcher.EMPTY) {
             return 0
         }
         return separator.collectMatches(driver)

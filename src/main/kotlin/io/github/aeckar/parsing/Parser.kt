@@ -6,7 +6,9 @@ import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.initialStateOf
+import io.github.aeckar.parsing.state.truncated
 import kotlin.reflect.typeOf
 
 /* ------------------------------ parser operations ------------------------------ */
@@ -31,7 +33,7 @@ public inline fun <reified R> Parser<R>.parse(
         if (complete) {
             val matchLength = matches.last().length
             if (matchLength != input.length) {
-                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input '${Tape(input)}'")
+                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input '${input.truncated().escaped()}'")
             }
         }
         (this as RichMatcher).logger?.debug { "Walking syntax tree of ${yellow("'$input'")}" }

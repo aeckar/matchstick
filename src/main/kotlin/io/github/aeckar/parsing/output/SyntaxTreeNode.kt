@@ -3,6 +3,7 @@ package io.github.aeckar.parsing.output
 import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.aeckar.parsing.state.TreeNode
+import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
 
@@ -99,7 +100,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         if (matcher == null) {
             return "\"$substring\""
         }
-        return "\"$substring\" @ $matcher"
+        return "\"${substring.escaped()}\" @ $matcher"
     }
 
     public companion object {

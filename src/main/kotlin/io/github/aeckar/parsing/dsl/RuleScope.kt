@@ -19,6 +19,8 @@ public operator fun RuleFactory.invoke(scope: RuleScope): Matcher = this(false, 
 
 /**
  * Configures and returns a rule-based matcher whose separator is an empty string.
+ *
+ * The separator block is invoked only once.
  * @see newMatcher
  */
 public fun newRule(
@@ -42,6 +44,8 @@ public fun newRule(
  *     /* Using 'whitespace' as separator... */
  * }
  * ```
+ *
+ * The separator block is invoked only once.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see matcherBy
  * @see RuleContext.plus

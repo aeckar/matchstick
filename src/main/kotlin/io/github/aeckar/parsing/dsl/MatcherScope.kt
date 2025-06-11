@@ -17,6 +17,8 @@ public typealias MatcherFactory = (MatcherScope) -> Matcher
 
 /**
  * Configures and returns a matcher whose behavior is explicitly defined and whose separator is an empty string.
+ *
+ * The separator block is invoked only once.
  * @see newRule
  * @see RuleContext.separator
  */
@@ -40,6 +42,8 @@ public fun newMatcher(
  *     /* Using 'whitespace' as separator... */
  * }
  * ```
+ *
+ * The separator block is invoked only once.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see ruleBy
  * @see RuleContext.separator

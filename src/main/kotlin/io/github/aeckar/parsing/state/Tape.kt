@@ -1,7 +1,5 @@
 package io.github.aeckar.parsing.state
 
-private const val LOOKAHEAD_SIZE = 20
-
 /**
  * Applies an offset to a character sequence.
  *
@@ -43,7 +41,7 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
         val subSequence = (offset - LOOKAHEAD_SIZE..offset + LOOKAHEAD_SIZE).map { index ->
             if (index in input.indices) {
                 val c = input[index]
-                if (index == offset) "[$c]" else c
+                if (index == offset) "$BEGIN_CARET$c$END_CARET" else c
             } else {
                 null
             }
@@ -59,10 +57,11 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
             }
             append(truncatedSequence)
             if (subSequence.last() != null && offset + LOOKAHEAD_SIZE != input.lastIndex) {
-                append("...")
+                append("... (")
+                append(input.lastIndex - offset + LOOKAHEAD_SIZE)
+                append(" remaining)")
             }
         }
-
     }
 
     override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
@@ -71,5 +70,11 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
 
     override fun equals(other: Any?): Boolean {
         return other is Tape && other.input == input && other.offset == offset
+    }
+
+    companion object {
+        private const val LOOKAHEAD_SIZE = 20
+        internal const val BEGIN_CARET = '【'
+        internal const val END_CARET = '】'
     }
 }

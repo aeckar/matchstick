@@ -5,6 +5,7 @@ import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.rules.*
 import io.github.aeckar.parsing.state.Intangible
+import io.github.aeckar.parsing.state.escaped
 import io.github.oshai.kotlinlogging.KLogger
 import kotlin.reflect.typeOf
 
@@ -56,17 +57,19 @@ public open class RuleContext @PublishedApi internal constructor(
     public fun char(): Matcher = singleChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = cacheableMatcher("'$c'") { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = cacheableMatcher("'${c.toString().escaped()}'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
-    public fun text(substring: String): Matcher = cacheableMatcher("\"$substring\"") { yield(lengthOf(substring)) }
+    public fun text(substring: String): Matcher {
+        return cacheableMatcher("\"${substring.escaped()}\"") { yield(lengthOf(substring)) }
+    }
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: String): Matcher = charIn(chars.toList())
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: Collection<Char>): Matcher {
-        val logicString = "[${chars.joinToString("")}]"
+        val logicString = "[${chars.joinToString("") { it.toString().escaped() }}]"
         return cacheableMatcher(logicString) { yield(lengthOfFirst(chars)) }
     }
 
@@ -75,7 +78,7 @@ public open class RuleContext @PublishedApi internal constructor(
 
     /** Returns a rule matching any character not in the given collection. */
     public fun charNotIn(chars: Collection<Char>): Matcher {
-        val logicString = "![${chars.joinToString("")}]"
+        val logicString = "![${chars.joinToString("") { it.toString().escaped() }}]".escaped()
         return cacheableMatcher(logicString) {
             if (lengthOfFirst(chars) != -1) {
                 fail()
@@ -86,7 +89,7 @@ public open class RuleContext @PublishedApi internal constructor(
 
     /** Returns a rule matching the first acceptable substring. */
     public fun textIn(substrings: Collection<String>): Matcher {
-        val logicString = substrings.joinToString(" | ", "(", ")") { "\"$it\"" }
+        val logicString = substrings.joinToString(" | ", "(", ")") { "\"${it.escaped()}\"" }
         return cacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
     }
 
@@ -99,7 +102,7 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see MatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = cacheableMatcher("`${expr.escaped()}`") { yield(lengthByChar(expr)) }
 
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
@@ -110,7 +113,7 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see MatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = cacheableMatcher("``${expr.escaped()}``") { yield(lengthByText(expr)) }
 
     /**
      * Returns a rule matching this one, then the [separator][match], then the other.

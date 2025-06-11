@@ -4,6 +4,7 @@ import io.github.aeckar.ansi.*
 import io.github.aeckar.parsing.dsl.MatcherScope
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.state.Tape
+import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.getOrSet
 
 /**
@@ -89,7 +90,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     }
 
     private fun substringMarker(begin: Int, endExclusive: Int): String {
-        val substring = if (begin < tape.input.length) tape.input.substring(begin, endExclusive) else ""
+        val substring = if (begin < tape.input.length) tape.input.substring(begin, endExclusive).escaped() else ""
         return "(${yellow("'$substring'")})"
     }
 
