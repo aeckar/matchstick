@@ -13,8 +13,8 @@ internal open class MatcherProperty(
 
     override fun collectMatches(driver: Driver): Int {
         return rootMatches(driver) {
-            if (value.collectMatches(driver) == -1) {
-                throw unnamedMatchInterrupt
+            if (value.fundamentalIdentity().collectMatches(driver) == -1) {
+                throw MatchInterrupt.UNCONDITIONAL
             }
         }
     }

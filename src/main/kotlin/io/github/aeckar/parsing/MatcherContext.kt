@@ -172,7 +172,7 @@ public class MatcherContext internal constructor(
     public fun remaining(): CharIterator = driver.tape.remaining()
 
     /** Fails the current match. */
-    public fun fail(): Nothing = throw unnamedMatchInterrupt
+    public fun fail(): Nothing = throw MatchInterrupt.UNCONDITIONAL
 
     /** Fails the current match with the given cause. */
     public fun fail(lazyCause: () -> String): Nothing = throw MatchInterrupt(lazyCause)

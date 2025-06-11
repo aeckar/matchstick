@@ -2,13 +2,13 @@ package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.AggregateMatcher
 import io.github.aeckar.parsing.Driver
+import io.github.aeckar.parsing.MatchInterrupt
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RuleContext
 import io.github.aeckar.parsing.SequenceMatcher
 import io.github.aeckar.parsing.fundamentalIdentity
 import io.github.aeckar.parsing.group
 import io.github.aeckar.parsing.specified
-import io.github.aeckar.parsing.unnamedMatchInterrupt
 import io.github.oshai.kotlinlogging.KLogger
 import kotlin.collections.contains
 
@@ -39,11 +39,11 @@ internal class Concatenation(
         for ((index, matcher) in matchers.withIndex()) {
             val length = matcher.collectMatches(driver)
             if (length == -1) {
-                throw unnamedMatchInterrupt
+                throw MatchInterrupt.UNCONDITIONAL
             }
             if (totalLength == 0 && matcher in driver.localMatchers()) {
                 logger?.debug { "Left recursion found for $matcher" }
-                throw unnamedMatchInterrupt
+                throw MatchInterrupt.UNCONDITIONAL
             }
             if (index == subMatchers.lastIndex) {
                 break

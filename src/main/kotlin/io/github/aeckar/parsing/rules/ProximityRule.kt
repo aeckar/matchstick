@@ -1,9 +1,9 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.Driver
+import io.github.aeckar.parsing.MatchInterrupt
 import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.RuleContext
-import io.github.aeckar.parsing.unnamedMatchInterrupt
 import io.github.oshai.kotlinlogging.KLogger
 import kotlin.Int
 
@@ -23,7 +23,7 @@ internal class ProximityRule(
             if (distance == -1) Int.MAX_VALUE else distance
         }
         if (nearestRule !in driver.matchers() || nearestRule.collectMatches(driver) == -1) {
-            throw unnamedMatchInterrupt
+            throw MatchInterrupt.UNCONDITIONAL
         }
     }
 }

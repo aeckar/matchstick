@@ -2,6 +2,7 @@ package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.AggregateMatcher
 import io.github.aeckar.parsing.Driver
+import io.github.aeckar.parsing.MatchInterrupt
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.RuleContext
@@ -9,7 +10,6 @@ import io.github.aeckar.parsing.fundamentalIdentity
 import io.github.aeckar.parsing.fundamentalLogic
 import io.github.aeckar.parsing.group
 import io.github.aeckar.parsing.specified
-import io.github.aeckar.parsing.unnamedMatchInterrupt
 import io.github.oshai.kotlinlogging.KLogger
 
 internal class Alternation(
@@ -39,7 +39,7 @@ internal class Alternation(
                 }
                 ++driver.choice
             }
-            throw unnamedMatchInterrupt
+            throw MatchInterrupt.UNCONDITIONAL
         }
         for (matcher in subMatchers) {
             guardLeftRecursion(driver, matcher) && continue
@@ -48,7 +48,7 @@ internal class Alternation(
             }
             ++driver.choice
         }
-        throw unnamedMatchInterrupt
+        throw MatchInterrupt.UNCONDITIONAL
     }
 
     /** Returns true if the sub-matcher is left-recursive. */
