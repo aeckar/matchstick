@@ -1,7 +1,5 @@
 package io.github.aeckar.parsing.state
 
-internal val UNKNOWN_ID: String = "<unknown>".intern()
-
 /** An object with an [id]. */
 public interface Enumerated {
     /**
@@ -10,4 +8,8 @@ public interface Enumerated {
      * If not overriden, is the interned string `"<unknown>"`.
      */
     public val id: String get() = UNKNOWN_ID
+
+    public companion object {
+        internal val UNKNOWN_ID: String = "<unknown>".intern()
+    }
 }

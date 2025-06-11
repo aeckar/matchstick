@@ -9,17 +9,7 @@ import io.github.aeckar.parsing.TransformContext
 import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
-import io.github.aeckar.parsing.state.UNKNOWN_ID
-
-private val syntaxTreePlaceholder = syntaxTreeOf("", listOf(Match(null, 0, 0, 0, 0)))
-
-/**
- * Returns a new syntax tree according to the matched substrings.
- * @throws NoSuchMatchException a match cannot be made to the input
- */
-public fun syntaxTreeOf(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
-    return SyntaxTreeNode(input, matches.toMutableList())
-}
+import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
@@ -115,6 +105,18 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
             return "\"$substring\""
         }
         return "\"$substring\" @ $matcher"
+    }
+
+    public companion object {
+        /**
+         * Returns a new syntax tree according to the matched substrings.
+         * @throws NoSuchMatchException a match cannot be made to the input
+         */
+        public fun of(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
+            return SyntaxTreeNode(input, matches.toMutableList())
+        }
+
+        private val syntaxTreePlaceholder = of("", listOf(Match(null, 0, 0, 0, 0)))
     }
 }
 

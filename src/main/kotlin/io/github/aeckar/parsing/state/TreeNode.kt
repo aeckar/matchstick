@@ -1,27 +1,6 @@
 package io.github.aeckar.parsing.state
 
 /**
- * Can be passed to [TreeNode.treeString] so that the lines in the returned string are made of UTF-8 characters.
- */
-public val UTF_8: TreeNodeStyle = TreeNodeStyle("│─├└")
-
-/**
- * Can be passed to [TreeNode.treeString] so that the lines in the returned string are made of ASCII characters.
- */
-public val ASCII: TreeNodeStyle = TreeNodeStyle("|-++")
-
-/** Contains the specific characters used to create the [tree string][TreeNode.treeString] of a node. */
-public data class TreeNodeStyle(val vertical: Char, val horizontal: Char, val turnstile: Char, val corner: Char) {
-    /**
-     * Returns a line map containing the given characters.
-     * @throws IllegalArgumentException [chars] does not contain exactly 4 characters
-     */
-    public constructor(chars: String) : this(chars[0], chars[1], chars[2], chars[3]) {
-        require(chars.length == 4) { "String '$chars' must have 4 characters'" }
-    }
-}
-
-/**
  * A node in some larger tree, whose children are other nodes in the same tree.
  *
  * Instances of this class perform no checks to prevent cycles.
@@ -31,11 +10,34 @@ public abstract class TreeNode {
     public abstract val children: List<TreeNode>
     private var treeString: String? = null
 
+    /** Contains the specific characters used to create the [tree string][TreeNode.treeString] of a node. */
+    public data class Style(val vertical: Char, val horizontal: Char, val turnstile: Char, val corner: Char) {
+        /**
+         * Returns a line map containing the given characters.
+         * @throws IllegalArgumentException [chars] does not contain exactly 4 characters
+         */
+        public constructor(chars: String) : this(chars[0], chars[1], chars[2], chars[3]) {
+            require(chars.length == 4) { "String '$chars' must have 4 characters'" }
+        }
+
+        public companion object {
+            /**
+             * Can be passed to [TreeNode.treeString] so that the lines in the returned string are made of UTF-8 characters.
+             */
+            public val UTF_8: Style = Style("│─├└")
+
+            /**
+             * Can be passed to [TreeNode.treeString] so that the lines in the returned string are made of ASCII characters.
+             */
+            public val ASCII: Style = Style("|-++")
+        }
+    }
+    
     private inner class TreeStringBuilder {
         private val branchLines = mutableListOf<Boolean>()
         private val treeStringBuilder = StringBuilder()
 
-        fun appendSubtree(style: TreeNodeStyle, lineSeparator: String, node: TreeNode): TreeStringBuilder {
+        fun appendSubtree(style: Style, lineSeparator: String, node: TreeNode): TreeStringBuilder {
             val children = node.children
             treeStringBuilder.append(node.toString())
             // Use implementor-defined string representation
@@ -74,7 +76,7 @@ public abstract class TreeNode {
      * @param lineSeparator the character sequence used to denote a new line
      * @see toString
      */
-    public fun treeString(style: TreeNodeStyle = UTF_8, lineSeparator: String = "\n"): String {
+    public fun treeString(style: Style = Style.UTF_8, lineSeparator: String = "\n"): String {
         treeString?.let { return it }
         return TreeStringBuilder()
             .appendSubtree(style, lineSeparator, this)
