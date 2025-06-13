@@ -1,35 +1,47 @@
-import io.github.aeckar.parsing.MalformedExpressionException
-import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.UnrecoverableRecursionException
+import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.invoke
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.ruleBy
-import io.github.aeckar.parsing.match
-import io.github.aeckar.parsing.treeify
+import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
-import kotlin.test.assertNotNull
+import kotlin.test.assertEquals
 
 class NewRuleTest {
+    private val logger = logger(NewRuleTest::class.qualifiedName!!)
+
     @Test
-    fun obeysSeparator() {//fixme
+    fun acceptsSeparator() {
         val grammar = object {
-            val rule = ruleBy { newRule { textBy("{!=%*/|\n}+") } }
+            val rule = ruleBy(logger) { newRule(logger) { textBy("{!=%*/|\n}+") } }
 
             val comments by rule { oneOrMore(blockComment or lineComment) }
             val blockComment by rule { text("/*") + text("*/") }
             val lineComment by rule { text("//") + char('\n') }
         }
         val tree = grammar.comments.treeify("// hi there\n/* oh, hi! */").resultOrNull()?.treeString()
-        assertNotNull(tree) { tree -> println(tree) }   // Inspect tree for errors
+        assertEquals(
+            """
+            TODO
+            """.trimIndent(),
+            tree
+        )
     }
 
     @Test
     fun acceptsValidTextExpression() {
         val blockComment by newRule { text("/*") * textBy("{!=%*/}+") * text("*/") }
         val tree = blockComment.treeify("/* hello */").resultOrNull()?.treeString()
-        assertNotNull(tree) { tree -> println(tree) }   // Inspect tree for errors
+        assertEquals(
+            """
+            "/* hello */" @ blockComment
+            ├── "/*" @ "/*"
+            ├── " hello " @ ``{!=%*/}+``
+            └── "*/" @ "*/"
+            """.trimIndent(),
+            tree
+        )
     }
 
     @Test
@@ -42,7 +54,15 @@ class NewRuleTest {
     fun acceptsValidCharExpression() {
         val numbering by newRule { charBy("0..9|a..z|A..Z") * maybe(char('.')) }
         val tree = numbering.treeify("a.").resultOrNull()?.treeString()
-        assertNotNull(tree) { tree -> println(tree) }   // Inspect tree for errors
+        assertEquals(
+            """
+            "a." @ numbering
+            ├── "a" @ `0..9|a..z|A..Z`
+            └── "." @ '.'?
+                └── "." @ '.'
+            """.trimIndent(),
+            tree
+        )
     }
     
     @Test

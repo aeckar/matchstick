@@ -1,12 +1,13 @@
 <configuration>
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>./src/test/resources/parsing.log</file>
-        <append>false</append>
+        <file>./logs/test.log</file>
+        <append>true</append>
         <encoder>
-            <Pattern>[%t] %-5level %logger - %msg%n</Pattern>
+            <pattern>[%t] %-5level %logger - %msg%n</pattern>
         </encoder>
     </appender>
-    <root level="debug">
+
+    <root level="DEBUG">
         <appender-ref ref="FILE"/>
     </root>
 </configuration>

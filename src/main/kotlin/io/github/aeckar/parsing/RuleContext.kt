@@ -21,7 +21,7 @@ import kotlin.reflect.typeOf
  * @see MatcherContext
  * @see RichMatcher.collectMatches
  */
-@ParserComponentDSL
+@GrammarDSL
 public open class RuleContext @PublishedApi internal constructor(
     private val logger: KLogger?,
     greedy: Boolean,
@@ -40,7 +40,7 @@ public open class RuleContext @PublishedApi internal constructor(
     }
 
     private inline fun cacheableMatcher(descriptiveString: String, crossinline scope: MatcherScope): RichMatcher {
-        return ExplicitMatcher(logger, ExplicitMatcher::EMPTY, descriptiveString, isCacheable = true) {
+        return ExplicitMatcher(logger, ExplicitMatcher::EMPTY, descriptiveString, cacheable = true) {
             val isRecording = driver.isRecordingMatches
             driver.isRecordingMatches = false   // Do not track yields
             try {

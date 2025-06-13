@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.GrammarDSL
 import io.github.aeckar.parsing.dsl.actionBy
 import io.github.aeckar.parsing.dsl.mapBy
 import io.github.aeckar.parsing.dsl.with
@@ -15,7 +15,7 @@ import io.github.aeckar.parsing.output.SyntaxTreeNode
  * @see actionBy
  * @see RichTransform.consumeMatches
  */
-@ParserComponentDSL
+@GrammarDSL
 public class TransformContext<R> @PublishedApi internal constructor(
     private val root: SyntaxTreeNode,   // Stores properties in single object
     state: R

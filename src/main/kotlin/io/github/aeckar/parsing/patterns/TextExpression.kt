@@ -22,7 +22,7 @@ public class TextExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse text expressions. */
     public object Grammar {
         private val action = actionBy<TextExpression>(preOrder = true)
-        private val rule = ruleBy(logger("TextExpression.Grammar"))
+        private val rule = ruleBy(logger(Grammar::class.qualifiedName!!))
 
         private val modifiers = mapOf(
             '+' to { subPattern: Pattern ->

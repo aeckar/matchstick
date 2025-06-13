@@ -20,28 +20,21 @@ internal class Concatenation(
     }
 
     override fun collectSubMatches(driver: Driver) {
-        var separatorLength = 0
-        var totalLength = 0
         val matchers = subMatchers.iterator()
-        if (driver.leftAnchor in leftRecursionsPerSubRule[0]) {
+        if (driver.leftmostMatcher in leftRecursionsPerSubMatcher[0]) {
             matchers.next() // Drop first sub-match
-            separatorLength = collectSeparatorMatches(driver)
+            discardSeparatorMatches(driver)
         }
-        for ((index, matcher) in matchers.withIndex()) {
-            val length = matcher.collectMatches(driver)
-            if (length == -1) {
-                throw MatchInterrupt.UNCONDITIONAL
-            }
-            if (totalLength == 0 && matcher in driver.localMatchers()) {
-                logger?.debug { "Left recursion found for $matcher" }
-                throw MatchInterrupt.UNCONDITIONAL
-            }
-            if (index == subMatchers.lastIndex) {
+        var separatorLength = 0
+        for (matcher in matchers) { // Loops at least once
+            matcher.collectMatchesOrFail(driver)
+            if (!matchers.hasNext()) {
                 break
             }
-            totalLength += length
-            separatorLength = collectSeparatorMatches(driver)
+            driver.debug(logger) { "Begin separator matches" }
+            separatorLength = discardSeparatorMatches(driver)
+            driver.debug(logger) { "End separator matches" }
         }
-        driver.tape.offset -= separatorLength
+        driver.tape.offset -= separatorLength   // Truncate separator in substring
     }
 }

@@ -4,10 +4,10 @@ Provides a concise domain-specific language (DSL) to construct matchers and pars
 See the official [GitHub page](https://github.com/aeckar/extended-collections/) for more information.
 
 # Package io.github.aeckar.parsing
-Provides core utilities for use alongside the parser-component DSL.
+Provides core utilities for use alongside the grammar DSL.
 
 # Package io.github.aeckar.parsing.dsl
-Provides the parser-component DSL.
+Provides the grammar DSL.
 
 # Package io.github.aeckar.parsing.output
 Provides data structures holding parser output.

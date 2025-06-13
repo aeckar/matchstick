@@ -21,19 +21,19 @@ internal class Alternation(
     }
 
     override fun collectSubMatches(driver: Driver) {
-        val leftAnchor = driver.leftAnchor
-        if (leftAnchor != null) {
+        if (driver.leftmostMatcher != null) {
             for ((index, matcher) in subMatchers.withIndex()) { // Extract for-loop
-                guardLeftRecursion(driver, matcher) && continue
-                if (leftAnchor in leftRecursionsPerSubRule[index] && matcher.collectMatches(driver) != -1) {
+                guard(driver, matcher) && continue
+                if (driver.leftmostMatcher!! in leftRecursionsPerSubMatcher[index] &&
+                        matcher.collectMatches(driver) != -1) {
                     return
                 }
                 ++driver.choice
             }
             throw MatchInterrupt.UNCONDITIONAL
         }
-        for (matcher in subMatchers) {
-            guardLeftRecursion(driver, matcher) && continue
+        for (matcher in subMatchers) {  // Loops at least once
+            guard(driver, matcher) && continue
             if (matcher.collectMatches(driver) != -1) {
                 return
             }
@@ -43,10 +43,10 @@ internal class Alternation(
     }
 
     /** Returns true if the sub-matcher is left-recursive. */
-    private fun guardLeftRecursion(driver: Driver, subMatcher: RichMatcher): Boolean {
+    private fun guard(driver: Driver, subMatcher: RichMatcher): Boolean {
         if (subMatcher.fundamentalLogic() in driver.localMatchers()) {
             driver.addDependency(subMatcher)
-            logger?.debug { "Left recursion found for $subMatcher" }
+            driver.debug(logger) { "Left recursion found for $subMatcher" }
             return true
         }
         return false

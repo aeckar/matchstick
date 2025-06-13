@@ -41,6 +41,7 @@ internal fun RichMatcher.specified(): String {
     return toString()   // Descriptive string or ID
 }
 
+/** Returns a string representation of this matcher that is guaranteed to never recur. */
 internal fun RichMatcher.safeString(): String {
     if (id !== UNKNOWN_ID) {
         return id
@@ -70,6 +71,25 @@ internal fun RichMatcher.fundamentalLogic(): RichMatcher {
     }
 }
 
+/** Returns the length of the matched substring without recording the match. */
+internal fun RichMatcher.discardMatches(driver: Driver): Int {
+    val isRecording = driver.isRecordingMatches
+    driver.isRecordingMatches = false
+    try {   // Restore recording state on interrupt
+        return collectMatches(driver)
+    } finally {
+        driver.isRecordingMatches = isRecording
+    }
+}
+
+internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
+    val length = collectMatches(driver)
+    if (length == -1) {
+        throw MatchInterrupt.UNCONDITIONAL
+    }
+    return length
+}
+
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
  *
@@ -79,7 +99,7 @@ internal fun RichMatcher.fundamentalLogic(): RichMatcher {
 public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
     val driver = Driver(Tape(input), matches)
-    (this as RichMatcher).logger?.debug { "Received input ${yellow("'${input.truncated().escaped()}'")}" }
+    (this as RichMatcher).logger?.debug { "Received input ${yellow(input.truncated().escaped())}" }
     collectMatches(driver)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
     return if (matches.isEmpty()) Result<List<Match>>(driver.failures()) else Result(emptyList(), matches)

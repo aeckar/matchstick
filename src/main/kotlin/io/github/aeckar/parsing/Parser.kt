@@ -33,10 +33,10 @@ public inline fun <reified R> Parser<R>.parse(
         if (complete) {
             val matchLength = matches.last().length
             if (matchLength != input.length) {
-                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input '${input.truncated().escaped()}'")
+                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input ${input.truncated().escaped()}")
             }
         }
-        (this as RichMatcher).logger?.debug { "Walking syntax tree of ${yellow("'$input'")}" }
+        (this as RichMatcher).logger?.debug { "Walking syntax tree of ${yellow(input.truncated().escaped())}" }
         SyntaxTreeNode(input, matches as MutableList<Match>).walk(initialState)
     }
 }

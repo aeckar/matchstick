@@ -6,6 +6,7 @@ import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.getOrSet
+import io.github.oshai.kotlinlogging.KLogger
 
 /**
  * Collects matches in an input using a matcher.
@@ -39,14 +40,14 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             }
         }
 
-    /** The rule to be appended to a greedy match, if successful. */
-    var leftAnchor: RichMatcher? = null
+    /** The matcher to be appended to a greedy match, if successful. */
+    var leftmostMatcher: RichMatcher? = null
 
     /**
      * Modifies the current choice.
      *
      * This operation should be performed when matching to [alternations][io.github.aeckar.parsing.rules.Alternation] or
-     * [options][io.github.aeckar.parsing.rules.Option] to record which sub-rule was matched, if any.
+     * [options][io.github.aeckar.parsing.rules.Option] to record which sub-matcher was matched, if any.
      */
     var choice: Int
         get() = choiceCounts.last()
@@ -65,33 +66,34 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     fun failures(): List<MatchFailure> = failures
 
     /**
-     * Adds the given rule as a dependency.
+     * Adds the given matcher as a dependency.
      *
      * To retrieve a previously captured substring from cache,
      * the dependencies between the cached match and the current funnel state must match.
      */
-    fun addDependency(rule: RichMatcher) { dependencies += MatchDependency(rule, depth) }
+    fun addDependency(matcher: RichMatcher) { dependencies += MatchDependency(matcher, depth) }
 
     /** Pushes a match at the current depth and ending at the current offset, if recording matches. */
-    fun addMatch(matcher: RichMatcher?, begin: Int) {
+    fun recordMatch(matcher: RichMatcher?, begin: Int) {
         if (!isRecordingMatches) {
             return
         }
         matches += Match(matcher, depth, begin, tape.offset, choiceCounts.last())
     }
 
-    private fun indexMarker(begin: Int): String {
-        val charMarker = if (begin < tape.input.length) {
-            "('${tape.input[begin]}')"
+    /** Logs the debug message, followed by the current stack of matchers. */
+    inline fun debug(logger: KLogger?, offset: Int = -1, crossinline message: () -> String) {
+        val position = if (offset == -1) {
+            ""
         } else {
-            "(end of input)"
+            val cursor = if (offset < tape.input.length) {
+                "('${tape.input[offset].toString().escaped()}')"
+            } else {
+                "(end of input)"
+            }
+            " ${grey("@ $offset $cursor")}"
         }
-        return grey("@ $begin $charMarker")
-    }
-
-    private fun substringMarker(begin: Int, endExclusive: Int): String {
-        val substring = if (begin < tape.input.length) tape.input.substring(begin, endExclusive).escaped() else ""
-        return "(${yellow("'$substring'")})"
+        logger?.debug { "${message()}$position ${grey(matchers.joinToString(" > ", "[", "]"))}" }
     }
 
     /**
@@ -99,11 +101,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
      * Searches for viable cached results beforehand, and caches the result if possible.
      */
     fun captureSubstring(matcher: RichMatcher, scope: MatcherScope, context: MatcherContext): Int {
-        val delegate = if (root != null) {
-            root!!.also { root = null }
-        } else {
-            matcher
-        }
+        val delegate = if (root != null) root!!.also { root = null } else matcher
         val begin = tape.offset
         val beginMatchCount = matches.size
         val logger = delegate.logger
@@ -111,14 +109,13 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
         matchersPerIndex.getOrSet(begin) += delegate
         choiceCounts += 0
         ++depth
-        logger?.debug {
+        debug(logger, begin) {
             buildString {
                 append("Attempting match to ${blue(delegate)}")
                 val uniqueMatcher = delegate.fundamentalLogic()
                 if (uniqueMatcher !== delegate) {
                     append(" ($uniqueMatcher)")
                 }
-                append(" " + indexMarker(begin))
             }
         }
         return try {
@@ -128,48 +125,46 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                     matches += result.matches
                     val success = matches.last()
                     tape.offset += success.length
-                    logger?.debug {
-                        val substringMarker = substringMarker(success.begin, success.endExclusive)
-                        "Match previously ${green("succeeded")} $substringMarker"
-                    }
+                    debug(logger, begin) { "Match previously succeeded" }
                     return result.matches.last().length
                 } else if (result is MatchFailure) {
-                    logger?.debug { "Match previously ${red("failed")}" }
-                    throw MatchInterrupt {
-                        val message = StringBuilder()
-                        if (result.cause != null) {
-                            message.append(result.cause)
-                        }
-
-                        message.toString()
-                    }
+                    debug(logger, begin) { "Match previously failed" }
+                    throw MatchInterrupt { result.cause.orEmpty() }
                 } // Else, not in cache
             }
             context.apply(scope)
             context.yieldRemaining()
-            addMatch(delegate, begin)
-            logger?.debug {
-                val substringMarker = tape.input.substring(begin, tape.offset) // 'matches' may be empty here
-                "Match to ${blue(delegate)} ${green("succeeded")} $substringMarker ${indexMarker(begin)}"
+            recordMatch(delegate, begin)
+            debug(logger, begin) {
+                val substring = if (begin < tape.input.length) tape.input.substring(begin, tape.offset).escaped() else ""
+                "Match to ${blue(delegate)} ${green("succeeded")} ${"(${yellow("'$substring'")})"}"
             }
             val length = tape.offset - begin
             if (delegate.isCacheable) {
+                if (!isRecordingMatches) {  // Append match to success
+                    isRecordingMatches = true
+                    recordMatch(delegate, begin)
+                    isRecordingMatches = false
+                }
                 val success = MatchSuccess(matches.slice(beginMatchCount..<matches.size), dependencies.toSet())
                 successesPerIndex.getOrSet(begin) += success
-                logger?.debug { "Cached success" }
+                debug(logger, begin) { "Cached success" }
+                if (!isRecordingMatches) {
+                    matches.removeLast()
+                }
             }
             failures.clear()
             length
         } catch (e: MatchInterrupt) {
-            logger?.debug { "Match to ${blue(delegate)} ${red("failed")} ${indexMarker(begin)}" }
+            debug(logger, begin) { "Match to ${blue(delegate)} ${red("failed")}" }
             val failure = MatchFailure(e.lazyCause, tape.offset, delegate, dependencies.toSet())
             failures += failure
             if (delegate.isCacheable) {
                 failuresPerIndex.getOrSet(begin) += failure
-                logger?.debug { "Cached failure" }
+                debug(logger, begin) { "Cached failure" }
             }
             dependencies.retainAll { it.depth <= depth }
-            logger?.debug { "Current dependencies: $dependencies" }
+            debug(logger) { "Current dependencies: $dependencies" }
             tape.offset -= tape.offset - begin
             matches.subList(beginMatchCount, matches.size).clear()
             -1
@@ -186,10 +181,10 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             return null
         }
         val beginOffset = tape.offset
-        val hit = successesPerIndex.getOrNull(beginOffset)?.find { (matches, dependencies) ->
+        val result = successesPerIndex.getOrNull(beginOffset)?.find { (matches, dependencies) ->
             matcher == matches.last().matcher && this.dependencies.all { it in dependencies }
         }
-        return hit ?: failuresPerIndex.getOrNull(beginOffset)?.find { failure ->
+        return result ?: failuresPerIndex.getOrNull(beginOffset)?.find { failure ->
             matcher == failure.matcher && this.dependencies.all { it in failure.dependencies }
         }
     }

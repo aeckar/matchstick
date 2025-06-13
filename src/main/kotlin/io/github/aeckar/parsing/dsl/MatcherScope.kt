@@ -13,10 +13,15 @@ public typealias MatcherScope = MatcherContext.() -> Unit
  * When provided with an [MatcherScope], returns an explicitly defined matcher with a specific separator.
  * @see matcherBy
  */
-public typealias MatcherFactory = (MatcherScope) -> Matcher
+public typealias MatcherFactory = (cacheable: Boolean, scope: MatcherScope) -> Matcher
+
+/** Returns an explicit matcher that is not cacheable. */
+public operator fun MatcherFactory.invoke(scope: MatcherScope): Matcher = this(false, scope)
 
 /**
  * Configures and returns a matcher whose behavior is explicitly defined and whose separator is an empty string.
+ *
+ * [cacheable] should be set to `true` if the code within [scope] does not use any outside mutable state.
  *
  * The separator block is invoked only once.
  * @see newRule
@@ -24,10 +29,11 @@ public typealias MatcherFactory = (MatcherScope) -> Matcher
  */
 public fun newMatcher(
     logger: KLogger? = null,
+    cacheable: Boolean = false,
     separator: () -> Matcher = ExplicitMatcher::EMPTY,
     scope: MatcherScope
 ): Matcher {
-    return matcherBy(logger, separator)(scope)
+    return matcherBy(logger, separator)(cacheable, scope)
 }
 
 /**
@@ -42,7 +48,6 @@ public fun newMatcher(
  *     /* Using 'whitespace' as separator... */
  * }
  * ```
- *
  * The separator block is invoked only once.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see ruleBy
@@ -50,5 +55,5 @@ public fun newMatcher(
  */
 @Suppress("UNCHECKED_CAST")
 public fun matcherBy(logger: KLogger? = null, separator: () -> Matcher = ExplicitMatcher::EMPTY): MatcherFactory {
-    return { scope -> ExplicitMatcher(logger, separator as () -> RichMatcher, null, false, scope) }
+    return { cacheable, scope -> ExplicitMatcher(logger, separator as () -> RichMatcher, null, cacheable, scope) }
 }

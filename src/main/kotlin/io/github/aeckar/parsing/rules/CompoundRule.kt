@@ -4,21 +4,24 @@ import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.state.Recursive
 import io.github.oshai.kotlinlogging.KLogger
 
+// todo log using ANSI conditionally
+
 internal sealed class CompoundRule(
     final override val logger: KLogger?,
     private val context: RuleContext,
     subMatchers: List<Matcher>
 ) : UniqueMatcher(), Recursive {
     final override val separator get() = context.separator as RichMatcher
-    final override val isCacheable get() = true
     internal abstract val descriptiveString: String
     private var isInitialized = false
 
     @Suppress("UNCHECKED_CAST")
     val subMatchers = subMatchers as List<RichMatcher>
 
+    final override val isCacheable = this.subMatchers.all { it.isCacheable }
+
     /** For each sub-matcher, keeps a set of all rules containing left recursions of this one in that branch. */
-    protected lateinit var leftRecursionsPerSubRule: List<Set<RichMatcher>>
+    protected lateinit var leftRecursionsPerSubMatcher: List<Set<RichMatcher>>
         private set
 
     /**
@@ -29,12 +32,12 @@ internal sealed class CompoundRule(
      * - [MatcherLineage]: A recursion of the matcher at that index
      * - `null`: An non-compound matcher
      */
-    private lateinit var children: List<Recursive?>
+    private lateinit var subMatcherTrace: List<Recursive?>
 
     /** Recursively initializes this rule and all sub-matchers. */
     private inner class Initializer(private val recursions: MutableList<RichMatcher>) {
         /** Returns the sub-matcher tree given by the lineage. */
-        private fun childrenOf(lineage: MatcherLineage): List<Recursive?> {
+        private fun subMatcherTrace(lineage: MatcherLineage): List<Recursive?> {
             val (matcher) = lineage
             recursions += matcher
             return (matcher as CompoundRule).subMatchers.map { subMatcher ->
@@ -71,19 +74,19 @@ internal sealed class CompoundRule(
             }
         }
 
-        private fun leftRecursionsPerSubRuleOf(children: List<Any?>): List<Set<RichMatcher>> {
-            return children.map { child ->
+        private fun leftRecursionsPerMatcher(subMatcherTrace: List<Any?>): List<Set<RichMatcher>> {
+            return subMatcherTrace.map { child ->
                 when (child) {
                     null -> emptySet()
                     is MatcherLineage -> leftRecursionsOf(child)
-                    else -> (child as CompoundRule).leftRecursionsPerSubRule.flatMapTo(mutableSetOf()) { it }
+                    else -> (child as CompoundRule).leftRecursionsPerSubMatcher.flatMapTo(mutableSetOf()) { it }
                 }
             }
         }
 
         fun execute() {
-            children = childrenOf(MatcherLineage(this@CompoundRule, null))
-            leftRecursionsPerSubRule = leftRecursionsPerSubRuleOf(children)
+            subMatcherTrace = subMatcherTrace(MatcherLineage(this@CompoundRule, null))
+            leftRecursionsPerSubMatcher = leftRecursionsPerMatcher(subMatcherTrace)
         }
 
         override fun toString() = "Initializer @ ${this@CompoundRule}"
@@ -115,13 +118,13 @@ internal sealed class CompoundRule(
     final override fun collectMatches(driver: Driver): Int {
         initialize()    // Must call here, as may be constructed in explicit matcher
         driver.root = this
-        return ExplicitMatcher {
+        return ExplicitMatcher(cacheable = isCacheable) {
             collectSubMatches(driver)
-            if (context.isGreedy && leftRecursionsPerSubRule[0] != setOf(this)) {
+            if (context.isGreedy && leftRecursionsPerSubMatcher[0] != setOf(this)) {
                 var madeGreedyMatch = false
                 --driver.depth
                 while (true) {
-                    driver.leftAnchor = this@CompoundRule
+                    driver.leftmostMatcher = this@CompoundRule
                     val begin = driver.tape.offset
                     collectSubMatches(driver)
                     if (driver.tape.offset - begin == 0) {  // Match failed or did not move cursor
@@ -137,10 +140,10 @@ internal sealed class CompoundRule(
         }.collectMatches(driver)
     }
 
-    protected fun collectSeparatorMatches(driver: Driver): Int {
+    protected fun discardSeparatorMatches(driver: Driver): Int {
         if (separator === ExplicitMatcher.EMPTY) {
             return 0
         }
-        return separator.collectMatches(driver)
+        return separator.discardMatches(driver)
     }
 }

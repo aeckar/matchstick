@@ -38,29 +38,58 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
 
     /** Returns the original sequence, truncated and prepended with ellipses if the offset is greater than 0. */
     override fun toString(): String {
-        val subSequence = (offset - LOOKAHEAD_SIZE..offset + LOOKAHEAD_SIZE).map { index ->
+        val nearbyChars = (offset - MAX_VIEW_LENGTH..offset + MAX_VIEW_LENGTH).map { index ->
             if (index in input.indices) {
                 val c = input[index]
-                if (index == offset) "$BEGIN_CARET$c$END_CARET" else c
+                if (index == offset) "$BEGIN_CARET$c$END_CARET" else c.toString()
             } else {
                 null
             }
         }
+        val view = nearbyChars.asSequence()
+            .filterNotNull()
+            .joinToString("")
+        if (view.length - 2 /* carets */ == input.length) { // Both ends of 'nearbyChars' contain null
+            return "'$view'"
+        }
+        val (left, cursor, right) = view.split(BEGIN_CARET, END_CARET)
+
+        fun StringBuilder.appendViewSlice(leftCreep: Int, rightCreep: Int) {
+            append(left.takeLast(leftCreep))
+            append(BEGIN_CARET)
+            append(cursor)
+            append(END_CARET)
+            append(right.take(rightCreep))
+        }
+
+        fun StringBuilder.appendCutoff(rightCreep: Int) {
+            append("'... (")
+            append(input.length - offset - rightCreep - 1 /* end caret */)
+            append(" remaining)")
+        }
+
+        if (nearbyChars.first() != null && nearbyChars.last() != null) {
+            return buildString {
+                val creep = MAX_VIEW_LENGTH / 2
+                append("...'")
+                appendViewSlice(creep, creep)
+                if (offset + creep != input.lastIndex) {
+                    appendCutoff(creep)
+                }
+            }
+        }
+        if (nearbyChars.first() == null) {
+            return buildString {
+                val rightCreep = MAX_VIEW_LENGTH - left.length
+                append('\'')
+                appendViewSlice(left.length, rightCreep)
+                appendCutoff(rightCreep)
+            }
+        }
         return buildString {
-            val truncatedSequence = subSequence.filterNotNull().joinToString("")
-            if (truncatedSequence.length - 2 /* brackets */ == input.length) {
-                append(truncatedSequence)
-                return@buildString
-            }
-            if (subSequence.first() != null && offset - LOOKAHEAD_SIZE != 0) {
-                append("...")
-            }
-            append(truncatedSequence)
-            if (subSequence.last() != null && offset + LOOKAHEAD_SIZE != input.lastIndex) {
-                append("... (")
-                append(input.lastIndex - offset + LOOKAHEAD_SIZE)
-                append(" remaining)")
-            }
+            val leftCreep = MAX_VIEW_LENGTH - right.length
+            append("...'")
+            appendViewSlice(leftCreep, right.length)
         }
     }
 
@@ -73,7 +102,7 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
     }
 
     companion object {
-        private const val LOOKAHEAD_SIZE = 20
+        private const val MAX_VIEW_LENGTH = 20
         internal const val BEGIN_CARET = '【'
         internal const val END_CARET = '】'
     }

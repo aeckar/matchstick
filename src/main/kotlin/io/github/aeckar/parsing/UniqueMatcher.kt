@@ -7,8 +7,6 @@ import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.oshai.kotlinlogging.KLogger
 
-
-
 internal abstract class UniqueMatcher() : RichMatcher {
     override val identity: RichMatcher get() = this
 
@@ -23,9 +21,10 @@ internal class ExplicitMatcher(
     override val logger: KLogger? = null,
     lazySeparator: () -> RichMatcher = ::EMPTY,
     private val descriptiveString: String? = null,
-    override val isCacheable: Boolean = false,
+    cacheable: Boolean = false,
     private val scope: MatcherScope
 ) : UniqueMatcher() {
+    override val isCacheable = cacheable
     override val separator by lazy(lazySeparator)
 
     override fun toString() = descriptiveString ?: UNKNOWN_ID
@@ -35,7 +34,7 @@ internal class ExplicitMatcher(
     }
 
     companion object {
-        val EMPTY = ExplicitMatcher {}
+        val EMPTY = ExplicitMatcher(cacheable = true) {}
     }
 }
 

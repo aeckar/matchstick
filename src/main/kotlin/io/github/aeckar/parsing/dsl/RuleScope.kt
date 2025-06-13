@@ -14,7 +14,7 @@ public typealias RuleScope = RuleContext.() -> Matcher
  */
 public typealias RuleFactory = (greedy: Boolean, scope: RuleScope) -> Matcher
 
-/** Returns a reluctant matcher. */
+/** Returns a reluctant rule. */
 public operator fun RuleFactory.invoke(scope: RuleScope): Matcher = this(false, scope)
 
 /**
@@ -44,7 +44,6 @@ public fun newRule(
  *     /* Using 'whitespace' as separator... */
  * }
  * ```
- *
  * The separator block is invoked only once.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see matcherBy

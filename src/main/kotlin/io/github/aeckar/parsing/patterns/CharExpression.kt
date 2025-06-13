@@ -25,7 +25,7 @@ public class CharExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse character expressions. */
     public object Grammar {
         private val action = actionBy<CharExpression>(preOrder = true)
-        private val rule = ruleBy(logger("CharExpression.Grammar"))
+        private val rule = ruleBy(logger(Grammar::class.qualifiedName!!))
 
         private val textExpr by rule {
             TextExpression.Grammar.start

@@ -4,6 +4,7 @@ import io.github.aeckar.parsing.Driver
 import io.github.aeckar.parsing.MatchInterrupt
 import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.collectMatchesOrFail
 import io.github.oshai.kotlinlogging.KLogger
 
 internal class ProximityRule(
@@ -14,16 +15,17 @@ internal class ProximityRule(
     override val descriptiveString by lazy { candidates.joinToString(prefix = "[", postfix = "]") }
 
     override fun collectSubMatches(driver: Driver) {
-        if (driver.leftAnchor != null) {
+        if (driver.leftmostMatcher != null) {
             return
         }
-        val nearestRule = candidates.minBy { candidate ->
+        val nearestMatcher = candidates.minBy { candidate ->
             val distance = driver.matchers().asReversed().indexOf(candidate)
             if (distance == -1) Int.MAX_VALUE else distance
         }
-        if (nearestRule !in driver.matchers() || nearestRule.collectMatches(driver) == -1) {
+        if (nearestMatcher !in driver.matchers()) {
             throw MatchInterrupt.UNCONDITIONAL
         }
+        nearestMatcher.collectMatchesOrFail(driver)
     }
 }
 

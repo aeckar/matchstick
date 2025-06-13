@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.ParserComponentDSL
+import io.github.aeckar.parsing.dsl.GrammarDSL
 import io.github.aeckar.parsing.dsl.matcherBy
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.patterns.CharExpression
@@ -24,7 +24,7 @@ import io.github.oshai.kotlinlogging.KLogger
  * @see matcherBy
  * @see RichMatcher.collectMatches
  */
-@ParserComponentDSL
+@GrammarDSL
 public class MatcherContext internal constructor(
     logger: KLogger?,
     internal val driver: Driver,
@@ -37,17 +37,11 @@ public class MatcherContext internal constructor(
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
     public fun lengthOf(matcher: Matcher): Int {
-        val isRecording = driver.isRecordingMatches
-        driver.isRecordingMatches = false
-        try {   // Restore recording state on interrupt
-            val length = (matcher as RichMatcher).collectMatches(driver)
-            if (length != -1) {
-                driver.tape.offset -= length    // Reset tape to original position
-            }
-            return length
-        } finally {
-            driver.isRecordingMatches = isRecording
+        val length = (matcher as RichMatcher).discardMatches(driver)
+        if (length != -1) {
+            driver.tape.offset -= length    // Reset tape to original position
         }
+        return length
     }
 
     /**
@@ -128,7 +122,7 @@ public class MatcherContext internal constructor(
         }
         yieldRemaining()
         consume(length)
-        driver.addMatch(null, driver.tape.offset - length)
+        driver.recordMatch(null, driver.tape.offset - length)
     }
 
     /**
@@ -153,7 +147,7 @@ public class MatcherContext internal constructor(
         if (includePos == -1) {
             return
         }
-        driver.addMatch(null, includePos)
+        driver.recordMatch(null, includePos)
         includePos = -1
     }
 
