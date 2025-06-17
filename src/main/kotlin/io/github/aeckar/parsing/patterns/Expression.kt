@@ -1,14 +1,14 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.MatcherContext
-import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.ImperativeMatcherContext
+import io.github.aeckar.parsing.DeclarativeMatcherContext
 
 /**
  * Contains data pertaining to character or text expressions.
- * @see RuleContext.charBy
- * @see RuleContext.textBy
- * @see MatcherContext.lengthByChar
- * @see MatcherContext.lengthByText
+ * @see DeclarativeMatcherContext.charBy
+ * @see DeclarativeMatcherContext.textBy
+ * @see ImperativeMatcherContext.lengthByChar
+ * @see ImperativeMatcherContext.lengthByText
  */
 public sealed class Expression {
     protected val patterns: MutableList<Pattern> = mutableListOf()

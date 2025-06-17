@@ -26,12 +26,13 @@ public operator fun <R> Transform<R>.provideDelegate(
 public sealed interface Transform<out R> : Enumerated
 
 /**
- * Extends [Transform] with [match consumption][consumeMatches] and [state verification][inputType].
+ * Extends [Transform] with [match consumption][consumeMatches] and [state verification][stateType].
  *
  * All implementors of [Transform] also implement this interface.
  */
 internal interface RichTransform<R> : Transform<R> {
-    val inputType: KType
+    val stateType: KType
+
     val scope: TransformContext<R>.() -> R
 
     /** Returns the transformed output according to the behavior of the given context and its initial state. */

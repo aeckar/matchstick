@@ -4,8 +4,8 @@ import io.github.aeckar.parsing.rules.CompoundRule
 
 /**
  * Thrown when a pattern expression is malformed.
- * @see RuleContext.charBy
- * @see RuleContext.textBy
+ * @see DeclarativeMatcherContext.charBy
+ * @see DeclarativeMatcherContext.textBy
  */
 public class MalformedExpressionException internal constructor(message: String) : RuntimeException(message)
 
@@ -24,7 +24,7 @@ public class StateInitializerException @PublishedApi internal constructor(  // I
 ) : RuntimeException(message)
 
 /**
- * Thrown when a left-recursion is found in a [CompoundRule] that is not guarded by an [alternation][RuleContext.or].
+ * Thrown when a left-recursion is found in a [CompoundRule] that is not guarded by an [alternation][DeclarativeMatcherContext.or].
  *
  * Raising this exception ensures that rules in this form are caught early during parser development.
  */

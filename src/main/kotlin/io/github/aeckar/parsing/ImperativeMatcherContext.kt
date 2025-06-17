@@ -13,8 +13,8 @@ import io.github.oshai.kotlinlogging.KLogger
  * Configures a [Matcher] that is evaluated each time it is invoked,
  * whose behavior is described by a user-defined function.
  *
- * Matches captured by an invocation of [yield][MatcherContext.yield]
- * or successive invocations of [include][MatcherContext.include] are considered *explicit*.
+ * Matches captured by an invocation of [yield][ImperativeMatcherContext.yield]
+ * or successive invocations of [include][ImperativeMatcherContext.include] are considered *explicit*.
  *
  * As a [CharSequence], represents the remaining characters in the input.
  *
@@ -25,11 +25,11 @@ import io.github.oshai.kotlinlogging.KLogger
  * @see RichMatcher.collectMatches
  */
 @GrammarDSL
-public class MatcherContext internal constructor(
+public class ImperativeMatcherContext internal constructor(
     logger: KLogger?,
     internal val driver: Driver,
     lazySeparator: () -> RichMatcher,
-) : RuleContext(logger, false, lazySeparator), CharSequence by driver.tape {
+) : DeclarativeMatcherContext(logger, false, lazySeparator), CharSequence by driver.tape {
     internal var includePos = -1
         private set
 
@@ -37,7 +37,7 @@ public class MatcherContext internal constructor(
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
     public fun lengthOf(matcher: Matcher): Int {
-        val length = (matcher as RichMatcher).discardMatches(driver)
+        val length = driver.discardMatches { (matcher as RichMatcher).collectMatches(driver) }
         if (length != -1) {
             driver.tape.offset -= length    // Reset tape to original position
         }
@@ -122,7 +122,9 @@ public class MatcherContext internal constructor(
         }
         yieldRemaining()
         consume(length)
-        driver.recordMatch(null, driver.tape.offset - length)
+        if (isMatchingEnabled) {
+            driver.recordMatch(null, driver.tape.offset - length)
+        }
     }
 
     /**
@@ -147,7 +149,9 @@ public class MatcherContext internal constructor(
         if (includePos == -1) {
             return
         }
-        driver.recordMatch(null, includePos)
+        if (isMatchingEnabled) {
+            driver.recordMatch(null, includePos)
+        }
         includePos = -1
     }
 

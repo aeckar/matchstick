@@ -1,8 +1,8 @@
 package io.github.aeckar.parsing.patterns
 
 import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.MatcherContext
-import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.ImperativeMatcherContext
+import io.github.aeckar.parsing.DeclarativeMatcherContext
 import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.state.removeLast
 import io.github.oshai.kotlinlogging.KotlinLogging.logger
@@ -11,8 +11,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
 
 /**
  * Contains data pertaining to character expressions.
- * @see RuleContext.charBy
- * @see MatcherContext.lengthByChar
+ * @see DeclarativeMatcherContext.charBy
+ * @see ImperativeMatcherContext.lengthByChar
  */
 public class CharExpression internal constructor() : Expression() {
     private var isEndAcceptable = false

@@ -5,10 +5,12 @@ package io.github.aeckar.parsing.state
  *
  * Offsets exceeding the length of the original sequence are allowed, however,
  * negative offsets are not.
+ *
+ * If passed another tape, the instance is copied, with the given offset applied.
  */
 @PublishedApi   // Inlined by 'parse'
-internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
-    var offset: Int = offset
+internal class Tape(input: CharSequence, offset: Int = 0) : CharSequence {
+    var offset = 0
         set(value) {
             if (value < 0) {
                 throw IllegalArgumentException("Offset cannot be negative")
@@ -16,11 +18,16 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
             field = value
         }
 
+    val input: CharSequence
     override val length: Int get() = input.length - offset
 
     init {
         if (input is Tape) {
-            throw IllegalArgumentException("Sequence '${input.input}' has an offset of ${input.offset}")
+            this.input = input.input
+            this.offset = input.offset + offset
+        } else {
+            this.input = input
+            this.offset = offset
         }
         require(offset >= 0) { "Offset $offset is negative" }
     }
@@ -38,6 +45,9 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
 
     /** Returns the original sequence, truncated and prepended with ellipses if the offset is greater than 0. */
     override fun toString(): String {
+        if (offset >= input.length) {
+            return "${Tape(input, input.lastIndex).truncated()}$BEGIN_CARET$END_CARET"
+        }
         val nearbyChars = (offset - MAX_VIEW_LENGTH..offset + MAX_VIEW_LENGTH).map { index ->
             if (index in input.indices) {
                 val c = input[index]
@@ -102,7 +112,7 @@ internal class Tape(val input: CharSequence, offset: Int = 0) : CharSequence {
     }
 
     companion object {
-        private const val MAX_VIEW_LENGTH = 20
+        private const val MAX_VIEW_LENGTH = 50
         internal const val BEGIN_CARET = '【'
         internal const val END_CARET = '】'
     }

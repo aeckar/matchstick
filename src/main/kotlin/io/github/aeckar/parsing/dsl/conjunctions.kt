@@ -12,7 +12,7 @@ public operator fun <T : Matcher> T.provideDelegate(thisRef: Any?, property: KPr
 
 /** Returns a parser with the given matcher and transform. */
 public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
-    return UniqueParser(this as RichMatcher, transform as RichTransform)
+    return ParserInstance(this as RichMatcher, transform as RichTransform)
 }
 
 /** Returns a parser with the given matcher and an action that does nothing. */

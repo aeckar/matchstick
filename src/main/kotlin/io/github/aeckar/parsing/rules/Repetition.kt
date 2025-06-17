@@ -5,7 +5,7 @@ import io.github.oshai.kotlinlogging.KLogger
 
 internal class Repetition(
     logger : KLogger?,
-    context: RuleContext,
+    context: DeclarativeMatcherContext,
     subMatcher: Matcher,
     acceptsZero: Boolean,
     override val isContiguous: Boolean
@@ -20,17 +20,17 @@ internal class Repetition(
     }
 
     override fun collectSubMatches(driver: Driver) {
-        var separatorLength = 0
         var matchCount = 0
+        var separatorLength = 0
         if (driver.leftmostMatcher != null) {    // Use anchor as first match
             if (driver.leftmostMatcher!! !in leftRecursionsPerSubMatcher.single()) {  // Greedy match fails
                 return
             }
             ++matchCount
-            separatorLength = discardSeparatorMatches(driver)
+            separatorLength = collectSeparatorMatches(driver)
         }
         while (true) {
-            if (matchCount != 0 && separatorLength == 0 && subMatcher in driver.localMatchers()) {  // Unrecoverable recursion
+            if (subMatcher in driver.localMatchers()) {
                 driver.debug(logger, driver.tape.offset) { "Unrecoverable recursion found" }
                 break
             }
@@ -38,13 +38,11 @@ internal class Repetition(
                 break
             }
             ++matchCount
-            driver.debug(logger) { "Begin separator matches" }
-            separatorLength = discardSeparatorMatches(driver)
-            driver.debug(logger) { "End separator matches" }
+            separatorLength = collectSeparatorMatches(driver)
         }
         if (matchCount < minMatchCount) {
             throw MatchInterrupt.UNCONDITIONAL
         }
-        driver.tape.offset -= separatorLength   // Truncate separator in substring
+        driver.tape.offset -= separatorLength   // Truncate final separator
     }
 }

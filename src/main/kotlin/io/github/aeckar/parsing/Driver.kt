@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.ansi.*
-import io.github.aeckar.parsing.dsl.MatcherScope
+import io.github.aeckar.parsing.dsl.ImperativeMatcherScope
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.escaped
@@ -25,8 +25,11 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     private var choiceCounts = mutableListOf<Int>()
     private val matchers = mutableListOf<RichMatcher>()
     private val failures = mutableListOf<MatchFailure>()
-    var isRecordingMatches = true
+    private var isPersistenceEnabled = true
     var depth = 0                                   // Expose to 'CompoundMatcher' during greedy parsing
+
+    /** The matcher to be appended to a greedy match, if successful. */
+    var leftmostMatcher: RichMatcher? = null
 
     /**
      * The matcher assigned to the match of highest depth on the next invocation of [captureSubstring].
@@ -40,9 +43,6 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             }
         }
 
-    /** The matcher to be appended to a greedy match, if successful. */
-    var leftmostMatcher: RichMatcher? = null
-
     /**
      * Modifies the current choice.
      *
@@ -55,6 +55,17 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             choiceCounts.removeLast()
             choiceCounts += value
         }
+
+    /** Matches performed within the given block will not persist to the final syntax tree. */
+    inline fun <R> discardMatches(block: () -> R): R {
+        val persistence = isPersistenceEnabled
+        isPersistenceEnabled = false
+        try {
+            return block()
+        } finally { // Restore state on interrupt
+            isPersistenceEnabled = persistence
+        }
+    }
 
     /** Returns a list of all matchers at the current index. */
     fun localMatchers() = matchersPerIndex[tape.offset].orEmpty()
@@ -75,10 +86,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
 
     /** Pushes a match at the current depth and ending at the current offset, if recording matches. */
     fun recordMatch(matcher: RichMatcher?, begin: Int) {
-        if (!isRecordingMatches) {
-            return
-        }
-        matches += Match(matcher, depth, begin, tape.offset, choiceCounts.last())
+        matches += Match(matcher, isPersistenceEnabled, depth, begin, tape.offset, choiceCounts.last())
     }
 
     /** Logs the debug message, followed by the current stack of matchers. */
@@ -100,7 +108,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
      * Attempts to capture a substring using the given matcher, whose logic is given by [scope].
      * Searches for viable cached results beforehand, and caches the result if possible.
      */
-    fun captureSubstring(matcher: RichMatcher, scope: MatcherScope, context: MatcherContext): Int {
+    fun captureSubstring(matcher: RichMatcher, scope: ImperativeMatcherScope, context: ImperativeMatcherContext): Int {
         val delegate = if (root != null) root!!.also { root = null } else matcher
         val begin = tape.offset
         val beginMatchCount = matches.size
@@ -123,6 +131,9 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                 val result = lookupMatchResult(delegate)
                 if (result is MatchSuccess) {
                     matches += result.matches
+                        // Preserve persistence of nested separators
+                        .onEach { it.isPersistent = it.isPersistent && isPersistenceEnabled }
+                    matches.last().isPersistent = isPersistenceEnabled
                     val success = matches.last()
                     tape.offset += success.length
                     debug(logger, begin) { "Match previously succeeded" }
@@ -131,6 +142,9 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                     debug(logger, begin) { "Match previously failed" }
                     throw MatchInterrupt { result.cause.orEmpty() }
                 } // Else, not in cache
+            }
+            if (delegate.toString() == "lineComment" || delegate.toString() == "'\\n'") {
+                println()
             }
             context.apply(scope)
             context.yieldRemaining()
@@ -141,17 +155,10 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             }
             val length = tape.offset - begin
             if (delegate.isCacheable) {
-                if (!isRecordingMatches) {  // Append match to success
-                    isRecordingMatches = true
-                    recordMatch(delegate, begin)
-                    isRecordingMatches = false
-                }
-                val success = MatchSuccess(matches.slice(beginMatchCount..<matches.size), dependencies.toSet())
+                val newMatches = matches.slice(beginMatchCount..<matches.size)
+                val success = MatchSuccess(newMatches, dependencies.toSet())
                 successesPerIndex.getOrSet(begin) += success
                 debug(logger, begin) { "Cached success" }
-                if (!isRecordingMatches) {
-                    matches.removeLast()
-                }
             }
             failures.clear()
             length
@@ -173,6 +180,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             matchersPerIndex[begin]!!.removeLast()
             choiceCounts.removeLast()
             --depth
+            debug(logger) { matches.toString() + " " + tape.offset.toString() }
         }
     }
 

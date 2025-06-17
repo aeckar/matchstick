@@ -21,7 +21,7 @@ import kotlin.test.Test
 //        val whitespace by rule { charIn(" \t\n\r\u000c") }
 //
 //        private fun TransformContext<DoubleDown>.descendWithHtmlTag(tagName: String, vararg classes: String) {
-//            val classString = classes.joinToString(separator = " ", prefix = "class='", postfix = "'")
+//            val classString = classes.joinToString(discardMatches = " ", prefix = "class='", postfix = "'")
 //            state.emit("<$tagName $classString>")
 //            ++state.tabCount
 //            descend()

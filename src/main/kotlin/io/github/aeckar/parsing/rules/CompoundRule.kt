@@ -8,9 +8,9 @@ import io.github.oshai.kotlinlogging.KLogger
 
 internal sealed class CompoundRule(
     final override val logger: KLogger?,
-    private val context: RuleContext,
+    private val context: DeclarativeMatcherContext,
     subMatchers: List<Matcher>
-) : UniqueMatcher(), Recursive {
+) : MatcherInstance(), Recursive {
     final override val separator get() = context.separator as RichMatcher
     internal abstract val descriptiveString: String
     private var isInitialized = false
@@ -118,7 +118,7 @@ internal sealed class CompoundRule(
     final override fun collectMatches(driver: Driver): Int {
         initialize()    // Must call here, as may be constructed in explicit matcher
         driver.root = this
-        return ExplicitMatcher(cacheable = isCacheable) {
+        return ImperativeMatcher(cacheable = isCacheable) {
             collectSubMatches(driver)
             if (context.isGreedy && leftRecursionsPerSubMatcher[0] != setOf(this)) {
                 var madeGreedyMatch = false
@@ -140,10 +140,12 @@ internal sealed class CompoundRule(
         }.collectMatches(driver)
     }
 
-    protected fun discardSeparatorMatches(driver: Driver): Int {
-        if (separator === ExplicitMatcher.EMPTY) {
+    protected fun collectSeparatorMatches(driver: Driver): Int {
+        if (separator === ImperativeMatcher.EMPTY) {
             return 0
         }
-        return separator.discardMatches(driver)
+        driver.debug(logger) { "Begin separator matches" }
+        return driver.discardMatches { separator.collectMatches(driver) }
+            .also { driver.debug(logger) { "End separator matches" } }
     }
 }

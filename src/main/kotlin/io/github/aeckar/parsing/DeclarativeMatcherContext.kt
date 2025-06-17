@@ -4,12 +4,8 @@ import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.rules.*
-import io.github.aeckar.parsing.state.Intangible
 import io.github.aeckar.parsing.state.escaped
 import io.github.oshai.kotlinlogging.KLogger
-import kotlin.reflect.typeOf
-
-/* ------------------------------ context class ------------------------------ */
 
 /**
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.
@@ -18,35 +14,30 @@ import kotlin.reflect.typeOf
  * and is thus referred to as one within this context.
  * @see newRule
  * @see ruleBy
- * @see MatcherContext
+ * @see ImperativeMatcherContext
  * @see RichMatcher.collectMatches
  */
 @GrammarDSL
-public open class RuleContext @PublishedApi internal constructor(
+public open class DeclarativeMatcherContext internal constructor(
     private val logger: KLogger?,
     greedy: Boolean,
     lazySeparator: () -> RichMatcher
 ) {
     internal val isGreedy = greedy
+    private val singleChar = matcher(".") { yield(1) }
+    protected var isMatchingEnabled: Boolean = true
 
     /** Used to identify meaningless characters between captured substrings, such as whitespace. */
     public val separator: Matcher by lazy(lazySeparator)
 
-    private val singleChar = cacheableMatcher(".") { yield(1) }
-
-    /** Returns a copy of this parser that will not reuse the existing state when visited. */
-    public fun unique(parser: Parser<*>): Matcher {
-        return parser.with(UniqueTransform(typeOf<Intangible>(), (parser as RichTransform<*>).scope))
-    }
-
-    private inline fun cacheableMatcher(descriptiveString: String, crossinline scope: MatcherScope): RichMatcher {
-        return ExplicitMatcher(logger, ExplicitMatcher::EMPTY, descriptiveString, cacheable = true) {
-            val isRecording = driver.isRecordingMatches
-            driver.isRecordingMatches = false   // Do not track yields
+    private inline fun matcher(descriptiveString: String, crossinline scope: ImperativeMatcherScope): RichMatcher {
+        return ImperativeMatcher(logger, ImperativeMatcher::EMPTY, descriptiveString, cacheable = true) {
+            val isMatching = isMatchingEnabled
+            isMatchingEnabled = false
             try {
                 scope()
-            } finally { // Restore recording state on interrupt
-                driver.isRecordingMatches = isRecording
+            } finally { // Restore state on interrupt
+                isMatchingEnabled = isMatching
             }
         }
     }
@@ -57,11 +48,11 @@ public open class RuleContext @PublishedApi internal constructor(
     public fun char(): Matcher = singleChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = cacheableMatcher("'${c.toString().escaped()}'") { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = matcher("'${c.toString().escaped()}'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
     public fun text(substring: String): Matcher {
-        return cacheableMatcher("\"${substring.escaped()}\"") { yield(lengthOf(substring)) }
+        return matcher("\"${substring.escaped()}\"") { yield(lengthOf(substring)) }
     }
 
     /** Returns a rule matching the first acceptable character. */
@@ -70,7 +61,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: Collection<Char>): Matcher {
         val logicString = "[${chars.joinToString("") { it.toString().escaped() }}]"
-        return cacheableMatcher(logicString) { yield(lengthOfFirst(chars)) }
+        return matcher(logicString) { yield(lengthOfFirst(chars)) }
     }
 
     /** Returns a rule matching any character not in the given string. */
@@ -79,7 +70,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching any character not in the given collection. */
     public fun charNotIn(chars: Collection<Char>): Matcher {
         val logicString = "![${chars.joinToString("") { it.toString().escaped() }}]".escaped()
-        return cacheableMatcher(logicString) {
+        return matcher(logicString) {
             if (lengthOfFirst(chars) != -1) {
                 fail()
             }
@@ -90,7 +81,7 @@ public open class RuleContext @PublishedApi internal constructor(
     /** Returns a rule matching the first acceptable substring. */
     public fun textIn(substrings: Collection<String>): Matcher {
         val logicString = substrings.joinToString(" | ", "(", ")") { "\"${it.escaped()}\"" }
-        return cacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
+        return matcher(logicString) { yield(lengthOfFirst(substrings)) }
     }
 
     /**
@@ -99,10 +90,10 @@ public open class RuleContext @PublishedApi internal constructor(
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
      * @throws MalformedExpressionException the character expression is malformed
-     * @see MatcherContext.lengthByChar
+     * @see ImperativeMatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = cacheableMatcher("`${expr.escaped()}`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = matcher("`${expr.escaped()}`") { yield(lengthByChar(expr)) }
 
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
@@ -110,17 +101,17 @@ public open class RuleContext @PublishedApi internal constructor(
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
      * @throws MalformedExpressionException the text expression is malformed
-     * @see MatcherContext.lengthByText
+     * @see ImperativeMatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = cacheableMatcher("``${expr.escaped()}``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = matcher("``${expr.escaped()}``") { yield(lengthByText(expr)) }
 
     /**
-     * Returns a rule matching this one, then the [separator][match], then the other.
+     * Returns a rule matching this one, then the [discardMatches][match], then the other.
      * @see times
      */
     public operator fun Matcher.plus(other: Matcher): Matcher {
-        return Concatenation(logger, this@RuleContext, this, other, false)
+        return Concatenation(logger, this@DeclarativeMatcherContext, this, other, false)
     }
 
     /**
@@ -128,32 +119,32 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see plus
      */
     public operator fun Matcher.times(other: Matcher): Matcher {
-        return Concatenation(logger, this@RuleContext, this, other, isContiguous = true)
+        return Concatenation(logger, this@DeclarativeMatcherContext, this, other, isContiguous = true)
     }
 
     /** Returns a rule matching this one or the other. */
-    public infix fun Matcher.or(other: Matcher): Matcher = Alternation(logger, this@RuleContext, this, other)
+    public infix fun Matcher.or(other: Matcher): Matcher = Alternation(logger, this@DeclarativeMatcherContext, this, other)
 
     /**
      * Returns a rule matching the given rule one or more times,
-     * with the [separator][match] between each match.
+     * with the [discardMatches][match] between each match.
      * @see oneOrSpread
      */
-    public fun oneOrMore(subRule: Matcher): Matcher = Repetition(logger, this@RuleContext, subRule, false, false)
+    public fun oneOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, false, false)
 
     /**
      * Returns a rule matching the given rule zero or more times,
-     * with the [separator][match] between each match.
+     * with the [discardMatches][match] between each match.
      * @see zeroOrSpread
      */
-    public fun zeroOrMore(subRule: Matcher): Matcher = Repetition(logger, this@RuleContext, subRule, true, false)
+    public fun zeroOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, true, false)
 
     /**
      * Returns a rule matching the given rule one or more times successively.
      * @see oneOrMore
      */
     public fun oneOrSpread(subRule: Matcher): Matcher {
-        return Repetition(logger, this@RuleContext, subRule, false, isContiguous = true)
+        return Repetition(logger, this@DeclarativeMatcherContext, subRule, false, isContiguous = true)
     }
 
     /**
@@ -161,11 +152,11 @@ public open class RuleContext @PublishedApi internal constructor(
      * @see zeroOrMore
      */
     public fun zeroOrSpread(subRule: Matcher): Matcher {
-        return Repetition(logger, this@RuleContext, subRule, acceptsZero = true, isContiguous = true)
+        return Repetition(logger, this@DeclarativeMatcherContext, subRule, acceptsZero = true, isContiguous = true)
     }
 
     /** Returns a rule matching the given rule zero or one time. */
-    public fun maybe(subRule: Matcher): Matcher = Option(logger, this@RuleContext, subRule)
+    public fun maybe(subRule: Matcher): Matcher = Option(logger, this@DeclarativeMatcherContext, subRule)
 
     /**
      * Returns a rule matching the rule among those given that was invoked most recently
@@ -177,7 +168,7 @@ public open class RuleContext @PublishedApi internal constructor(
      */
     @Suppress("UNCHECKED_CAST")
     public fun nearestOf(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
-        return ProximityRule(logger, this@RuleContext, (listOf(subRule1, subRule2) + others) as List<RichMatcher>)
+        return ProximityRule(logger, this@DeclarativeMatcherContext, (listOf(subRule1, subRule2) + others) as List<RichMatcher>)
     }
 
     /* ------------------------------ utility ------------------------------ */

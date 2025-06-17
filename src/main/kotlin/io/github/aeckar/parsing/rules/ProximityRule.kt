@@ -3,13 +3,13 @@ package io.github.aeckar.parsing.rules
 import io.github.aeckar.parsing.Driver
 import io.github.aeckar.parsing.MatchInterrupt
 import io.github.aeckar.parsing.RichMatcher
-import io.github.aeckar.parsing.RuleContext
+import io.github.aeckar.parsing.DeclarativeMatcherContext
 import io.github.aeckar.parsing.collectMatchesOrFail
 import io.github.oshai.kotlinlogging.KLogger
 
 internal class ProximityRule(
     logger: KLogger?,
-    context: RuleContext,
+    context: DeclarativeMatcherContext,
     private val candidates: List<RichMatcher>
 ) : CompoundRule(logger, context, emptyList()) {
     override val descriptiveString by lazy { candidates.joinToString(prefix = "[", postfix = "]") }

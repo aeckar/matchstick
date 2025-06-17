@@ -3,7 +3,7 @@ package io.github.aeckar.parsing.dsl
 import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.Transform
 import io.github.aeckar.parsing.TransformContext
-import io.github.aeckar.parsing.UniqueTransform
+import io.github.aeckar.parsing.TransformInstance
 import kotlin.reflect.typeOf
 
 /**
@@ -41,7 +41,7 @@ public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
 public inline fun <reified R> actionBy(preOrder: Boolean = false): ActionFactory<R> {
     if (preOrder) {
         return { scope ->
-            UniqueTransform(typeOf<R>()) {
+            TransformInstance(typeOf<R>()) {
                 descend()
                 scope()
                 state
@@ -49,7 +49,7 @@ public inline fun <reified R> actionBy(preOrder: Boolean = false): ActionFactory
         }
     }
     return { scope ->
-        UniqueTransform(typeOf<R>()) {
+        TransformInstance(typeOf<R>()) {
             scope()
             state
         }

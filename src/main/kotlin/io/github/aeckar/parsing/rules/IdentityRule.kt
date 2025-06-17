@@ -5,7 +5,7 @@ import io.github.oshai.kotlinlogging.KLogger
 
 internal class IdentityRule(
     logger : KLogger?,
-    context: RuleContext,
+    context: DeclarativeMatcherContext,
     subMatcher: Matcher
 ) : CompoundRule(logger, context, listOf(subMatcher)), ModifierMatcher {
     override val subMatcher = subMatchers.single()

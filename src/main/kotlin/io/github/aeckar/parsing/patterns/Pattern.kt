@@ -33,13 +33,13 @@ internal fun pattern(
 
 /**
  * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
- * @see RuleContext.charBy
+ * @see DeclarativeMatcherContext.charBy
  */
 internal fun lookupCharPattern(expr: String) = lookupPattern(expr, charPatternCache, CharExpression.Grammar.start)
 
 /**
  * Returns the pre-compiled text pattern, or a new one if the pattern has not yet been cached.
- * @see RuleContext.textBy
+ * @see DeclarativeMatcherContext.textBy
  */
 internal fun lookupTextPattern(expr: String) = lookupPattern(expr, textPatternCache, TextExpression.Grammar.start)
 

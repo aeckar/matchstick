@@ -1,13 +1,13 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.MatcherScope
-import io.github.aeckar.parsing.dsl.RuleScope
+import io.github.aeckar.parsing.dsl.ImperativeMatcherScope
+import io.github.aeckar.parsing.dsl.DeclarativeMatcherScope
 import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.oshai.kotlinlogging.KLogger
 
-internal abstract class UniqueMatcher() : RichMatcher {
+internal abstract class MatcherInstance() : RichMatcher {
     override val identity: RichMatcher get() = this
 
     override fun hashCode() = id.hashCode()
@@ -17,34 +17,34 @@ internal abstract class UniqueMatcher() : RichMatcher {
     }
 }
 
-internal class ExplicitMatcher(
+internal class ImperativeMatcher(
     override val logger: KLogger? = null,
     lazySeparator: () -> RichMatcher = ::EMPTY,
     private val descriptiveString: String? = null,
     cacheable: Boolean = false,
-    private val scope: MatcherScope
-) : UniqueMatcher() {
+    private val scope: ImperativeMatcherScope
+) : MatcherInstance() {
     override val isCacheable = cacheable
     override val separator by lazy(lazySeparator)
 
     override fun toString() = descriptiveString ?: UNKNOWN_ID
 
     override fun collectMatches(driver: Driver): Int {
-        return driver.captureSubstring(this, scope, MatcherContext(logger, driver, ::separator))
+        return driver.captureSubstring(this, scope, ImperativeMatcherContext(logger, driver, ::separator))
     }
 
     companion object {
-        val EMPTY = ExplicitMatcher(cacheable = true) {}
+        val EMPTY = ImperativeMatcher(cacheable = true) {}
     }
 }
 
-internal class SingularRule(
+internal class DeclarativeMatcher(
     override val logger: KLogger?,
     greedy: Boolean,
-    lazySeparator: () -> RichMatcher = ExplicitMatcher::EMPTY,
-    private val scope: RuleScope
-) : UniqueMatcher() {
-    val context = RuleContext(logger, greedy, lazySeparator)
+    lazySeparator: () -> RichMatcher = ImperativeMatcher::EMPTY,
+    private val scope: DeclarativeMatcherScope
+) : MatcherInstance() {
+    val context = DeclarativeMatcherContext(logger, greedy, lazySeparator)
     override val separator get() = identity.separator
     override val isCacheable get() = true
     private var isInitializingIdentity = false
@@ -76,15 +76,15 @@ internal class SingularRule(
     private fun checkUnresolvableRecursion(matcher: RichMatcher) {
         when (matcher) {
             is MatcherProperty -> checkUnresolvableRecursion(matcher.value)
-            is SingularRule -> checkUnresolvableRecursion(matcher.identity) // Checks if initializing identity
+            is DeclarativeMatcher -> checkUnresolvableRecursion(matcher.identity) // Checks if initializing identity
         }
     }
 }
 
-internal class UniqueParser<R>(
+internal class ParserInstance<R>(
     override val subMatcher: RichMatcher,
     transform: RichTransform<R>
-) : UniqueMatcher(), RichParser<R>, RichMatcher by subMatcher, RichTransform<R> by transform, ModifierMatcher {
+) : MatcherInstance(), RichParser<R>, RichMatcher by subMatcher, RichTransform<R> by transform, ModifierMatcher {
     override val id get() = subMatcher.id
     override val identity get() = subMatcher.identity
 

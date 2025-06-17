@@ -15,6 +15,7 @@ import io.github.aeckar.parsing.Matcher
  */
 public class Match internal constructor(
     matcher: Matcher?,
+    internal var isPersistent: Boolean,
     public val depth: Int,
     public val begin: Int,
     public val endExclusive: Int,

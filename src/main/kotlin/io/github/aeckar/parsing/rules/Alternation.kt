@@ -5,7 +5,7 @@ import io.github.oshai.kotlinlogging.KLogger
 
 internal class Alternation(
     logger: KLogger?,
-    context: RuleContext,
+    context: DeclarativeMatcherContext,
     subRule1: Matcher,
     subRule2: Matcher
 ) : CompoundRule(

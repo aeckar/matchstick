@@ -45,6 +45,10 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         /* 2. Recursively initialize subtree */
         children = buildList {
             while (matches.isNotEmpty() && matches.last().depth > match.depth) {
+                if (!matches.last().isPersistent) {
+                    matches.removeLast()
+                    continue
+                }
                 this += SyntaxTreeNode(input, matches)
             }
             reverse()
@@ -52,7 +56,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     }
 
     /**
-     * Returns true if this node holds an [explicitly][MatcherContext] captured substring.
+     * Returns true if this node holds a [yielded][ImperativeMatcherContext.yield] substring.
      *
      * This function returns true if, and only if, [matcher] is null.
      */
@@ -60,7 +64,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
 
     /**
      * Returns the [matcher] attributed to this node.
-     * @throws NoSuchElementException this node contains an [explicitly][MatcherContext] captured substring
+     * @throws NoSuchElementException this node contains a [yielded][ImperativeMatcherContext.yield] substring
      * @see isYield
      */
     public fun matcher(): Matcher {
@@ -82,10 +86,10 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
             return state
         }
         matcher as RichTransform<R>
-        return if (state instanceOf matcher.inputType) {
+        return if (state instanceOf matcher.stateType) {
             matcher.consumeMatches(TransformContext(this, state))   // Invokes this function recursively
         } else {
-            val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.inputType) as R)
+            val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.stateType) as R)
             val result = matcher.consumeMatches(subParserContext) // Visit sub-transform
             if (matcher.id === UNKNOWN_ID) {
                 subParserContext.resultsBySubParser.forEach { (key, value) -> outerContext.addResult(key, value) }
@@ -112,7 +116,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
             return SyntaxTreeNode(input, matches.toMutableList())
         }
 
-        private val ROOT_PLACEHOLDER = of("", listOf(Match(null, 0, 0, 0, 0)))
+        private val ROOT_PLACEHOLDER = of("", listOf(Match(null, false, 0, 0, 0, 0)))
     }
 }
 

@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.ansi.yellow
-import io.github.aeckar.parsing.dsl.RuleScope
+import io.github.aeckar.parsing.dsl.DeclarativeMatcherScope
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.output.Match
@@ -46,7 +46,7 @@ internal fun RichMatcher.safeString(): String {
     if (id !== UNKNOWN_ID) {
         return id
     }
-    if (this is ExplicitMatcher) {
+    if (this is ImperativeMatcher) {
         return toString()
     }
     return "<unknown>"
@@ -54,7 +54,7 @@ internal fun RichMatcher.safeString(): String {
 
 /** Returns the most fundamental [identity][RichMatcher.identity] of this matcher. */
 internal fun RichMatcher.fundamentalIdentity(): RichMatcher {
-    if (this is SingularRule) {
+    if (this is DeclarativeMatcher) {
         return identity.fundamentalIdentity()
     }
     return this
@@ -64,21 +64,10 @@ internal fun RichMatcher.fundamentalIdentity(): RichMatcher {
 internal fun RichMatcher.fundamentalLogic(): RichMatcher {
     return when (this) {
         is MatcherProperty -> value.fundamentalLogic()
-        is SingularRule -> identity.fundamentalLogic()
-        is UniqueParser<*> -> subMatcher.fundamentalLogic()
+        is DeclarativeMatcher -> identity.fundamentalLogic()
+        is ParserInstance<*> -> subMatcher.fundamentalLogic()
         is IdentityRule -> subMatcher.fundamentalLogic()
         else -> this
-    }
-}
-
-/** Returns the length of the matched substring without recording the match. */
-internal fun RichMatcher.discardMatches(driver: Driver): Int {
-    val isRecording = driver.isRecordingMatches
-    driver.isRecordingMatches = false
-    try {   // Restore recording state on interrupt
-        return collectMatches(driver)
-    } finally {
-        driver.isRecordingMatches = isRecording
     }
 }
 
@@ -93,7 +82,7 @@ internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
  *
- * If the returned list is empty, this sequence does not match the matcher with the given separator.
+ * If the returned list is empty, this sequence does not match the matcher with the given discardMatches.
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  */
 public fun Matcher.match(input: CharSequence): Result<List<Match>> {
@@ -101,6 +90,7 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val driver = Driver(Tape(input), matches)
     (this as RichMatcher).logger?.debug { "Received input ${yellow(input.truncated().escaped())}" }
     collectMatches(driver)
+    matches.retainAll(Match::isPersistent)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
     return if (matches.isEmpty()) Result<List<Match>>(driver.failures()) else Result(emptyList(), matches)
 }
@@ -109,7 +99,7 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
  * Returns the syntax tree created by applying the matcher to this character sequence, in tree form.
  *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
- * @throws NoSuchMatchException the sequence does not match the matcher with the given separator
+ * @throws NoSuchMatchException the sequence does not match the matcher with the given discardMatches
  */
 public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
     return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>) }
@@ -132,20 +122,20 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  * Matches satisfying this matcher and its sub-matches are collectively considered to be *derived*
  * from this matcher.
  *
- * This function is called whenever this matcher [queries][MatcherContext.lengthOf]
- * or [matches][RuleContext.char] a substring in an input.
+ * This function is called whenever this matcher [queries][ImperativeMatcherContext.lengthOf]
+ * or [matches][DeclarativeMatcherContext.char] a substring in an input.
  *
  * Matchers are equivalent according to their matching logic.
  * @see newMatcher
  * @see newRule
- * @see RuleContext
- * @see MatcherContext
+ * @see DeclarativeMatcherContext
+ * @see ImperativeMatcherContext
  * @see Transform
  */
 public interface Matcher : Enumerated
 
 /**
- * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],
+ * Extends [Matcher] with [match collection][collectMatches], [discardMatches tracking][separator],
  * and [cache validation][isCacheable].
  *
  * All implementors of [Matcher] also implement this interface.
@@ -159,9 +149,9 @@ internal interface RichMatcher : Matcher {
     /**
      * The identity assigned to this matcher during debugging.
      *
-     * Because accessing this property for the first time may invoke a [RuleScope],
+     * Because accessing this property for the first time may invoke a [DeclarativeMatcherScope],
      * it must not be accessed before all dependent matchers are initialized.
-     * @see SingularRule
+     * @see DeclarativeMatcher
      */
     val identity: RichMatcher
 

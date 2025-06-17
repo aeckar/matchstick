@@ -8,22 +8,30 @@ import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class NewRuleTest {
-    private val logger = logger(NewRuleTest::class.qualifiedName!!)
+class MatcherScopeTest {
+    private val logger = logger(MatcherScopeTest::class.qualifiedName!!)
 
     @Test
     fun acceptsSeparator() {
         val grammar = object {
             val rule = ruleBy(logger) { newRule(logger) { textBy("{!=%*/|\n}+") } }
 
-            val comments by rule { oneOrMore(blockComment or lineComment) }
+            val comments by newRule(logger) { oneOrMore(blockComment or lineComment) }
             val blockComment by rule { text("/*") + text("*/") }
             val lineComment by rule { text("//") + char('\n') }
         }
-        val tree = grammar.comments.treeify("// hi there\n/* oh, hi! */").resultOrNull()?.treeString()
+        val tree = grammar.comments.treeify("//hi there\n/* oh, hi! */").resultOrNull()?.treeString()
         assertEquals(
             """
-            TODO
+            "//hi there\n/* oh, hi! */" @ comments
+            ├── "//hi there\n" @ blockComment | lineComment
+            │   └── "//hi there\n" @ lineComment
+            │       ├── "//" @ "//"
+            │       └── "\n" @ '\n'
+            └── "/* oh, hi! */" @ blockComment | lineComment
+                └── "/* oh, hi! */" @ blockComment
+                    ├── "/*" @ "/*"
+                    └── "*/" @ "*/"
             """.trimIndent(),
             tree
         )
