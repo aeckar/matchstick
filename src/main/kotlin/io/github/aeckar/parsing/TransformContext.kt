@@ -53,15 +53,15 @@ public class TransformContext<R> @PublishedApi internal constructor(
 
     /* ------------------------------ root node properties ------------------------------ */
 
-    public val substring: String get() = root.substring
+    public val capture: String get() = root.capture
 
     /**
-     * The index of the sub-matcher that the [substring] satisfies.
+     * The index of the sub-matcher that the [capture] satisfies.
      * @see Match.choice
      */
     public val choice: Int get() = root.choice
 
-    /** Contains nodes for each section of the [substring] captured by any sub-matchers. */
+    /** Contains nodes for each section of the [capture] captured by any sub-matchers. */
     public val children: List<SyntaxTreeNode> get() = root.children
 
     /* ------------------------------ descent operations ------------------------------ */
@@ -75,7 +75,7 @@ public class TransformContext<R> @PublishedApi internal constructor(
         if (isChildrenVisited) {
             throw MalformedTransformException("descend() called more than once")
         }
-        children.forEach { state = it.walk(this) }
+        children.forEach { state = it.transform(this) }
         isChildrenVisited = true
     }
 

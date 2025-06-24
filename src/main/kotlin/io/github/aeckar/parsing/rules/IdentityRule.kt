@@ -9,7 +9,8 @@ internal class IdentityRule(
     subMatcher: Matcher
 ) : CompoundRule(logger, context, listOf(subMatcher)), ModifierMatcher {
     override val subMatcher = subMatchers.single()
-    override val descriptiveString by lazy { "{ ${this.subMatcher.fundamentalIdentity().specified()} }" }
+
+    override fun resolveDescription() = "{ ${this.subMatcher.atom().specified()} }"
 
     override fun collectSubMatches(driver: Driver) {
         subMatcher.collectMatches(driver)

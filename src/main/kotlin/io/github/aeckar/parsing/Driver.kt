@@ -3,6 +3,7 @@ package io.github.aeckar.parsing
 import io.github.aeckar.ansi.*
 import io.github.aeckar.parsing.dsl.ImperativeMatcherScope
 import io.github.aeckar.parsing.output.Match
+import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.getOrSet
@@ -29,7 +30,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     var depth = 0                                   // Expose to 'CompoundMatcher' during greedy parsing
 
     /** The matcher to be appended to a greedy match, if successful. */
-    var leftmostMatcher: RichMatcher? = null
+    var anchor: CompoundRule? = null
 
     /**
      * The matcher assigned to the match of highest depth on the next invocation of [captureSubstring].
@@ -113,6 +114,10 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
         val begin = tape.offset
         val beginMatchCount = matches.size
         val logger = delegate.logger
+        if (localMatchers().count { it == delegate } > 1) {
+            debug(logger, begin) { "Unrecoverable recursion found" }
+            return -1
+        }
         matchers += delegate
         matchersPerIndex.getOrSet(begin) += delegate
         choiceCounts += 0
@@ -120,13 +125,13 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
         debug(logger, begin) {
             buildString {
                 append("Attempting match to ${blue(delegate)}")
-                val uniqueMatcher = delegate.fundamentalLogic()
+                val uniqueMatcher = delegate.logic()
                 if (uniqueMatcher !== delegate) {
                     append(" ($uniqueMatcher)")
                 }
             }
         }
-        return try {
+        try {
             if (delegate.isCacheable) {
                 val result = lookupMatchResult(delegate)
                 if (result is MatchSuccess) {
@@ -143,15 +148,12 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                     throw MatchInterrupt { result.cause.orEmpty() }
                 } // Else, not in cache
             }
-            if (delegate.toString() == "lineComment" || delegate.toString() == "'\\n'") {
-                println()
-            }
             context.apply(scope)
             context.yieldRemaining()
             recordMatch(delegate, begin)
             debug(logger, begin) {
-                val substring = if (begin < tape.input.length) tape.input.substring(begin, tape.offset).escaped() else ""
-                "Match to ${blue(delegate)} ${green("succeeded")} ${"(${yellow("'$substring'")})"}"
+                val substring = if (begin < tape.input.length) tape.input.substring(begin, tape.offset) else ""
+                "Match to ${blue(delegate)} ${green("succeeded")} ${"(${yellow("'${substring.escaped()}'")})"}"
             }
             val length = tape.offset - begin
             if (delegate.isCacheable) {
@@ -161,7 +163,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                 debug(logger, begin) { "Cached success" }
             }
             failures.clear()
-            length
+            return length
         } catch (e: MatchInterrupt) {
             debug(logger, begin) { "Match to ${blue(delegate)} ${red("failed")}" }
             val failure = MatchFailure(e.lazyCause, tape.offset, delegate, dependencies.toSet())
@@ -174,13 +176,12 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             debug(logger) { "Current dependencies: $dependencies" }
             tape.offset -= tape.offset - begin
             matches.subList(beginMatchCount, matches.size).clear()
-            -1
+            return -1
         } finally {
             matchers.removeLast()
             matchersPerIndex[begin]!!.removeLast()
             choiceCounts.removeLast()
             --depth
-            debug(logger) { matches.toString() + " " + tape.offset.toString() }
         }
     }
 

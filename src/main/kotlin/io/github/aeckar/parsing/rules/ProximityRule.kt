@@ -12,10 +12,10 @@ internal class ProximityRule(
     context: DeclarativeMatcherContext,
     private val candidates: List<RichMatcher>
 ) : CompoundRule(logger, context, emptyList()) {
-    override val descriptiveString by lazy { candidates.joinToString(prefix = "[", postfix = "]") }
+    override fun resolveDescription(): String = candidates.joinToString(prefix = "[", postfix = "]")
 
     override fun collectSubMatches(driver: Driver) {
-        if (driver.leftmostMatcher != null) {
+        if (driver.anchor != null) {
             return
         }
         val nearestMatcher = candidates.minBy { candidate ->
@@ -25,6 +25,7 @@ internal class ProximityRule(
         if (nearestMatcher !in driver.matchers()) {
             throw MatchInterrupt.UNCONDITIONAL
         }
+        driver.addDependency(nearestMatcher)
         nearestMatcher.collectMatchesOrFail(driver)
     }
 }

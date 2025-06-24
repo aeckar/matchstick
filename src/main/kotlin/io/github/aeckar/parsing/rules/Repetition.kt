@@ -13,33 +13,41 @@ internal class Repetition(
     override val subMatcher = subMatchers.single()
     private val minMatchCount = if (acceptsZero) 0 else 1
 
-    override val descriptiveString by lazy {
+    override fun resolveDescription(): String {
         val modifier = "~".takeIf { isContiguous }.orEmpty()
         val symbol = if (minMatchCount == 0) "*" else "+"
-        "${this.subMatcher.fundamentalIdentity().specified()}$modifier$symbol"
+        return "${this.subMatcher.atom().specified()}$modifier$symbol"
     }
 
     override fun collectSubMatches(driver: Driver) {
         var matchCount = 0
         var separatorLength = 0
-        if (driver.leftmostMatcher != null) {    // Use anchor as first match
-            if (driver.leftmostMatcher!! !in leftRecursionsPerSubMatcher.single()) {  // Greedy match fails
-                return
+        if (driver.anchor != null) {
+            if (!containsAnchor(driver, 0)) {
+                return  // Greedy match fails
             }
-            ++matchCount
-            separatorLength = collectSeparatorMatches(driver)
+            ++matchCount    // Use anchor as first match
+            if (!isContiguous) {
+                separatorLength = collectSeparatorMatches(driver)
+            }
         }
-        while (true) {
-            if (subMatcher in driver.localMatchers()) {
-                driver.debug(logger, driver.tape.offset) { "Unrecoverable recursion found" }
-                break
+        if (isContiguous) {
+            while (true) {
+                if (subMatcher.collectMatches(driver) == -1) {
+                    break
+                }
+                ++matchCount
             }
-            if (subMatcher.collectMatches(driver) == -1) {
-                break
+        } else {
+            while (true) {
+                if (subMatcher.collectMatches(driver) == -1) {
+                    break
+                }
+                ++matchCount
+                separatorLength = collectSeparatorMatches(driver)
             }
-            ++matchCount
-            separatorLength = collectSeparatorMatches(driver)
         }
+
         if (matchCount < minMatchCount) {
             throw MatchInterrupt.UNCONDITIONAL
         }

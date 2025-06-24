@@ -17,18 +17,18 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     matches: MutableList<Match>
 ) : TreeNode() {
     /** The captured substring. */
-    public val substring: String
+    public val capture: String
 
-    /** The matcher that captured the [substring], if present. */
+    /** The matcher that captured the [capture], if present. */
     public val matcher: Matcher?
 
     /**
-     * The index of the sub-matcher that the [substring] satisfies.
+     * The index of the sub-matcher that the [capture] satisfies.
      * @see Match.choice
      */
     public val choice: Int
 
-    /** Contains nodes for each section of the [substring] captured by any sub-matchers. */
+    /** Contains nodes for each section of the [capture] captured by any sub-matchers. */
     override val children: List<SyntaxTreeNode>
 
     init {
@@ -38,7 +38,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         } catch (_: NoSuchElementException) {
             throw NoSuchMatchException("Expected a match")
         }
-        substring = if (match.begin < input.length) input.substring(match.begin, match.endExclusive) else ""
+        capture = if (match.begin < input.length) input.substring(match.begin, match.endExclusive) else ""
         matcher = match.matcher
         choice = match.choice
 
@@ -54,6 +54,19 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
             reverse()
         }
     }
+
+    /**
+     * Returns the child at the specified index.
+     * @throws IndexOutOfBoundsException the child does not exist
+     */
+    public operator fun get(index: Int): SyntaxTreeNode = children[index]
+
+    /**
+     * Returns the single child of this node, if only one exists.
+     * @throws NoSuchElementException no children exist
+     * @throws IllegalArgumentException more than one child exists
+     */
+    public fun child(): SyntaxTreeNode = children.single()
 
     /**
      * Returns true if this node holds a [yielded][ImperativeMatcherContext.yield] substring.
@@ -76,13 +89,13 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
      *
      * The transforms are encountered during post-order traversal of the syntax tree whose root is this node.
      */
-    public fun <R> walk(initialState: R): R = walk(TransformContext(ROOT_PLACEHOLDER, initialState))
+    public fun <R> transform(initialState: R): R = transform(TransformContext(ROOT_PLACEHOLDER, initialState))
 
     @Suppress("UNCHECKED_CAST")
-    internal fun <R> walk(outerContext: TransformContext<R>): R {
+    internal fun <R> transform(outerContext: TransformContext<R>): R {
         val state = outerContext.state
         if (matcher !is Transform<*>) {
-            children.forEach { it.walk(outerContext) }  // Invoke child transforms directly
+            children.forEach { it.transform(outerContext) }  // Invoke child transforms directly
             return state
         }
         matcher as RichTransform<R>
@@ -102,9 +115,9 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
 
     override fun toString(): String {
         if (matcher == null) {
-            return "\"$substring\""
+            return "\"$capture\""
         }
-        return "\"${substring.escaped()}\" @ $matcher"
+        return "\"${capture.escaped()}\" @ $matcher"
     }
 
     public companion object {

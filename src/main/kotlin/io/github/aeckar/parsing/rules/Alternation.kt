@@ -13,42 +13,28 @@ internal class Alternation(
     context,
     subRule1.group<Alternation>() + subRule2.group<Alternation>()
 ), AggregateMatcher {
-    override val descriptiveString by lazy {
-        subMatchers.joinToString(" | ") {
-            val subMatcher = it.fundamentalIdentity()
-            if (subMatcher is Concatenation) subMatcher.descriptiveString else subMatcher.specified()
+    override fun resolveDescription(): String {
+        return subMatchers.joinToString(" | ") {
+            val subMatcher = it.atom()
+            if (subMatcher is Concatenation) subMatcher.description else subMatcher.specified()
         }
     }
 
     override fun collectSubMatches(driver: Driver) {
-        if (driver.leftmostMatcher != null) {
-            for ((index, matcher) in subMatchers.withIndex()) { // Extract for-loop
-                guard(driver, matcher) && continue
-                if (driver.leftmostMatcher!! in leftRecursionsPerSubMatcher[index] &&
-                        matcher.collectMatches(driver) != -1) {
-                    return
-                }
-                ++driver.choice
+        for ((index, matcher) in subMatchers.withIndex()) {  // Loops at least once
+            if (matcher.logic() in driver.localMatchers()) {
+                driver.addDependency(matcher)
+                driver.debug(logger) { "Left recursion found for $matcher" }
+                continue
             }
-            throw MatchInterrupt.UNCONDITIONAL
-        }
-        for (matcher in subMatchers) {  // Loops at least once
-            guard(driver, matcher) && continue
-            if (matcher.collectMatches(driver) != -1) {
-                return
+            if ((driver.anchor == null || containsAnchor(driver, index)) && matcher.collectMatches(driver) != -1) {
+                return  // Match succeeds
             }
             ++driver.choice
         }
-        throw MatchInterrupt.UNCONDITIONAL
-    }
-
-    /** Returns true if the sub-matcher is left-recursive. */
-    private fun guard(driver: Driver, subMatcher: RichMatcher): Boolean {
-        if (subMatcher.fundamentalLogic() in driver.localMatchers()) {
-            driver.addDependency(subMatcher)
-            driver.debug(logger) { "Left recursion found for $subMatcher" }
-            return true
+        if (driver.anchor != null) {
+            return  // Greedy match fails
         }
-        return false
+        throw MatchInterrupt.UNCONDITIONAL
     }
 }

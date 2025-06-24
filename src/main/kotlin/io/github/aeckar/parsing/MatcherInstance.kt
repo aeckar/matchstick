@@ -2,18 +2,19 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.ImperativeMatcherScope
 import io.github.aeckar.parsing.dsl.DeclarativeMatcherScope
-import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.oshai.kotlinlogging.KLogger
 
 internal abstract class MatcherInstance() : RichMatcher {
     override val identity: RichMatcher get() = this
+    override var logic: RichMatcher? = null
+    override var atom: RichMatcher? = null
 
     override fun hashCode() = id.hashCode()
 
     override fun equals(other: Any?): Boolean {
-        return this === other || other is RichMatcher && other.fundamentalLogic() === fundamentalLogic()
+        return this === other || other is RichMatcher && other.logic() === logic()
     }
 }
 
@@ -67,11 +68,7 @@ internal class DeclarativeMatcher(
     }
 
     override fun toString() = identity.toString()
-
-    override fun collectMatches(driver: Driver): Int {
-        (identity as? CompoundRule)?.initialize()
-        return identity.collectMatches(driver)
-    }
+    override fun collectMatches(driver: Driver) = identity.collectMatches(driver)
 
     private fun checkUnresolvableRecursion(matcher: RichMatcher) {
         when (matcher) {
@@ -87,6 +84,8 @@ internal class ParserInstance<R>(
 ) : MatcherInstance(), RichParser<R>, RichMatcher by subMatcher, RichTransform<R> by transform, ModifierMatcher {
     override val id get() = subMatcher.id
     override val identity get() = subMatcher.identity
+    override var logic by subMatcher::logic
+    override var atom by subMatcher::atom
 
     override fun toString() = subMatcher.toString()
 

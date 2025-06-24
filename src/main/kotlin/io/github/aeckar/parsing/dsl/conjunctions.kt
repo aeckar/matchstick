@@ -15,13 +15,23 @@ public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
     return ParserInstance(this as RichMatcher, transform as RichTransform)
 }
 
-/** Returns a parser with the given matcher and an action that does nothing. */
+/**
+ * Returns a parser with the given matcher and an action that does nothing.
+ *
+ * Declaring a matcher as a parser [exposes][TransformContext.resultsOf]
+ * modifications of its state by sub-matchers.
+ */
 @JvmName("withAction")
 public infix fun <R> Matcher.with(action: ActionFactory<R>): Parser<R> {
     return this with action {}
 }
 
-/** Returns a parser with the given matcher and a mapping that returns the previous state. */
+/**
+ * Returns a parser with the given matcher and a mapping that returns the previous state.
+ *
+ * Declaring a matcher as a parser [exposes][TransformContext.resultsOf]
+ * modifications of its state by sub-matchers.
+ */
 @JvmName("withMap")
 public infix fun <R> Matcher.with(map: MapFactory<R>): Parser<R> {
     return this with map { state }
@@ -30,7 +40,7 @@ public infix fun <R> Matcher.with(map: MapFactory<R>): Parser<R> {
 /** Returns an equivalent parser whose [ID][Enumerated.id] is as given. */
 @Suppress("UNCHECKED_CAST")
 public infix fun <T : Matcher> T.named(id: String): T {
-    if (this is Parser<*>) {    // Parsers should always return a parserf
+    if (this is Parser<*>) {
         return ParserProperty(id, this as RichParser<*>) as T
     }
     return MatcherProperty(id, this as RichMatcher) as T

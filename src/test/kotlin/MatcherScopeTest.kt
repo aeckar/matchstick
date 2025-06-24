@@ -7,18 +7,17 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class MatcherScopeTest {
-    private val logger = logger(MatcherScopeTest::class.qualifiedName!!)
-
     @Test
     fun acceptsSeparator() {
         val grammar = object {
-            val rule = ruleBy(logger) { newRule(logger) { textBy("{!=%*/|\n}+") } }
+            val loggedSpreadRule = ruleBy(logger) { newRule(logger) { textBy("{!=%*/|\n}+") } }
 
-            val comments by newRule(logger) { oneOrMore(blockComment or lineComment) }
-            val blockComment by rule { text("/*") + text("*/") }
-            val lineComment by rule { text("//") + char('\n') }
+            val comments by loggedSpreadRule { oneOrMore(blockComment or lineComment) }
+            val blockComment by loggedSpreadRule { text("/*") + text("*/") }
+            val lineComment by loggedSpreadRule { text("//") + char('\n') }
         }
         val tree = grammar.comments.treeify("//hi there\n/* oh, hi! */").resultOrNull()?.treeString()
         assertEquals(
@@ -39,7 +38,7 @@ class MatcherScopeTest {
 
     @Test
     fun acceptsValidTextExpression() {
-        val blockComment by newRule { text("/*") * textBy("{!=%*/}+") * text("*/") }
+        val blockComment by newRule(logger) { text("/*") * textBy("{!=%*/}+") * text("*/") }
         val tree = blockComment.treeify("/* hello */").resultOrNull()?.treeString()
         assertEquals(
             """
@@ -54,13 +53,13 @@ class MatcherScopeTest {
 
     @Test
     fun throwsOnInvalidTextExpression() {
-        val blockComment by newRule { text("/*") * textBy("{!=*/}+") * text("*/") }
-        assertThrows<MalformedExpressionException> { blockComment.treeify("/* hello */").resultOrNull()?.treeString() }
+        val blockComment by newRule(logger) { text("/*") * textBy("{!=*/}+") * text("*/") }
+        assertThrows<MalformedPatternException> { blockComment.treeify("/* hello */").resultOrNull()?.treeString() }
     }
 
     @Test
     fun acceptsValidCharExpression() {
-        val numbering by newRule { charBy("0..9|a..z|A..Z") * maybe(char('.')) }
+        val numbering by newRule(logger) { charBy("0..9|a..z|A..Z") * maybe(char('.')) }
         val tree = numbering.treeify("a.").resultOrNull()?.treeString()
         assertEquals(
             """
@@ -75,15 +74,16 @@ class MatcherScopeTest {
     
     @Test
     fun throwsOnInvalidCharExpression() {
-        val numbering by newRule { charBy("0..9|a..z|A..Z|") * maybe(char('.')) }
-        assertThrows<MalformedExpressionException> { numbering.treeify("a.").resultOrNull()?.treeString() }
+        val numbering by newRule(logger) { charBy("0..9|a..z|A..Z|") * maybe(char('.')) }
+        assertThrows<MalformedPatternException> { numbering.treeify("a.").resultOrNull()?.treeString() }
     }
 
     @Test
     fun throwsOnIndirectMutualLeftRecursion() {
         val grammar = object {
-            val rule1: Matcher = newRule { rule2 * char() }
-            val rule2 = newRule { rule1 * char() }
+            private val loggedRule = ruleBy(logger)
+            val rule1: Matcher = loggedRule { rule2 * char() }
+            val rule2 = loggedRule { rule1 * char() }
         }
         assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
     }
@@ -91,8 +91,9 @@ class MatcherScopeTest {
     @Test
     fun throwsOnMutualLeftRecursion() {
         val grammar = object {
-            val rule1: Matcher = newRule { rule2 }
-            val rule2 = newRule { rule1 }
+            private val loggedRule = ruleBy(logger)
+            val rule1: Matcher = loggedRule { rule2 }
+            val rule2 = loggedRule { rule1 }
         }
         assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
     }
@@ -100,8 +101,9 @@ class MatcherScopeTest {
     @Test
     fun throwsOnNamedIndirectMutualLeftRecursion() {
         val grammar = object {
-            val rule1: Matcher by newRule { rule2 * char() }
-            val rule2 by newRule { rule1 * char() }
+            private val loggedRule = ruleBy(logger)
+            val rule1: Matcher by loggedRule { rule2 * char() }
+            val rule2 by loggedRule { rule1 * char() }
         }
         assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
     }
@@ -109,8 +111,9 @@ class MatcherScopeTest {
     @Test
     fun throwsOnNamedMutualLeftRecursion() {
         val grammar = object {
-            val rule1: Matcher by newRule { rule2 }
-            val rule2 by newRule { rule1 }
+            private val loggedRule = ruleBy(logger)
+            val rule1: Matcher by loggedRule { rule2 }
+            val rule2 by loggedRule { rule1 }
         }
         assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
     }
@@ -118,7 +121,7 @@ class MatcherScopeTest {
     @Test
     fun throwsOnSelfLeftRecursion() {
         val grammar = object {
-            val rule: Matcher = newRule { rule }
+            val rule: Matcher = newRule(logger) { rule }
         }
         assertThrows<UnrecoverableRecursionException> { grammar.rule.match("") }
     }
@@ -126,26 +129,32 @@ class MatcherScopeTest {
     @Test
     fun throwsOnNamedSelfLeftRecursion() {
         val grammar = object {
-            val rule: Matcher by newRule { rule }
+            val rule: Matcher by newRule(logger) { rule }
         }
         assertThrows<UnrecoverableRecursionException> { grammar.rule.match("") }
     }
 
     @Test
-    fun throwsOnRecursionWithoutGuard() {
+    fun failsOnRecursionWithoutGuard() {
         val grammar = object {
-            val rule1: Matcher = newRule { char() * rule2 }
-            val rule2 = newRule { char() * rule1 }
+            private val loggedRule = ruleBy(logger)
+            val rule1: Matcher = loggedRule { char() * rule2 }
+            val rule2 = loggedRule { char() * rule1 }
         }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
+        assertTrue(grammar.rule1.match("").isFailure())
     }
 
     @Test
-    fun throwsOnNamedRecursionWithoutGuard() {
+    fun failsOnNamedRecursionWithoutGuard() {
         val grammar = object {
-            val rule1: Matcher by newRule { char() * rule2 }
-            val rule2 by newRule { char() * rule1 }
+            private val loggedRule = ruleBy(logger)
+            val rule1: Matcher by loggedRule { char() * rule2 }
+            val rule2 by loggedRule { char() * rule1 }
         }
-        assertThrows<UnrecoverableRecursionException> { grammar.rule1.match("") }
+        assertTrue(grammar.rule1.match("").isFailure())
+    }
+
+    private companion object {
+        val logger = logger(MatcherScopeTest::class.qualifiedName!!)
     }
 }

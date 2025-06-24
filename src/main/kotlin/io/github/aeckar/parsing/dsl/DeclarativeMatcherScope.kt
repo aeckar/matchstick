@@ -11,7 +11,7 @@ import io.github.oshai.kotlinlogging.KLogger
 public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Matcher
 
 /**
- * When provided with an [DeclarativeMatcherScope], returns a declarative matcher with a specific discardMatches.
+ * When provided with an [DeclarativeMatcherScope], returns a declarative matcher with a specific separator.
  * @see newRule
  * @see ruleBy
  */
@@ -21,9 +21,9 @@ public typealias DeclarativeMatcherFactory = (greedy: Boolean, scope: Declarativ
 public operator fun DeclarativeMatcherFactory.invoke(scope: DeclarativeMatcherScope): Matcher = this(false, scope)
 
 /**
- * Configures and returns a declarative matcher whose discardMatches is an empty string.
+ * Configures and returns a declarative matcher whose separator is an empty string.
  *
- * The discardMatches block is invoked only once.
+ * The separator block is invoked only once.
  * @see newMatcher
  * @see ruleBy
  * @see DeclarativeMatcherContext.separator
@@ -31,14 +31,31 @@ public operator fun DeclarativeMatcherFactory.invoke(scope: DeclarativeMatcherSc
 public fun newRule(
     logger: KLogger? = null,
     greedy: Boolean = false,
-    separator: () -> Matcher = ImperativeMatcher::EMPTY,
+    separator: () -> Matcher,
     scope: DeclarativeMatcherScope
 ): Matcher {
     return ruleBy(logger, separator)(greedy, scope)
 }
 
 /**
- * Configures and returns a declarative matcher with the given discardMatches.
+ * Configures and returns a declarative matcher whose separator is an empty string.
+ *
+ * The separator block is invoked only once.
+ * @see newMatcher
+ * @see ruleBy
+ * @see DeclarativeMatcherContext.separator
+ */
+public fun newRule(
+    logger: KLogger? = null,
+    greedy: Boolean = false,
+    separator: Matcher = ImperativeMatcher.EMPTY,
+    scope: DeclarativeMatcherScope
+): Matcher {
+    return ruleBy(logger, separator)(greedy, scope)
+}
+
+/**
+ * Configures and returns a declarative matcher with the given separator.
  * ```kotlin
  * val whitespace by rule {
  *     /* ... */
@@ -46,10 +63,13 @@ public fun newRule(
  *
  * val rule = ruleBy { whitespace }
  * val parser by rule {
- *     /* Using 'whitespace' as discardMatches... */
+ *     /* Using 'whitespace' as separator... */
  * }
  * ```
- * The discardMatches block is invoked only once.
+ * The separator block is invoked only once.
+ *
+ * The result of this function should be assigned to a property whose name
+ * is descriptive of the concept whose syntax is described by the matcher.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see newRule
  * @see matcherBy
@@ -61,7 +81,38 @@ public fun newRule(
 @Suppress("UNCHECKED_CAST")
 public fun ruleBy(
     logger: KLogger? = null,
-    separator: () -> Matcher = ImperativeMatcher::EMPTY
+    separator: () -> Matcher
 ): DeclarativeMatcherFactory {
     return { greedy, scope -> DeclarativeMatcher(logger, greedy, separator as () -> RichMatcher, scope) }
+}
+
+/**
+ * Configures and returns a declarative matcher with the given separator.
+ * ```kotlin
+ * val whitespace by rule {
+ *     /* ... */
+ * }
+ *
+ * val rule = ruleBy(separator = whitespace)
+ * val parser by rule {
+ *     /* Using 'whitespace' as separator... */
+ * }
+ * ```
+ * The separator block is invoked only once.
+ *
+ * The result of this function should be assigned to a property whose name
+ * is descriptive of the concept whose syntax is described by the matcher.
+ * @param separator used to identify meaningless characters between captured substrings, such as whitespace
+ * @see newRule
+ * @see matcherBy
+ * @see DeclarativeMatcherContext.separator
+ * @see DeclarativeMatcherContext.plus
+ * @see DeclarativeMatcherContext.zeroOrSpread
+ * @see DeclarativeMatcherContext.oneOrSpread
+ */
+public fun ruleBy(
+    logger: KLogger? = null,
+    separator: Matcher = ImperativeMatcher.EMPTY
+): DeclarativeMatcherFactory {
+    return ruleBy(logger) { separator }
 }

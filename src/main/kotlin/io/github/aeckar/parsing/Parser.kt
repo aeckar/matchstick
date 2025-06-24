@@ -5,7 +5,6 @@ import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 import io.github.aeckar.parsing.state.Result
-import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.truncated
@@ -20,9 +19,13 @@ import kotlin.reflect.typeOf
  * Alternatively, if the given type is nullable and no nullary constructor is found, `null` is used as the initial state.
  *
  * If [complete] is true, [NoSuchMatchException] is thrown if a match cannot be made to the entire input.
+ *
+ * Exceptions thrown when walking the resulting syntax tree are not caught.
+ * @throws UnrecoverableRecursionException there exists a left recursion in the matcher
  * @throws NoSuchMatchException a match cannot be made to the input
  * @throws MalformedTransformException [TransformContext.descend] is called more than once by any sub-parser
  * @throws StateInitializerException the initial state is not provided, and the nullary constructor of [R] is inaccessible
+ * @see SyntaxTreeNode.transform
  */
 public inline fun <reified R> Parser<R>.parse(
     input: CharSequence,
@@ -33,11 +36,11 @@ public inline fun <reified R> Parser<R>.parse(
         if (complete) {
             val matchLength = matches.last().length
             if (matchLength != input.length) {
-                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input ${input.truncated().escaped()}")
+                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input ${input.truncated()}")
             }
         }
-        (this as RichMatcher).logger?.debug { "Walking syntax tree of ${yellow(input.truncated().escaped())}" }
-        SyntaxTreeNode(input, matches as MutableList<Match>).walk(initialState)
+        (this as RichMatcher).logger?.debug { "Transforming syntax tree of ${yellow(input.truncated().escaped())}" }
+        SyntaxTreeNode(input, matches as MutableList<Match>).transform(initialState)
     }
 }
 

@@ -41,34 +41,38 @@ internal fun RichMatcher.specified(): String {
     return toString()   // Descriptive string or ID
 }
 
-/** Returns a string representation of this matcher that is guaranteed to never recur. */
-internal fun RichMatcher.safeString(): String {
-    if (id !== UNKNOWN_ID) {
-        return id
+/**
+ * Returns the [ID][Enumerated.id] or [descriptive string][ImperativeMatcher.descriptiveString],
+ * if one exists, of this matcher.
+ *
+ * This function should be used when information about a matcher is requested,
+ * but it is unsure whether the matcher is infinitely recursive.
+ */
+internal fun RichMatcher.idOrDescription(): String {
+    return when {
+        id !== UNKNOWN_ID -> id
+        this is ImperativeMatcher -> toString()
+        else -> "<unknown>"
     }
-    if (this is ImperativeMatcher) {
-        return toString()
-    }
-    return "<unknown>"
 }
 
 /** Returns the most fundamental [identity][RichMatcher.identity] of this matcher. */
-internal fun RichMatcher.fundamentalIdentity(): RichMatcher {
-    if (this is DeclarativeMatcher) {
-        return identity.fundamentalIdentity()
-    }
-    return this
+internal fun RichMatcher.atom(): RichMatcher {
+    return atom ?: (if (this is DeclarativeMatcher) identity.atom() else this).also { atom = it }
 }
 
-/** Returns the matcher that this one delegates its matching logic to, and so forth. */
-internal fun RichMatcher.fundamentalLogic(): RichMatcher {
-    return when (this) {
-        is MatcherProperty -> value.fundamentalLogic()
-        is DeclarativeMatcher -> identity.fundamentalLogic()
-        is ParserInstance<*> -> subMatcher.fundamentalLogic()
-        is IdentityRule -> subMatcher.fundamentalLogic()
+/**
+ * Returns the matcher that this one delegates its matching logic to, and so forth.
+ *
+ * Matchers are equal to each other according to the value returned by this function.
+ */
+internal fun RichMatcher.logic(): RichMatcher {
+    return logic ?: (when (this) {
+        is MatcherProperty -> value.logic()
+        is DeclarativeMatcher -> identity.logic()
+        is IdentityRule, is ParserInstance<*> -> subMatcher.logic()
         else -> this
-    }
+    }).also { logic = it }
 }
 
 internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
@@ -82,8 +86,9 @@ internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
 /**
  * Returns the syntax tree created by applying the matcher to this character sequence, in list form.
  *
- * If the returned list is empty, this sequence does not match the matcher with the given discardMatches.
+ * If the returned list is empty, this sequence does not match the matcher with the given separator.
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
+ * @throws UnrecoverableRecursionException there exists a left recursion in the matcher
  */
 public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
@@ -99,7 +104,8 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
  * Returns the syntax tree created by applying the matcher to this character sequence, in tree form.
  *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
- * @throws NoSuchMatchException the sequence does not match the matcher with the given discardMatches
+ * @throws UnrecoverableRecursionException there exists a left recursion in the matcher
+ * @throws NoSuchMatchException the sequence does not match the matcher with the given separator
  */
 public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
     return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>) }
@@ -135,7 +141,7 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
 public interface Matcher : Enumerated
 
 /**
- * Extends [Matcher] with [match collection][collectMatches], [discardMatches tracking][separator],
+ * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],
  * and [cache validation][isCacheable].
  *
  * All implementors of [Matcher] also implement this interface.
@@ -145,6 +151,10 @@ internal interface RichMatcher : Matcher {
     val separator: RichMatcher
     val isCacheable: Boolean
     val logger: KLogger?
+
+    /* Cached properties */
+    var logic: RichMatcher?
+    var atom: RichMatcher?
 
     /**
      * The identity assigned to this matcher during debugging.

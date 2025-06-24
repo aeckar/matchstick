@@ -42,11 +42,16 @@ internal fun <E> Array<MutableList<E>?>.getOrSet(index: Int): MutableList<E> {
     return this[index] ?: mutableListOf<E>().also { this[index] = it }
 }
 
-/** Returns a string with invisible characters replaced by their corresponding escape code. */
+/**
+ * Returns a string with invisible characters replaced by their corresponding escape code.
+ *
+ * Ignores ANSI escape codes.
+ */
 @PublishedApi   // Inlined by 'parse'
 internal fun CharSequence.escaped() = buildString {
     this@escaped.forEach { c ->
         append(when {
+            c == '\u001B' -> c
             c == '\\' -> "\\\\"
             c == '\n' -> "\\n"
             c == '\t' -> "\\t"

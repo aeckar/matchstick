@@ -15,14 +15,11 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
  * @see ImperativeMatcherContext.lengthByText
  */
 public class TextExpression internal constructor() : Expression() {
-    override fun clearTemporaryData() {
-        charData.clear()
-    }
-
     /** Holds the matchers used to parse text expressions. */
-    public object Grammar {
+    public companion object Grammar {
         private val action = actionBy<TextExpression>(preOrder = true)
         private val rule = ruleBy(logger(Grammar::class.qualifiedName!!))
+        private const val END_OF_INPUT = '\u0000'
 
         private val modifiers = mapOf(
             '+' to { subPattern: Pattern ->
@@ -51,9 +48,9 @@ public class TextExpression internal constructor() : Expression() {
         )
 
         private val charExpr by rule {
-            CharExpression.Grammar.start
+            CharExpression.start
         } with action {
-            val charPattern = resultsOf(CharExpression.Grammar.start).single().rootPattern()
+            val charPattern = resultsOf(CharExpression.start).single().rootPattern()
             state.patterns += pattern(charPattern.toString()) { s, i ->
                 if (charPattern(s, i) == 1) 1 else -1
             }
@@ -63,45 +60,64 @@ public class TextExpression internal constructor() : Expression() {
             char('{') * (charExpr or textExpr) * char('}') * maybe(charIn("+*?"))
         } with action {
             val pattern = state.patterns.removeLast()
-            state.patterns += if (children[3].choice == 0) {
-                modifiers.getValue(children[3].substring.single())(pattern)
-            } else {
-                pattern("{$pattern}", pattern)
+            state.patterns += when (children[3].choice) {
+                0 -> modifiers.getValue(children[3].capture.single())(pattern)
+                else /* -1 */ -> pattern("{$pattern}", pattern)
             }
         }
 
         public val substring: Matcher by rule {
-            oneOrMore(charOrEscape(rule, "|{}+*?"))
+            oneOrMore(char('^') or charOrEscape(rule, "^|{}+*?"))
         } with action {
-            val substring = state.charData.toString()
-            state.patterns += pattern(substring) { s, i -> if (s.startsWith(substring, i)) substring.length else -1 }
-            state.clearTemporaryData()
+            val expansion = children.joinToString("") { child ->
+                if (child.choice == 0) END_OF_INPUT.toString() else state.charData.removeFirst().toString()
+            }
+            val matchLength = if (END_OF_INPUT in expansion) {
+                expansion.dropLastWhile { it != END_OF_INPUT }.length
+            } else {
+                expansion.length
+            }
+            state.patterns += pattern(expansion) { s, i ->
+                val success = expansion.withIndex().all { (ei, c) ->
+                    if (c == END_OF_INPUT) i >= s.length else i + ei < s.length && s[i + ei] == c
+                }
+                if (success) matchLength else -1
+            }
         }
 
         public val sequence: Matcher by rule {
-            oneOrMore(textExpr)
+            oneOrMore(substring or captureGroup)
         } with action {
             val patterns = state.patterns.removeLast(children.size)
             state.patterns += pattern(patterns.joinToString("")) { s, i ->
                 var offset = 0
                 var matchCount = 0
-                patterns.asSequence()
-                    .map { it(s, i) }
-                    .onEach { if (it != -1) ++matchCount }
-                    .takeWhile { i + offset < s.length && it != -1 }
-                    .forEach { offset += it }
+                for (pattern in patterns) {
+                    val result = pattern(s, i + offset)
+                    if (result != -1) {
+                        ++matchCount
+                    }
+                    if (i + offset >= s.length || result == -1) {
+                        break
+                    }
+                    offset += result
+                }
                 if (matchCount != patterns.size) -1 else offset
             }
         }
 
         public val union: Matcher by rule {
-            textExpr * char('|') * textExpr * zeroOrMore(char('|') * textExpr)
+            sequence * char('|') * sequence * zeroOrMore(char('|') * sequence)
         } with action {
             val patterns = state.patterns.removeLast(2 + children[3].children.size)
             state.patterns += pattern(patterns.joinToString("|")) { s, i ->
-                patterns.asSequence()
-                    .map { it(s, i) }
-                    .firstOrNull { it != -1 } ?: -1
+                patterns.forEach { pattern ->
+                    val result = pattern(s, i)
+                    if (result != -1) {
+                        return@pattern result
+                    }
+                }
+                -1
             }
         }
 

@@ -11,7 +11,7 @@ import io.github.oshai.kotlinlogging.KLogger
 public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
 
 /**
- * When provided with an [ImperativeMatcherScope], returns an imperative matcher with a specific discardMatches.
+ * When provided with an [ImperativeMatcherScope], returns an imperative matcher with a specific separator.
  * @see newMatcher
  * @see matcherBy
  */
@@ -21,11 +21,11 @@ public typealias ImperativeMatcherFactory = (cacheable: Boolean, scope: Imperati
 public operator fun ImperativeMatcherFactory.invoke(scope: ImperativeMatcherScope): Matcher = this(false, scope)
 
 /**
- * Configures and returns an imperative matcher whose discardMatches is an empty string.
+ * Configures and returns an imperative matcher whose separator is an empty string.
  *
  * [cacheable] should be set to `true` if the code within [scope] does not use any outside mutable state.
  *
- * The discardMatches block is invoked only once.
+ * The separator block is invoked only once.
  * @see matcherBy
  * @see newRule
  * @see DeclarativeMatcherContext.separator
@@ -33,14 +33,33 @@ public operator fun ImperativeMatcherFactory.invoke(scope: ImperativeMatcherScop
 public fun newMatcher(
     logger: KLogger? = null,
     cacheable: Boolean = false,
-    separator: () -> Matcher = ImperativeMatcher::EMPTY,
+    separator: () -> Matcher,
     scope: ImperativeMatcherScope
 ): Matcher {
     return matcherBy(logger, separator)(cacheable, scope)
 }
 
 /**
- * Configures and returns an imperative matcher with the given discardMatches.
+ * Configures and returns an imperative matcher whose separator is an empty string.
+ *
+ * [cacheable] should be set to `true` if the code within [scope] does not use any outside mutable state.
+ *
+ * The separator block is invoked only once.
+ * @see matcherBy
+ * @see newRule
+ * @see DeclarativeMatcherContext.separator
+ */
+public fun newMatcher(
+    logger: KLogger? = null,
+    cacheable: Boolean = false,
+    separator: Matcher = ImperativeMatcher.EMPTY,
+    scope: ImperativeMatcherScope
+): Matcher {
+    return matcherBy(logger, separator)(cacheable, scope)
+}
+
+/**
+ * Configures and returns an imperative matcher with the given separator.
  * ```kotlin
  * val whitespace by rule {
  *     /* ... */
@@ -48,10 +67,13 @@ public fun newMatcher(
  *
  * val matcher = matcherBy { whitespace }
  * val parser by matcher {
- *     /* Using 'whitespace' as discardMatches... */
+ *     /* Using 'whitespace' as separator... */
  * }
  * ```
- * The discardMatches block is invoked only once.
+ * The separator block is invoked only once.
+ *
+ * The result of this function should be assigned to a property whose name
+ * is descriptive of the concept whose syntax is described by the matcher.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see newMatcher
  * @see ruleBy
@@ -63,4 +85,30 @@ public fun matcherBy(
     separator: () -> Matcher = ImperativeMatcher::EMPTY
 ): ImperativeMatcherFactory {
     return { cacheable, scope -> ImperativeMatcher(logger, separator as () -> RichMatcher, null, cacheable, scope) }
+}
+
+/**
+ * Configures and returns an imperative matcher with the given separator.
+ * ```kotlin
+ * val whitespace by rule {
+ *     /* ... */
+ * }
+ *
+ * val matcher = matcherBy(separator = whitespace)
+ * val parser by matcher {
+ *     /* Using 'whitespace' as separator... */
+ * }
+ * ```
+ * The separator block is invoked only once.
+ *
+ * The result of this function should be assigned to a property whose name
+ * is descriptive of the concept whose syntax is described by the matcher.
+ * @param separator used to identify meaningless characters between captured substrings, such as whitespace
+ * @see newMatcher
+ * @see ruleBy
+ * @see DeclarativeMatcherContext.separator
+ */
+@Suppress("UNCHECKED_CAST")
+public fun matcherBy(logger: KLogger? = null, separator: Matcher): ImperativeMatcherFactory {
+    return matcherBy(logger) { separator }
 }

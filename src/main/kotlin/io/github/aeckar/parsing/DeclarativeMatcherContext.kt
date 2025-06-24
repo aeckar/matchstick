@@ -26,12 +26,10 @@ public open class DeclarativeMatcherContext internal constructor(
     internal val isGreedy = greedy
     private val singleChar = matcher(".") { yield(1) }
     protected var isMatchingEnabled: Boolean = true
-
-    /** Used to identify meaningless characters between captured substrings, such as whitespace. */
-    public val separator: Matcher by lazy(lazySeparator)
+    internal val separator by lazy(lazySeparator)
 
     private inline fun matcher(descriptiveString: String, crossinline scope: ImperativeMatcherScope): RichMatcher {
-        return ImperativeMatcher(logger, ImperativeMatcher::EMPTY, descriptiveString, cacheable = true) {
+        return ImperativeMatcher(logger, ImperativeMatcher::EMPTY, descriptiveString.escaped(), cacheable = true) {
             val isMatching = isMatchingEnabled
             isMatchingEnabled = false
             try {
@@ -42,17 +40,35 @@ public open class DeclarativeMatcherContext internal constructor(
         }
     }
 
-    /* ------------------------------ rule factories ------------------------------ */
+    /* ------------------------------ utility ------------------------------ */
+
+    /** Wraps this [character expression][charBy] in a negation. */
+    public operator fun String.not(): String = "!($this)"
+
+    /** Maps each integer to the receiver repeated that number of times. */
+    public operator fun String.times(counts: Iterable<Int>): List<String> {
+        return counts.map { repeat(it) }
+    }
+
+    /* ------------------------------ matcher factories ------------------------------ */
+
+    /** Used to identify meaningless characters between captured substrings, such as whitespace. */
+    public fun separator(): Matcher = separator
+
+    /** Returns an equivalent matcher whose syntax subtree does not get walked over during parsing. */
+    public fun inert(parser: Parser<*>): Matcher {
+        return object : RichMatcher by parser {}
+    }
 
     /** Returns a rule matching the next character, including the end-of-input character. */
     public fun char(): Matcher = singleChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = matcher("'${c.toString().escaped()}'") { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = matcher("'$c'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
     public fun text(substring: String): Matcher {
-        return matcher("\"${substring.escaped()}\"") { yield(lengthOf(substring)) }
+        return matcher("\"$substring\"") { yield(lengthOf(substring)) }
     }
 
     /** Returns a rule matching the first acceptable character. */
@@ -60,8 +76,7 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: Collection<Char>): Matcher {
-        val logicString = "[${chars.joinToString("") { it.toString().escaped() }}]"
-        return matcher(logicString) { yield(lengthOfFirst(chars)) }
+        return matcher("[${chars.joinToString("")}]") { yield(lengthOfFirst(chars)) }
     }
 
     /** Returns a rule matching any character not in the given string. */
@@ -69,8 +84,7 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /** Returns a rule matching any character not in the given collection. */
     public fun charNotIn(chars: Collection<Char>): Matcher {
-        val logicString = "![${chars.joinToString("") { it.toString().escaped() }}]".escaped()
-        return matcher(logicString) {
+        return matcher("![${chars.joinToString("")}]") {
             if (lengthOfFirst(chars) != -1) {
                 fail()
             }
@@ -80,7 +94,7 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /** Returns a rule matching the first acceptable substring. */
     public fun textIn(substrings: Collection<String>): Matcher {
-        val logicString = substrings.joinToString(" | ", "(", ")") { "\"${it.escaped()}\"" }
+        val logicString = substrings.joinToString(" | ", "(", ")") { "\"$it\"" }
         return matcher(logicString) { yield(lengthOfFirst(substrings)) }
     }
 
@@ -89,25 +103,25 @@ public open class DeclarativeMatcherContext internal constructor(
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
-     * @throws MalformedExpressionException the character expression is malformed
+     * @throws MalformedPatternException the character expression is malformed
      * @see ImperativeMatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = matcher("`${expr.escaped()}`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = matcher("`$expr`") { yield(lengthByChar(expr)) }
 
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
      *
      * If a function may be called that has the same functionality as the given expression,
      * that function should be called instead.
-     * @throws MalformedExpressionException the text expression is malformed
+     * @throws MalformedPatternException the text expression is malformed
      * @see ImperativeMatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = matcher("``${expr.escaped()}``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = matcher("``$expr``") { yield(lengthByText(expr)) }
 
     /**
-     * Returns a rule matching this one, then the [discardMatches][match], then the other.
+     * Returns a rule matching this one, then the [separator][match], then the other.
      * @see times
      */
     public operator fun Matcher.plus(other: Matcher): Matcher {
@@ -127,24 +141,24 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /**
      * Returns a rule matching the given rule one or more times,
-     * with the [discardMatches][match] between each match.
+     * with the [separator][match] between each match.
      * @see oneOrSpread
      */
-    public fun oneOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, false, false)
+    public fun oneOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, false, true)
 
     /**
      * Returns a rule matching the given rule zero or more times,
-     * with the [discardMatches][match] between each match.
+     * with the [separator][match] between each match.
      * @see zeroOrSpread
      */
-    public fun zeroOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, true, false)
+    public fun zeroOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, true, true)
 
     /**
      * Returns a rule matching the given rule one or more times successively.
      * @see oneOrMore
      */
     public fun oneOrSpread(subRule: Matcher): Matcher {
-        return Repetition(logger, this@DeclarativeMatcherContext, subRule, false, isContiguous = true)
+        return Repetition(logger, this@DeclarativeMatcherContext, subRule, false, false)
     }
 
     /**
@@ -152,7 +166,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see zeroOrMore
      */
     public fun zeroOrSpread(subRule: Matcher): Matcher {
-        return Repetition(logger, this@DeclarativeMatcherContext, subRule, acceptsZero = true, isContiguous = true)
+        return Repetition(logger, this@DeclarativeMatcherContext, subRule, true, false)
     }
 
     /** Returns a rule matching the given rule zero or one time. */
@@ -169,15 +183,5 @@ public open class DeclarativeMatcherContext internal constructor(
     @Suppress("UNCHECKED_CAST")
     public fun nearestOf(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
         return ProximityRule(logger, this@DeclarativeMatcherContext, (listOf(subRule1, subRule2) + others) as List<RichMatcher>)
-    }
-
-    /* ------------------------------ utility ------------------------------ */
-
-    /** Wraps this [character expression][charBy] in a negation. */
-    public operator fun String.not(): String = "!($this)"
-
-    /** Maps each integer to the receiver repeated that number of times. */
-    public operator fun String.times(counts: Iterable<Int>): List<String> {
-        return counts.map { repeat(it) }
     }
 }

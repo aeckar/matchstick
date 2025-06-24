@@ -12,8 +12,7 @@ import io.github.aeckar.parsing.DeclarativeMatcherContext
  */
 public sealed class Expression {
     protected val patterns: MutableList<Pattern> = mutableListOf()
-    internal val charData: StringBuilder = StringBuilder()
+    internal val charData = ArrayDeque<Char>()  // todo optimize with custom deque
 
     internal fun rootPattern() = patterns.single()
-    protected abstract fun clearTemporaryData()
 }

@@ -14,22 +14,34 @@ internal class Concatenation(
     context,
     subMatcher1.group<Concatenation>(isContiguous) + subMatcher2.group<Concatenation>(isContiguous)
 ), AggregateMatcher, SequenceMatcher {
-    override val descriptiveString by lazy {
+    override fun resolveDescription(): String {
         val symbol = if (isContiguous) "&" else "~&"
-        subMatchers.joinToString(" $symbol ") { it.fundamentalIdentity().specified() }
+        return subMatchers.joinToString(" $symbol ") { it.atom().specified() }
     }
 
     override fun collectSubMatches(driver: Driver) {
         val matchers = subMatchers.iterator()
-        if (driver.leftmostMatcher in leftRecursionsPerSubMatcher[0]) {
+        if (driver.anchor != null) {
+            if (!containsAnchor(driver, 0)) {
+                return  // Greedy match fails
+            }
             matchers.next() // Drop first sub-match
         }
-        for (matcher in matchers) { // Loops at least once
-            matcher.collectMatchesOrFail(driver)
-            if (!matchers.hasNext()) {
-                break
+        if (isContiguous) {
+            for (matcher in matchers) { // Loops at least once
+                matcher.collectMatchesOrFail(driver)
+                if (!matchers.hasNext()) {
+                    break
+                }
             }
-            collectSeparatorMatches(driver)
+        } else {
+            for (matcher in matchers) { // Loops at least once
+                matcher.collectMatchesOrFail(driver)
+                if (!matchers.hasNext()) {
+                    break
+                }
+                collectSeparatorMatches(driver)
+            }
         }
     }
 }
