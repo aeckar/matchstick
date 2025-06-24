@@ -7,6 +7,8 @@ import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
 
+// todo test '^' capture
+
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
  * @param input the original input

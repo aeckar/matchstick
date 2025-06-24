@@ -4,7 +4,7 @@ import io.github.aeckar.parsing.*
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
- * Provides a scope, evaluated once, to describe the behavior of a rule.
+ * Provides a scope, evaluated eagerly, to describe the behavior of a rule.
  * @see newRule
  * @see ruleBy
  */

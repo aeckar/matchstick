@@ -43,10 +43,10 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         public val intersection: Matcher by rule {
-            atomicCharExpr * char(',') * atomicCharExpr * zeroOrMore(char(',') * atomicCharExpr)
+            atomicCharExpr * char('&') * atomicCharExpr * zeroOrMore(char('&') * atomicCharExpr)
         } with action {
             val subPatterns = state.patterns.removeLast(2 + children[3].children.size)
-            state.patterns += singlePattern(subPatterns.joinToString(",")) { s, i ->
+            state.patterns += singlePattern(subPatterns.joinToString("&")) { s, i ->
                 subPatterns.all { it(s, i) != -1 }
             }
         }
@@ -103,7 +103,7 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         public val charRange: Matcher by rule {
-            val rangeCharOrEscape by charOrEscape(rule, ".,|()[]")
+            val rangeCharOrEscape by charOrEscape(rule, ".&|()[]")
             rangeCharOrEscape * text("..") * rangeCharOrEscape
         } with action {
             val range = state.charData.removeFirst()..state.charData.removeFirst()
@@ -145,18 +145,6 @@ public class CharExpression internal constructor() : Expression() {
             state.patterns += singlePattern("=$subPattern") { s, i -> subPattern(s, i) != -1 }
         }
 
-        public val singleChar: Matcher by rule {
-            char('^') or charOrEscape(rule, "^,|()[]%")
-        } with action {
-            state.patterns += when (choice) {
-                0 -> singlePattern("^") { s, i -> i >= s.length }
-                else -> {
-                    val c =  state.charData.removeFirst()
-                    singlePattern(capture) { s, i -> i < s.length && s[i] == c }
-                }
-            }
-        }
-
         public val charExpr: Matcher by rule {
             union or
                     intersection or
@@ -170,8 +158,7 @@ public class CharExpression internal constructor() : Expression() {
                     suffix or
                     prefix or
                     firstChar or
-                    charRange or
-                    singleChar
+                    charRange
         }
 
         internal val start = charExpr with action

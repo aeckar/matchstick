@@ -29,9 +29,9 @@ class Markup(private val macros: MarkupPreprocessor) {
         private val state = actionBy<Markup>()
         private val element = ruleBy(separator = whitespace)
 
-        private fun TransformContext<Markup>.descendWithHtmlTag(tagName: String, vararg classes: String) {
-            val classString = classes.joinToString(separator = " ", prefix = "class='", postfix = "'")
-            state.emit("<$tagName $classString>")
+        private fun TransformContext<Markup>.descendWithHtmlTag(tagName: String, vararg classList: String) {
+            val classes = classList.joinToString(" ", "class='", "'")
+            state.emit("<$tagName $classes>")
             ++state.tabCount
             descend()
             --state.tabCount
@@ -76,14 +76,14 @@ class Markup(private val macros: MarkupPreprocessor) {
         val heading by element {
             textIn("#" * (1..6)) + enumerableLine
         } with state {
-            val headerType = children[0].substring.length
+            val headerType = children[0].capture.length
             descendWithHtmlTag("h$headerType", "dt-heading", "dt-h$headerType")
         }
 
         val assignment by element {
             identifier + char('=') + topLevelElement
         } with state {
-            if (children[0].substring in state.variables) {
+            if (children[0].capture in state.variables) {
                 /* error */
             }
         }
@@ -91,8 +91,8 @@ class Markup(private val macros: MarkupPreprocessor) {
         /* ------------------------------ labels ------------------------------ */
 
         val label by element { (identifier or compoundIdentifier) + char(':') }
-        val identifier by element { charBy("a..z|A..Z|_") * zeroOrMore(charBy("a..z|A..Z|0..9|_")) }
-        val compoundIdentifier by element { char('"') + oneOrSpread(identifier) + char('"') }
+        val identifier by element { charBy("a..z|A..Z|_") * textBy("{a..z|A..Z|0..9|_}*") }
+        val compoundIdentifier by element { char('"') * textBy("{![\"\n]}+") * char('"') }
 
         /* ------------------------------ lists ------------------------------ */
 
@@ -103,19 +103,36 @@ class Markup(private val macros: MarkupPreprocessor) {
         }
 
         val listItem by element {
-            zeroOrMore(char(' ')) * (charBy("[-$]") or textBy("[{[ x]}]")) + labellableLineGroup
+            zeroOrMore(char(' ')) * textBy("{[-$]}|[{[ x]}]") + labellableLineGroup
         } with state {
 
         }
 
         /* ------------------------------ lines of text ------------------------------ */
 
-        val line by element { zeroOrSpread(lineElement or charBy(!"[\n^]")) * char() }
-        val labellableLine by element { maybe(label) + line }
-        val enumerableLine by element { char('$') + labellableLine }
-        val lineGroup by element { zeroOrSpread(lineElement or charBy(!"^|>\n,<={ }*{{[-$]}|[{[ x]}]}")) * char() }
-        val labellableLineGroup by element { maybe(label) + lineGroup }
-        val enumerableLineGroup by element { char('$') + labellableLineGroup }
+        val line by element {
+            zeroOrSpread(lineElement or charBy(!"[\n^]")) * char()
+        }
+
+        val labellableLine by element {
+            maybe(label) + line
+        }
+
+        val enumerableLine by element {
+            char('$') + labellableLine
+        }
+
+        val lineGroup by element {
+            zeroOrSpread(lineElement or charBy(!"=^|>\n&<={ }*{{[-$]}|[{[ x]}]}")) * char()
+        }
+
+        val labellableLineGroup by element {
+            maybe(label) + lineGroup
+        }
+
+        val enumerableLineGroup by element {
+            char('$') + labellableLineGroup
+        }
 
         val lineElement by element {
             inlineCode or
@@ -165,13 +182,22 @@ class Markup(private val macros: MarkupPreprocessor) {
 
         /* ------------------------------ inline elements ------------------------------ */
 
-        //inlineCode
-        //inlineMath
+        val inlineCode by element {
+            char('`') * textBy("{!(=`|=\n{\n}+)}+") * char('`')
+        } with state {
+
+        }
+
+        val inlineMath by element {
+            char('{') * textBy("{!(=%}|=\n{\n}+)}+") * char('}')
+        } with state {
+
+        }
 
         val macro = element {
             inert(MarkupPreprocessor.macro)
         } with state {
-            children[1].substring   // todo substitute
+            children[1].capture   // todo substitute
         }
 
 
@@ -188,7 +214,7 @@ data class MarkupPreprocessor(
         private val directive = ruleBy(logger(MarkupPreprocessor::class.qualifiedName!!), whitespace)
         private val preProcessor = actionBy<MarkupPreprocessor>()
 
-        val identifier = newRule { charBy("a..z|A..Z|_") * zeroOrMore(charBy("a..z|A..Z|0..9|_")) }
+        val identifier = newRule { charBy("a..z|A..Z|=_") * textBy("{a..z|A..Z|0..9|=_}*") }
 
         val macro by directive {
             char('$') * (identifier or char('{') + identifier + char('}'))
