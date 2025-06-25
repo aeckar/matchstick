@@ -183,13 +183,13 @@ class Markup(private val macros: MarkupPreprocessor) {
         /* ------------------------------ inline elements ------------------------------ */
 
         val inlineCode by element {
-            char('`') * textBy("{!(=`|=\n{\n}+)}+") * char('`')
+            textBy("`{!(=`|=\n{\n}+)}+`")
         } with state {
 
         }
 
         val inlineMath by element {
-            char('{') * textBy("{!(=%}|=\n{\n}+)}+") * char('}')
+            textBy("%{{!(=%}|=\n{\n}+)}+%}")
         } with state {
 
         }

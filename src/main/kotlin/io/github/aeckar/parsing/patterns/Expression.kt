@@ -2,6 +2,10 @@ package io.github.aeckar.parsing.patterns
 
 import io.github.aeckar.parsing.ImperativeMatcherContext
 import io.github.aeckar.parsing.DeclarativeMatcherContext
+import io.github.aeckar.parsing.Parser
+import io.github.aeckar.parsing.dsl.DeclarativeMatcherFactory
+import io.github.aeckar.parsing.dsl.actionBy
+import io.github.aeckar.parsing.dsl.with
 
 /**
  * Contains data pertaining to character or text expressions.
@@ -15,4 +19,20 @@ public sealed class Expression {
     internal val charData = ArrayDeque<Char>()  // todo optimize with custom deque
 
     internal fun rootPattern() = patterns.single()
+
+    protected companion object {
+        /**
+         * Returns the next character or mandatory escape sequence.
+         *
+         * Escape sequences are prefixed by `'%'`, where the percent sign itself must be escaped as `"%%"`.
+         */
+        @JvmStatic
+        protected fun charOrEscape(factory: DeclarativeMatcherFactory, forbiddenChars: String): Parser<Expression> {
+            return factory(/* greedy = */ false) {
+                charNotIn("$forbiddenChars%") or char('%') * charIn(forbiddenChars)
+            } with (actionBy<Expression>()) {
+                state.charData += capture[choice]
+            }
+        }
+    }
 }
