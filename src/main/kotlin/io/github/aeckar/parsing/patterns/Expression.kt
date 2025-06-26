@@ -4,7 +4,7 @@ import io.github.aeckar.parsing.ImperativeMatcherContext
 import io.github.aeckar.parsing.DeclarativeMatcherContext
 import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.dsl.DeclarativeMatcherFactory
-import io.github.aeckar.parsing.dsl.actionBy
+import io.github.aeckar.parsing.dsl.actionUsing
 import io.github.aeckar.parsing.dsl.with
 
 /**
@@ -30,7 +30,7 @@ public sealed class Expression {
         protected fun charOrEscape(factory: DeclarativeMatcherFactory, forbiddenChars: String): Parser<Expression> {
             return factory(/* greedy = */ false) {
                 charNotIn("$forbiddenChars%") or char('%') * charIn(forbiddenChars)
-            } with (actionBy<Expression>()) {
+            } with (actionUsing<Expression>()) {
                 state.charData += capture[choice]
             }
         }

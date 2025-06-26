@@ -40,7 +40,7 @@ public inline fun <reified R> Parser<R>.parse(
             }
         }
         (this as RichMatcher).logger?.debug { "Transforming syntax tree of ${yellow(input.truncated().escaped())}" }
-        SyntaxTreeNode(input, matches as MutableList<Match>).transform(initialState)
+        SyntaxTreeNode(input, matches as MutableList<Match>, null).transform(initialState)
     }
 }
 

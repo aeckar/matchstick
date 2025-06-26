@@ -8,14 +8,14 @@ import kotlin.reflect.typeOf
 
 /**
  * When provided with an [MapScope], returns an action conforming to the given output type.
- * @see mapBy
+ * @see mapUsing
  */
 public typealias MapFactory<R> = (scope: MapScope<R>) -> Transform<R>
 
 /**
  * Provides a scope, evaluated at runtime, to describe how an input should be transformed according to each match
  * and when the children of a syntax tree node should be visited.
- * @see mapBy
+ * @see mapUsing
  */
 public typealias MapScope<R> = TransformContext<R>.() -> R
 
@@ -27,7 +27,7 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  *
  * Binding a map to a [Parser] using [with] overwrites the previous transform.
  * ```kotlin
- * val map = mapBy<Output>()
+ * val map = mapUsing<Output>()
  * val parser by rule {
  *     /* ... */
  * } with map { /* this: TransformContext<Output> */
@@ -35,10 +35,10 @@ public typealias MapScope<R> = TransformContext<R>.() -> R
  * }
  * ```
  * @param preOrder if true, [TransformContext.descend] is called before entering the scope
- * @see actionBy
+ * @see actionUsing
  * @see with
  */
-public inline fun <reified R> mapBy(preOrder: Boolean = false): MapFactory<R> {
+public inline fun <reified R> mapUsing(preOrder: Boolean = false): MapFactory<R> {
     if (preOrder) {
         return { scope ->
             TransformInstance(typeOf<R>()) {

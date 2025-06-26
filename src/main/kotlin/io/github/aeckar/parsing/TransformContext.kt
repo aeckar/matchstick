@@ -1,8 +1,8 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.GrammarDSL
-import io.github.aeckar.parsing.dsl.actionBy
-import io.github.aeckar.parsing.dsl.mapBy
+import io.github.aeckar.parsing.dsl.actionUsing
+import io.github.aeckar.parsing.dsl.mapUsing
 import io.github.aeckar.parsing.dsl.with
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
@@ -11,8 +11,8 @@ import io.github.aeckar.parsing.output.SyntaxTreeNode
  * Configures and returns a transform.
  *
  * Itself represents the captured substring.
- * @see mapBy
- * @see actionBy
+ * @see mapUsing
+ * @see actionUsing
  * @see RichTransform.consumeMatches
  */
 @GrammarDSL
@@ -53,6 +53,10 @@ public class TransformContext<R> @PublishedApi internal constructor(
 
     /* ------------------------------ root node properties ------------------------------ */
 
+    /** The node containing the target node as a child, if one exists. */
+    public val parent: SyntaxTreeNode? get() = root.parent
+
+    /** The substring captured by the target node. */
     public val capture: String get() = root.capture
 
     /**
@@ -60,6 +64,9 @@ public class TransformContext<R> @PublishedApi internal constructor(
      * @see Match.choice
      */
     public val choice: Int get() = root.choice
+
+    /** The index of the [capture] in the original input. */
+    public val index: Int get() = root.index
 
     /** Contains nodes for each section of the [capture] captured by any sub-matchers. */
     public val children: List<SyntaxTreeNode> get() = root.children

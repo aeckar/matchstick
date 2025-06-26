@@ -2,7 +2,7 @@ import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.invoke
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.dsl.provideDelegate
-import io.github.aeckar.parsing.dsl.ruleBy
+import io.github.aeckar.parsing.dsl.ruleUsing
 import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
@@ -13,7 +13,7 @@ class MatcherScopeTest {
     @Test
     fun acceptsSeparator() {
         val grammar = object {
-            val loggedSpreadRule = ruleBy(logger) { newRule(logger) { textBy("{!=%*/|\n}+") } }
+            val loggedSpreadRule = ruleUsing(logger) { newRule(logger) { textBy("{!=%*/|\n}+") } }
 
             val comments by loggedSpreadRule { oneOrMore(blockComment or lineComment) }
             val blockComment by loggedSpreadRule { text("/*") + text("*/") }
@@ -81,7 +81,7 @@ class MatcherScopeTest {
     @Test
     fun throwsOnIndirectMutualLeftRecursion() {
         val grammar = object {
-            private val loggedRule = ruleBy(logger)
+            private val loggedRule = ruleUsing(logger)
             val rule1: Matcher = loggedRule { rule2 * char() }
             val rule2 = loggedRule { rule1 * char() }
         }
@@ -91,7 +91,7 @@ class MatcherScopeTest {
     @Test
     fun throwsOnMutualLeftRecursion() {
         val grammar = object {
-            private val loggedRule = ruleBy(logger)
+            private val loggedRule = ruleUsing(logger)
             val rule1: Matcher = loggedRule { rule2 }
             val rule2 = loggedRule { rule1 }
         }
@@ -101,7 +101,7 @@ class MatcherScopeTest {
     @Test
     fun throwsOnNamedIndirectMutualLeftRecursion() {
         val grammar = object {
-            private val loggedRule = ruleBy(logger)
+            private val loggedRule = ruleUsing(logger)
             val rule1: Matcher by loggedRule { rule2 * char() }
             val rule2 by loggedRule { rule1 * char() }
         }
@@ -111,7 +111,7 @@ class MatcherScopeTest {
     @Test
     fun throwsOnNamedMutualLeftRecursion() {
         val grammar = object {
-            private val loggedRule = ruleBy(logger)
+            private val loggedRule = ruleUsing(logger)
             val rule1: Matcher by loggedRule { rule2 }
             val rule2 by loggedRule { rule1 }
         }
@@ -137,7 +137,7 @@ class MatcherScopeTest {
     @Test
     fun failsOnRecursionWithoutGuard() {
         val grammar = object {
-            private val loggedRule = ruleBy(logger)
+            private val loggedRule = ruleUsing(logger)
             val rule1: Matcher = loggedRule { char() * rule2 }
             val rule2 = loggedRule { char() * rule1 }
         }
@@ -147,7 +147,7 @@ class MatcherScopeTest {
     @Test
     fun failsOnNamedRecursionWithoutGuard() {
         val grammar = object {
-            private val loggedRule = ruleBy(logger)
+            private val loggedRule = ruleUsing(logger)
             val rule1: Matcher by loggedRule { char() * rule2 }
             val rule2 by loggedRule { char() * rule1 }
         }

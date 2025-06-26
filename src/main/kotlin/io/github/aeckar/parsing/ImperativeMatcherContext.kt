@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.GrammarDSL
-import io.github.aeckar.parsing.dsl.matcherBy
+import io.github.aeckar.parsing.dsl.matcherUsing
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
@@ -21,7 +21,7 @@ import io.github.oshai.kotlinlogging.KLogger
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
  * @see newMatcher
- * @see matcherBy
+ * @see matcherUsing
  * @see RichMatcher.collectMatches
  */
 @GrammarDSL

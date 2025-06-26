@@ -10,10 +10,10 @@ import io.github.oshai.kotlinlogging.KLogger
 /**
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.
  *
- * The resulting matcher is analogous to a *rule* in a context-free grammar,
+ * The resulting cacheableMatcher is analogous to a *rule* in a context-free grammar,
  * and is thus referred to as one within this context.
  * @see newRule
- * @see ruleBy
+ * @see ruleUsing
  * @see ImperativeMatcherContext
  * @see RichMatcher.collectMatches
  */
@@ -24,11 +24,14 @@ public open class DeclarativeMatcherContext internal constructor(
     lazySeparator: () -> RichMatcher
 ) {
     internal val isGreedy = greedy
-    private val singleChar = matcher(".") { yield(1) }
+    private val singleChar = cacheableMatcher(".") { yield(1) }
     protected var isMatchingEnabled: Boolean = true
     internal val separator by lazy(lazySeparator)
 
-    private inline fun matcher(descriptiveString: String, crossinline scope: ImperativeMatcherScope): RichMatcher {
+    private inline fun cacheableMatcher(
+        descriptiveString: String,
+        crossinline scope: ImperativeMatcherScope
+    ): RichMatcher {
         return ImperativeMatcher(logger, ImperativeMatcher::EMPTY, descriptiveString.escaped(), cacheable = true) {
             val isMatching = isMatchingEnabled
             isMatchingEnabled = false
@@ -42,20 +45,17 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /* ------------------------------ utility ------------------------------ */
 
-    /** Wraps this [character expression][charBy] in a negation. */
-    public operator fun String.not(): String = "!($this)"
-
     /** Maps each integer to the receiver repeated that number of times. */
     public operator fun String.times(counts: Iterable<Int>): List<String> {
         return counts.map { repeat(it) }
     }
 
-    /* ------------------------------ matcher factories ------------------------------ */
+    /* ------------------------------ cacheableMatcher factories ------------------------------ */
 
     /** Used to identify meaningless characters between captured substrings, such as whitespace. */
     public fun separator(): Matcher = separator
 
-    /** Returns an equivalent matcher whose syntax subtree does not get walked over during parsing. */
+    /** Returns an equivalent cacheableMatcher whose syntax subtree does not get walked over during parsing. */
     public fun inert(parser: Parser<*>): Matcher {
         return object : RichMatcher by parser {}
     }
@@ -64,11 +64,11 @@ public open class DeclarativeMatcherContext internal constructor(
     public fun char(): Matcher = singleChar
 
     /** Returns a rule matching the substring containing the single character. */
-    public fun char(c: Char): Matcher = matcher("'$c'") { yield(lengthOf(c)) }
+    public fun char(c: Char): Matcher = cacheableMatcher("'$c'") { yield(lengthOf(c)) }
 
     /** Returns a rule matching the given substring. */
     public fun text(substring: String): Matcher {
-        return matcher("\"$substring\"") { yield(lengthOf(substring)) }
+        return cacheableMatcher("\"$substring\"") { yield(lengthOf(substring)) }
     }
 
     /** Returns a rule matching the first acceptable character. */
@@ -76,7 +76,7 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /** Returns a rule matching the first acceptable character. */
     public fun charIn(chars: Collection<Char>): Matcher {
-        return matcher("[${chars.joinToString("")}]") { yield(lengthOfFirst(chars)) }
+        return cacheableMatcher("[${chars.joinToString("")}]") { yield(lengthOfFirst(chars)) }
     }
 
     /** Returns a rule matching any character not in the given string. */
@@ -84,7 +84,7 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /** Returns a rule matching any character not in the given collection. */
     public fun charNotIn(chars: Collection<Char>): Matcher {
-        return matcher("![${chars.joinToString("")}]") {
+        return cacheableMatcher("![${chars.joinToString("")}]") {
             if (lengthOfFirst(chars) != -1) {
                 fail()
             }
@@ -95,30 +95,35 @@ public open class DeclarativeMatcherContext internal constructor(
     /** Returns a rule matching the first acceptable substring. */
     public fun textIn(substrings: Collection<String>): Matcher {
         val logicString = substrings.joinToString(" | ", "(", ")") { "\"$it\"" }
-        return matcher(logicString) { yield(lengthOfFirst(substrings)) }
+        return cacheableMatcher(logicString) { yield(lengthOfFirst(substrings)) }
     }
 
     /**
      * Returns a rule matching a single character satisfying the pattern given by the expression.
-     *
-     * If a function may be called that has the same functionality as the given expression,
-     * that function should be called instead.
      * @throws MalformedPatternException the character expression is malformed
      * @see ImperativeMatcherContext.lengthByChar
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = matcher("`$expr`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
+
+    /**
+     * Returns a rule matching a single character not satisfying the pattern given by the expression.
+     * @throws MalformedPatternException the character expression is malformed
+     * @see ImperativeMatcherContext.lengthByChar
+     * @see CharExpression.Grammar
+     */
+    public fun charNotBy(expr: String): Matcher = cacheableMatcher("`$expr`") {
+
+        yield(lengthByChar(expr))
+    }
 
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
-     *
-     * If a function may be called that has the same functionality as the given expression,
-     * that function should be called instead.
      * @throws MalformedPatternException the text expression is malformed
      * @see ImperativeMatcherContext.lengthByText
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = matcher("``$expr``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
 
     /**
      * Returns a rule matching this one, then the [separator][match], then the other.

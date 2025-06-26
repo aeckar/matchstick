@@ -108,7 +108,7 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
  * @throws NoSuchMatchException the sequence does not match the matcher with the given separator
  */
 public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
-    return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>) }
+    return match(sequence).mapResult { SyntaxTreeNode(sequence, it as MutableList<Match>, null) }
 }
 
 /**

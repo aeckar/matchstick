@@ -6,14 +6,14 @@ import io.github.oshai.kotlinlogging.KLogger
 /**
  * Provides a scope, evaluated eagerly, to describe the behavior of a rule.
  * @see newRule
- * @see ruleBy
+ * @see ruleUsing
  */
 public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Matcher
 
 /**
  * When provided with an [DeclarativeMatcherScope], returns a declarative matcher with a specific separator.
  * @see newRule
- * @see ruleBy
+ * @see ruleUsing
  */
 public typealias DeclarativeMatcherFactory = (greedy: Boolean, scope: DeclarativeMatcherScope) -> Matcher
 
@@ -25,7 +25,7 @@ public operator fun DeclarativeMatcherFactory.invoke(scope: DeclarativeMatcherSc
  *
  * The separator block is invoked only once.
  * @see newMatcher
- * @see ruleBy
+ * @see ruleUsing
  * @see DeclarativeMatcherContext.separator
  */
 public fun newRule(
@@ -34,7 +34,7 @@ public fun newRule(
     separator: () -> Matcher,
     scope: DeclarativeMatcherScope
 ): Matcher {
-    return ruleBy(logger, separator)(greedy, scope)
+    return ruleUsing(logger, separator)(greedy, scope)
 }
 
 /**
@@ -42,7 +42,7 @@ public fun newRule(
  *
  * The separator block is invoked only once.
  * @see newMatcher
- * @see ruleBy
+ * @see ruleUsing
  * @see DeclarativeMatcherContext.separator
  */
 public fun newRule(
@@ -51,7 +51,7 @@ public fun newRule(
     separator: Matcher = ImperativeMatcher.EMPTY,
     scope: DeclarativeMatcherScope
 ): Matcher {
-    return ruleBy(logger, separator)(greedy, scope)
+    return ruleUsing(logger, separator)(greedy, scope)
 }
 
 /**
@@ -61,7 +61,7 @@ public fun newRule(
  *     /* ... */
  * }
  *
- * val rule = ruleBy { whitespace }
+ * val rule = ruleUsing { whitespace }
  * val parser by rule {
  *     /* Using 'whitespace' as separator... */
  * }
@@ -72,14 +72,14 @@ public fun newRule(
  * is descriptive of the concept whose syntax is described by the matcher.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see newRule
- * @see matcherBy
+ * @see matcherUsing
  * @see DeclarativeMatcherContext.separator
  * @see DeclarativeMatcherContext.plus
  * @see DeclarativeMatcherContext.zeroOrSpread
  * @see DeclarativeMatcherContext.oneOrSpread
  */
 @Suppress("UNCHECKED_CAST")
-public fun ruleBy(
+public fun ruleUsing(
     logger: KLogger? = null,
     separator: () -> Matcher
 ): DeclarativeMatcherFactory {
@@ -93,7 +93,7 @@ public fun ruleBy(
  *     /* ... */
  * }
  *
- * val rule = ruleBy(separator = whitespace)
+ * val rule = ruleUsing(separator = whitespace)
  * val parser by rule {
  *     /* Using 'whitespace' as separator... */
  * }
@@ -104,15 +104,15 @@ public fun ruleBy(
  * is descriptive of the concept whose syntax is described by the matcher.
  * @param separator used to identify meaningless characters between captured substrings, such as whitespace
  * @see newRule
- * @see matcherBy
+ * @see matcherUsing
  * @see DeclarativeMatcherContext.separator
  * @see DeclarativeMatcherContext.plus
  * @see DeclarativeMatcherContext.zeroOrSpread
  * @see DeclarativeMatcherContext.oneOrSpread
  */
-public fun ruleBy(
+public fun ruleUsing(
     logger: KLogger? = null,
     separator: Matcher = ImperativeMatcher.EMPTY
 ): DeclarativeMatcherFactory {
-    return ruleBy(logger) { separator }
+    return ruleUsing(logger) { separator }
 }

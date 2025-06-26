@@ -17,8 +17,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
 public class TextExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse text expressions. */
     public companion object Grammar {
-        private val action = actionBy<TextExpression>(preOrder = true)
-        private val rule = ruleBy(logger(Grammar::class.qualifiedName!!))
+        private val action = actionUsing<TextExpression>(preOrder = true)
+        private val rule = ruleUsing(logger(Grammar::class.qualifiedName!!))
         private const val END_OF_INPUT = '\u0000'
 
         private val modifiers = mapOf(

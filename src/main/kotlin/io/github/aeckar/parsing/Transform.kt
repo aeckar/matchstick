@@ -1,7 +1,7 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.actionBy
-import io.github.aeckar.parsing.dsl.mapBy
+import io.github.aeckar.parsing.dsl.actionUsing
+import io.github.aeckar.parsing.dsl.mapUsing
 import io.github.aeckar.parsing.state.Enumerated
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -18,8 +18,8 @@ public operator fun <R> Transform<R>.provideDelegate(
 /**
  * Transforms an input value according to a syntax tree in list form.
  * @param R the type of the input value
- * @see mapBy
- * @see actionBy
+ * @see mapUsing
+ * @see actionUsing
  * @see TransformContext
  * @see Matcher
  */

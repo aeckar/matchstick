@@ -9,13 +9,13 @@ import kotlin.reflect.typeOf
 /**
  * Provides a scope, evaluated at runtime, to describe how an input should be modified according to each match
  * and when the children of a syntax tree node should be visited.
- * @see actionBy
+ * @see actionUsing
  */
 public typealias ActionScope<R> = TransformContext<R>.() -> Unit
 
 /**
  * When provided with an [ActionScope], returns an action conforming to the given output type.
- * @see actionBy
+ * @see actionUsing
  */
 public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
 
@@ -27,7 +27,7 @@ public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
  *
  * Binding an action to a [Parser] using [with] overwrites the previous transform.
  * ```kotlin
- * val action = actionBy<Output>()
+ * val action = actionUsing<Output>()
  * val parser by rule {
  *     /* ... */
  * } with action { /* this: TransformContext<Output> */
@@ -35,10 +35,10 @@ public typealias ActionFactory<R> = (scope: ActionScope<R>) -> Transform<R>
  * }
  * ```
  * @param preOrder if true, [TransformContext.descend] is called before entering the scope
- * @see mapBy
+ * @see mapUsing
  * @see with
  */
-public inline fun <reified R> actionBy(preOrder: Boolean = false): ActionFactory<R> {
+public inline fun <reified R> actionUsing(preOrder: Boolean = false): ActionFactory<R> {
     if (preOrder) {
         return { scope ->
             TransformInstance(typeOf<R>()) {

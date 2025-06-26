@@ -17,8 +17,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
 public class CharExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse character expressions. */
     public companion object Grammar {
-        private val action = actionBy<CharExpression>(preOrder = true)
-        private val rule = ruleBy(logger(Grammar::class.qualifiedName!!))
+        private val action = actionUsing<CharExpression>(preOrder = true)
+        private val rule = ruleUsing(logger(Grammar::class.qualifiedName!!))
 
         private val charClasses = mapOf(
             'a' to "abcdefghijklmnopqrstuvwxyz",

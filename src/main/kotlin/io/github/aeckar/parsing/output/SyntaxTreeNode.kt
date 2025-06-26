@@ -13,10 +13,12 @@ import io.github.aeckar.parsing.state.instanceOf
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
  * @param input the original input
  * @param matches the matches made on the input, in reverse breadth-first notation
+ * @param parent the node containing this one as a child, if one exists
  */
 public class SyntaxTreeNode @PublishedApi internal constructor(
     input: CharSequence,
-    matches: MutableList<Match>
+    matches: MutableList<Match>,    // Within internal API, reuse existing list
+    public val parent: SyntaxTreeNode?
 ) : TreeNode() {
     /** The captured substring. */
     public val capture: String
@@ -29,6 +31,9 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
      * @see Match.choice
      */
     public val choice: Int
+
+    /** The index of the [capture] in the original input. */
+    public val index: Int
 
     /** Contains nodes for each section of the [capture] captured by any sub-matchers. */
     override val children: List<SyntaxTreeNode>
@@ -43,6 +48,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
         capture = if (match.begin < input.length) input.substring(match.begin, match.endExclusive) else ""
         matcher = match.matcher
         choice = match.choice
+        index = match.begin
 
         /* 2. Recursively initialize subtree */
         children = buildList {
@@ -51,7 +57,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
                     matches.removeLast()
                     continue
                 }
-                this += SyntaxTreeNode(input, matches)
+                this += SyntaxTreeNode(input, matches, this@SyntaxTreeNode)
             }
             reverse()
         }
@@ -128,7 +134,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
          * @throws NoSuchMatchException a match cannot be made to the input
          */
         public fun of(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
-            return SyntaxTreeNode(input, matches.toMutableList())
+            return SyntaxTreeNode(input, matches.toMutableList(), null)
         }
 
         private val ROOT_PLACEHOLDER = of("", listOf(Match(null, false, 0, 0, 0, 0)))
