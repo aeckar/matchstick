@@ -161,6 +161,6 @@ public class CharExpression internal constructor() : Expression() {
                     charRange
         }
 
-        internal val start = charExpr with action
+        internal val start = charExpr.parser<CharExpression>()
     }
 }

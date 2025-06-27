@@ -10,7 +10,7 @@ internal class Option(
 ) : CompoundRule(logger, context, listOf(subMatcher)), ModifierMatcher {
     override val subMatcher = subMatchers.single()
 
-    override fun resolveDescription() = "${this.subMatcher.atom().specified()}?"
+    override fun resolveDescription() = "${this.subMatcher.coreIdentity().unambiguousString()}?"
 
     override fun collectSubMatches(driver: Driver) {
         if (subMatcher.collectMatches(driver) == -1) {

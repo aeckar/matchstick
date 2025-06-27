@@ -64,7 +64,7 @@ internal sealed class CompoundRule(
         private fun linkSubMatchers(link: Link): List<*> {
             matchers += link.matcher
             return link.matcher.subMatchers.map { matcher ->
-                when (val logic = matcher.logic()) {
+                when (val logic = matcher.coreLogic()) {
                     !is CompoundRule -> null
                     !in matchers -> {
                         matchers += logic
@@ -82,8 +82,8 @@ internal sealed class CompoundRule(
                 }
                 if (index == 0 && branch is Link) {
                     if (branch.none { it is Alternation }) {
-                        throw UnrecoverableRecursionException("Recursion of ${branch.matcher.idOrDescription()} in " +
-                                "${branch.parent!!.matcher.idOrDescription()} will never terminate")
+                        throw UnrecoverableRecursionException("Recursion of ${branch.matcher.basicString()} in " +
+                                "${branch.parent!!.matcher.basicString()} will never terminate")
                     }
                 }
             }
@@ -113,6 +113,9 @@ internal sealed class CompoundRule(
     final override fun equals(other: Any?) = super.equals(other)
     final override fun hashCode() = super.hashCode()
     final override fun toString() = description
+    final override fun coreIdentity() = this
+    final override fun coreScope() = null
+    override fun coreLogic(): RichMatcher = this
 
     protected fun containsAnchor(driver: Driver, subMatcherIndex: Int): Boolean {
         return driver.anchor in anchorsPerSubMatcher[subMatcherIndex]

@@ -125,7 +125,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
         debug(logger, begin) {
             buildString {
                 append("Attempting match to ${blue(delegate)}")
-                val uniqueMatcher = delegate.logic()
+                val uniqueMatcher = delegate.coreLogic()
                 if (uniqueMatcher !== delegate) {
                     append(" ($uniqueMatcher)")
                 }

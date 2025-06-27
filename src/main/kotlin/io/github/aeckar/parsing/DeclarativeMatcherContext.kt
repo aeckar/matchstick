@@ -10,7 +10,7 @@ import io.github.oshai.kotlinlogging.KLogger
 /**
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.
  *
- * The resulting cacheableMatcher is analogous to a *rule* in a context-free grammar,
+ * The resulting matcher is analogous to a *rule* in a context-free grammar,
  * and is thus referred to as one within this context.
  * @see newRule
  * @see ruleUsing
@@ -50,14 +50,14 @@ public open class DeclarativeMatcherContext internal constructor(
         return counts.map { repeat(it) }
     }
 
-    /* ------------------------------ cacheableMatcher factories ------------------------------ */
+    /* ------------------------------ matcher factories ------------------------------ */
 
     /** Used to identify meaningless characters between captured substrings, such as whitespace. */
     public fun separator(): Matcher = separator
 
-    /** Returns an equivalent cacheableMatcher whose syntax subtree does not get walked over during parsing. */
-    public fun inert(parser: Parser<*>): Matcher {
-        return object : RichMatcher by parser {}
+    /** Returns an equivalent matcher whose syntax subtree does not get transformed during parsing. */
+    public fun inert(matcher: Matcher): Matcher {
+        return InertMatcher(matcher as RichMatcher)
     }
 
     /** Returns a rule matching the next character, including the end-of-input character. */
@@ -113,8 +113,11 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see CharExpression.Grammar
      */
     public fun charNotBy(expr: String): Matcher = cacheableMatcher("`$expr`") {
-
-        yield(lengthByChar(expr))
+        val length = lengthByChar(expr)
+        if (length != -1) {
+            fail()
+        }
+        yield(1)
     }
 
     /**

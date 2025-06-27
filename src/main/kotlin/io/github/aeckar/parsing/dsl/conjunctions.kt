@@ -5,6 +5,7 @@ import io.github.aeckar.parsing.state.Enumerated
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
+
 /** Returns an equivalent parser whose [ID][Enumerated.id] is the name of the property. */
 public operator fun <T : Matcher> T.provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, T> {
     return ReadOnlyProperty { _, _ -> named(property.name) as T }
@@ -22,19 +23,8 @@ public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
  * modifications of its state by sub-matchers.
  */
 @JvmName("withAction")
-public infix fun <R> Matcher.with(action: ActionFactory<R>): Parser<R> {
-    return this with action {}
-}
-
-/**
- * Returns a parser with the given matcher and a mapping that returns the previous state.
- *
- * Declaring a matcher as a parser [exposes][TransformContext.resultsOf]
- * modifications of its state by sub-matchers.
- */
-@JvmName("withMap")
-public infix fun <R> Matcher.with(map: MapFactory<R>): Parser<R> {
-    return this with map { state }
+public inline fun <reified R> Matcher.parser(): Parser<R> {
+    return this with (actionUsing<R>()) {}
 }
 
 /** Returns an equivalent parser whose [ID][Enumerated.id] is as given. */

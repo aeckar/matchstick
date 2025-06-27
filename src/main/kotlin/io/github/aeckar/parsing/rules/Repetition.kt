@@ -16,7 +16,7 @@ internal class Repetition(
     override fun resolveDescription(): String {
         val modifier = "~".takeIf { isContiguous }.orEmpty()
         val symbol = if (minMatchCount == 0) "*" else "+"
-        return "${this.subMatcher.atom().specified()}$modifier$symbol"
+        return "${this.subMatcher.coreIdentity().unambiguousString()}$modifier$symbol"
     }
 
     override fun collectSubMatches(driver: Driver) {

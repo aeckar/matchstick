@@ -15,14 +15,14 @@ internal class Alternation(
 ), AggregateMatcher {
     override fun resolveDescription(): String {
         return subMatchers.joinToString(" | ") {
-            val subMatcher = it.atom()
-            if (subMatcher is Concatenation) subMatcher.description else subMatcher.specified()
+            val subMatcher = it.coreIdentity()
+            if (subMatcher is Concatenation) subMatcher.description else subMatcher.unambiguousString()
         }
     }
 
     override fun collectSubMatches(driver: Driver) {
         for ((index, matcher) in subMatchers.withIndex()) {  // Loops at least once
-            if (matcher.logic() in driver.localMatchers()) {
+            if (matcher.coreLogic() in driver.localMatchers()) {
                 driver.addDependency(matcher)
                 driver.debug(logger) { "Left recursion found for $matcher" }
                 continue

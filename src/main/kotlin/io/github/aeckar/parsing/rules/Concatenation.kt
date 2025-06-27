@@ -16,7 +16,7 @@ internal class Concatenation(
 ), AggregateMatcher, SequenceMatcher {
     override fun resolveDescription(): String {
         val symbol = if (isContiguous) "&" else "~&"
-        return subMatchers.joinToString(" $symbol ") { it.atom().specified() }
+        return subMatchers.joinToString(" $symbol ") { it.coreIdentity().unambiguousString() }
     }
 
     override fun collectSubMatches(driver: Driver) {

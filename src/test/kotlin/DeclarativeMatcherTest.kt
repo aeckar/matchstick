@@ -9,7 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class MatcherScopeTest {
+class DeclarativeMatcherTest {
     @Test
     fun acceptsSeparator() {
         val grammar = object {
@@ -155,6 +155,6 @@ class MatcherScopeTest {
     }
 
     private companion object {
-        val logger = logger(MatcherScopeTest::class.qualifiedName!!)
+        val logger = logger(DeclarativeMatcherTest::class.qualifiedName!!)
     }
 }

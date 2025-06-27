@@ -7,7 +7,6 @@ import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 import io.github.aeckar.parsing.rules.CompoundRule
-import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Enumerated
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
 import io.github.aeckar.parsing.state.Result
@@ -29,50 +28,21 @@ internal inline fun <reified T: CompoundRule> Matcher.group(isContiguous: Boolea
     return subMatchers
 }
 
-/**
- * Returns the string representation of this matcher as a sub-rule.
- *
- * As such, this function parenthesizes this rule if it comprises multiple other rules.
- */
-internal fun RichMatcher.specified(): String {
+/** Returns the string representation of this matcher, parenthesized if it comprises multiple other rules. */
+internal fun RichMatcher.unambiguousString(): String {
     if (this is AggregateMatcher) {
         return "($this)"
     }
     return toString()   // Descriptive string or ID
 }
 
-/**
- * Returns the [ID][Enumerated.id] or [descriptive string][ImperativeMatcher.descriptiveString],
- * if one exists, of this matcher.
- *
- * This function should be used when information about a matcher is requested,
- * but it is unsure whether the matcher is infinitely recursive.
- */
-internal fun RichMatcher.idOrDescription(): String {
+/** Returns a string representation of this matcher without calling [toString] on other matchers. */
+internal fun RichMatcher.basicString(): String {
     return when {
         id !== UNKNOWN_ID -> id
-        this is ImperativeMatcher -> toString()
-        else -> "<unknown>"
+        this is ImperativeMatcher -> toString() // Descriptive string or unknown ID
+        else -> UNKNOWN_ID
     }
-}
-
-/** Returns the most fundamental [identity][RichMatcher.identity] of this matcher. */
-internal fun RichMatcher.atom(): RichMatcher {
-    return atom ?: (if (this is DeclarativeMatcher) identity.atom() else this).also { atom = it }
-}
-
-/**
- * Returns the matcher that this one delegates its matching logic to, and so forth.
- *
- * Matchers are equal to each other according to the value returned by this function.
- */
-internal fun RichMatcher.logic(): RichMatcher {
-    return logic ?: (when (this) {
-        is MatcherProperty -> value.logic()
-        is DeclarativeMatcher -> identity.logic()
-        is IdentityRule, is ParserInstance<*> -> subMatcher.logic()
-        else -> this
-    }).also { logic = it }
 }
 
 internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
@@ -152,10 +122,6 @@ internal interface RichMatcher : Matcher {
     val isCacheable: Boolean
     val logger: KLogger?
 
-    /* Cached properties */
-    var logic: RichMatcher?
-    var atom: RichMatcher?
-
     /**
      * The identity assigned to this matcher during debugging.
      *
@@ -170,6 +136,27 @@ internal interface RichMatcher : Matcher {
      * of the remaining input, or -1 if one was not found.
      */
     fun collectMatches(driver: Driver): Int
+
+    /** Returns the most fundamental [identity] of this matcher. */
+    fun coreIdentity(): RichMatcher
+
+    /**
+     * Returns the matcher that this one delegates its matching logic to, and so forth.
+     *
+     * Matchers are equal to each other according to the value returned by this function.\
+     */
+    fun coreLogic(): RichMatcher
+
+    /**
+     * Returns the most fundamental [declarative][DeclarativeMatcher] or [imperative][ImperativeMatcher]
+     * matcher this one delegates its matching logic to.
+     *
+     * Returns null if a [CompoundRule] is found.
+     *
+     * The matcher returned by this function is provided its own unique scope,
+     * which holds its own value of [TransformContext.resultsOf].
+     */
+    fun coreScope(): RichMatcher?
 }
 
 internal interface ModifierMatcher : RichMatcher {

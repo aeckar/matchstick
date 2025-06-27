@@ -8,13 +8,12 @@ import io.github.oshai.kotlinlogging.KLogger
 
 internal abstract class MatcherInstance() : RichMatcher {
     override val identity: RichMatcher get() = this
-    override var logic: RichMatcher? = null
-    override var atom: RichMatcher? = null
 
     override fun hashCode() = id.hashCode()
+    override fun coreIdentity(): RichMatcher = this
 
     override fun equals(other: Any?): Boolean {
-        return this === other || other is RichMatcher && other.logic() === logic()
+        return this === other || other is RichMatcher && other.coreLogic() === coreLogic()
     }
 }
 
@@ -29,6 +28,8 @@ internal class ImperativeMatcher(
     override val separator by lazy(lazySeparator)
 
     override fun toString() = descriptiveString ?: UNKNOWN_ID
+    override fun coreLogic() = this
+    override fun coreScope() = this
 
     override fun collectMatches(driver: Driver): Int {
         return driver.captureSubstring(this, scope, ImperativeMatcherContext(logger, driver, ::separator))
@@ -50,6 +51,8 @@ internal class DeclarativeMatcher(
     override val isCacheable get() = true
     private var isInitializingIdentity = false
     private var matcher: RichMatcher? = null
+    private val lazyCoreIdentity by lazy(identity::coreIdentity)
+    private val lazyCoreLogic by lazy(identity::coreLogic)
 
     override val identity: RichMatcher get() {
         matcher?.let { return it }
@@ -69,6 +72,9 @@ internal class DeclarativeMatcher(
 
     override fun toString() = identity.toString()
     override fun collectMatches(driver: Driver) = identity.collectMatches(driver)
+    override fun coreIdentity() = lazyCoreIdentity
+    override fun coreLogic() = lazyCoreLogic
+    override fun coreScope() = this
 
     private fun checkUnresolvableRecursion(matcher: RichMatcher) {
         when (matcher) {
@@ -78,16 +84,27 @@ internal class DeclarativeMatcher(
     }
 }
 
+/**
+ * A matcher whose syntax subtree does not get transformed during parsing.
+ * @see DeclarativeMatcherContext.inert
+ */
+internal class InertMatcher(
+    override val subMatcher: RichMatcher
+) : MatcherInstance(), ModifierMatcher, RichMatcher by subMatcher {
+    override val identity = subMatcher.identity
+
+    override fun coreIdentity() = subMatcher.coreIdentity()
+}
+
 internal class ParserInstance<R>(
     override val subMatcher: RichMatcher,
     transform: RichTransform<R>
 ) : MatcherInstance(), RichParser<R>, RichMatcher by subMatcher, RichTransform<R> by transform, ModifierMatcher {
     override val id get() = subMatcher.id
     override val identity get() = subMatcher.identity
-    override var logic by subMatcher::logic
-    override var atom by subMatcher::atom
 
     override fun toString() = subMatcher.toString()
+    override fun coreIdentity() = this  // Resolve ambiguity
 
     override fun collectMatches(driver: Driver): Int {
         driver.root = this

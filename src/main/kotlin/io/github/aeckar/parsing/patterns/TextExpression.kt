@@ -128,6 +128,6 @@ public class TextExpression internal constructor() : Expression() {
                     captureGroup
         }
 
-        internal val start = textExpr with action
+        internal val start = textExpr.parser<TextExpression>()
     }
 }

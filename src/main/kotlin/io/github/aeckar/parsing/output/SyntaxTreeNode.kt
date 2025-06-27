@@ -103,16 +103,19 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     internal fun <R> transform(outerContext: TransformContext<R>): R {
         val state = outerContext.state
         if (matcher !is Transform<*>) {
-            children.forEach { it.transform(outerContext) }  // Invoke child transforms directly
+            if (matcher !is InertMatcher) {
+                children.forEach { it.transform(outerContext) }  // Invoke child transforms directly
+            }
             return state
         }
-        matcher as RichTransform<R>
+        matcher as RichParser<R>
         return if (state instanceOf matcher.stateType) {
             matcher.consumeMatches(TransformContext(this, state))   // Invokes this function recursively
         } else {
             val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.stateType) as R)
             val result = matcher.consumeMatches(subParserContext) // Visit sub-transform
-            if (matcher.id === UNKNOWN_ID) {
+            if (matcher.id === UNKNOWN_ID && matcher.coreScope() == null) {
+                // Scope check ensures results are only hoisted from the same scope
                 subParserContext.resultsBySubParser.forEach { (key, value) -> outerContext.addResult(key, value) }
             } else {
                 outerContext.addResult(matcher, result)
