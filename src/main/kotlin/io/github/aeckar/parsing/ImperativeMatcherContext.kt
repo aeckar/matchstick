@@ -160,13 +160,13 @@ public class ImperativeMatcherContext internal constructor(
             return
         }
         val tape = driver.tape
-        if (tape.offset + length > tape.input.length) {
+        if (tape.offset + length > tape.input.length + 1) { // Accept end-of-input
             throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.input.length}" }
         }
         tape.offset += length
     }
 
-    /* ------------------------------ misc. ------------------------------ */
+    /* ------------------------------ miscellaneous ------------------------------ */
 
     /** Returns an iterator returning the remaining characters in the input, regardless of the current offset. */
     public fun remaining(): CharIterator = driver.tape.remaining()

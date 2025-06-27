@@ -78,6 +78,13 @@ public class Result<R> @PublishedApi internal constructor(
         return Result(failures, transform(result()))
     }
 
+    override fun toString(): String {
+        if (isSuccess()) {
+            return "Success (result = ${result()})"
+        }
+        return "Failure (failures = $failures)"
+    }
+
     private companion object {
         val RESULT_PLACEHOLDER = Any()
     }

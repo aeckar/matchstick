@@ -11,6 +11,12 @@ import kotlin.test.assertTrue
 
 class DeclarativeMatcherTest {
     @Test
+    fun acceptsEmptyString() {
+        val singleChar by newRule { char() }
+        println(singleChar.treeify(""))
+    }
+
+    @Test
     fun acceptsSeparator() {
         val grammar = object {
             val loggedSpreadRule = ruleUsing(logger) { newRule(logger) { textBy("{!=%*/|\n}+") } }

@@ -1,5 +1,6 @@
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.Parser
+import io.github.aeckar.parsing.TransformContext
 import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.parse
 import io.github.aeckar.parsing.treeify
@@ -25,7 +26,8 @@ class Markup(private val preprocessor: MarkupPreprocessor) {
     }
 
     companion object Grammar {
-        private val markupRule = ruleUsing(separator = whitespace)
+        private val logger = logger(Markup::class.qualifiedName!!)
+        private val markupRule = ruleUsing(logger, whitespace)
         private val markupAction = actionUsing<Markup>()
 
         private fun TransformContext<Markup>.descendWithHtmlTag(tagName: String, vararg classList: String) {
@@ -133,7 +135,7 @@ class Markup(private val preprocessor: MarkupPreprocessor) {
             char('$') + labellableLineGroup
         }
 
-        val lineElement by markupRule {
+        val lineElement: Matcher by markupRule {
             inlineCode or
                     inlineMath or
                     bold or
@@ -193,12 +195,43 @@ class Markup(private val preprocessor: MarkupPreprocessor) {
 
         }
 
-        val macro = markupRule {
+        val macro by markupRule {
             inert(MarkupPreprocessor.macro)
         } with markupAction {
-            val
-            children[1].capture   // todo substitute
+//            val
+//            children[1].capture   // todo substitute
         }
+
+        val linkBody = markupRule {
+            nearestOf(line, lineGroup) * text("](") + (macro or oneOrMore(charBy("![)\n^]"))) + char(')')
+        }
+
+        val link = markupRule {
+            char('[') * linkBody
+        } with markupAction {
+
+        }
+
+        val embed = markupRule {
+            text("![") * linkBody
+        } with markupAction {
+            /*
+                            todo for each type of embed
+
+                            - image file
+                            - video file
+                            - youtube video
+                            - html
+
+                            - pdf/word/powerpoint
+                            */
+        }
+
+        val footnoteAnchor by markupRule {
+
+        }
+
+        // footnote
     }
 }
 
@@ -254,12 +287,12 @@ class MarkupIntegrationTest {
             # This is my markup
             ${'$'}{"subtitle.txt"}
             ${'$'}{"macros.dt"}
-           
+
             ${'$'}macro1 = https://www.en.wikipedia.org/
             ${'$'}macro2 = ``c
                 int n = 0;
             ``
-            
+
             - This is an unordered list...
                 $ With an ordered sublist
                 $ This macro is ${'$'}implicit

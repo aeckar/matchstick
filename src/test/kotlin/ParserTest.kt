@@ -2,17 +2,17 @@ import kotlin.test.Test
 
 class ParserTest {
     @Test
-    fun correctnestedchildren() {
+    fun nestedChildrenAreInOrder() {
 
     }
 
     @Test
-    fun hoist() {
+    fun hoistsResultsFromSameScope() {
 
     }
 
     @Test
-    fun donothoistfromdifferentscope() {
+    fun doesNotHoistResultsFromOtherScopes() {
 
     }
 }

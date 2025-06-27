@@ -29,4 +29,6 @@ public class MatchFailure internal constructor(
 
     /** Returns the [matcher]. */
     public operator fun component3(): Matcher = matcher
+
+    override fun toString(): String = "{$cause,$offset,$matcher}"
 }
