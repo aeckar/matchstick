@@ -11,7 +11,17 @@ import kotlin.test.assertTrue
 
 class DeclarativeMatcherTest {
     @Test
-    fun acceptsEmptyString() {
+    fun guardsRecursionOfEmptyRepetitionArgument() {    //todo impl
+
+    }
+
+    @Test
+    fun acceptsEmptyTextExpression() {  //todo impl
+
+    }
+
+    @Test
+    fun acceptsEmptyString() {  // todo elaborate
         val singleChar by newRule { char() }
         println(singleChar.treeify(""))
     }

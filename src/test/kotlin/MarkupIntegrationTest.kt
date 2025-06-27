@@ -123,6 +123,9 @@ class Markup(private val preprocessor: MarkupPreprocessor) {
             char('$') + labellableLine
         }
 
+        // words will stop for first chars of all other line elements
+        // add non-recursive rules
+
         val lineGroup by markupRule {
             zeroOrSpread(lineElement or charNotBy("=^|>\n&<={ }*{{[-$]}|[{[ x]}]}")) * char()
         }
@@ -146,13 +149,21 @@ class Markup(private val preprocessor: MarkupPreprocessor) {
                     link or
                     embed or
                     macro or
-                    footnoteAnchor
+                    footnoteAnchor or
+                    word
+        }
+        // if, for example, bold is currently being matched and you have a string like "**hello**", how to recognize last "**" as not a word?
+        // maybe...
+        val word by markupRule {
+            char() * textBy("{![$%[*|`%{]}*")
+        } with markupAction {
+
         }
 
         /* ------------------------------ inline formatting ------------------------------ */
 
         val bold by markupRule {
-            text("**") * nearestOf(line, lineGroup) * text("**")
+            text("**") * nearestOf(line, lineGroup) * hoist(text("**"))
         } with markupAction {
             descendWithHtmlTag("strong", "dt-bold")
         }
