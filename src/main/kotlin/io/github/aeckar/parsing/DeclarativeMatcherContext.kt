@@ -56,8 +56,8 @@ public open class DeclarativeMatcherContext internal constructor(
     public fun separator(): Matcher = separator
 
     /** Returns an equivalent matcher whose syntax subtree does not get transformed during parsing. */
-    public fun inert(matcher: Matcher): Matcher {
-        return InertMatcher(matcher as RichMatcher)
+    public fun stump(matcher: Matcher): Matcher {
+        return StumpMatcher(matcher as RichMatcher)
     }
 
     /** Returns a rule matching the next character, including the end-of-input character. */
@@ -101,19 +101,19 @@ public open class DeclarativeMatcherContext internal constructor(
     /**
      * Returns a rule matching a single character satisfying the pattern given by the expression.
      * @throws MalformedPatternException the character expression is malformed
-     * @see ImperativeMatcherContext.lengthByChar
+     * @see ImperativeMatcherContext.lengthOfCharBy
      * @see CharExpression.Grammar
      */
-    public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthByChar(expr)) }
+    public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthOfCharBy(expr)) }
 
     /**
      * Returns a rule matching a single character not satisfying the pattern given by the expression.
      * @throws MalformedPatternException the character expression is malformed
-     * @see ImperativeMatcherContext.lengthByChar
+     * @see ImperativeMatcherContext.lengthOfCharBy
      * @see CharExpression.Grammar
      */
     public fun charNotBy(expr: String): Matcher = cacheableMatcher("`$expr`") {
-        val length = lengthByChar(expr)
+        val length = lengthOfCharBy(expr)
         if (length != -1) {
             fail()
         }
@@ -123,10 +123,10 @@ public open class DeclarativeMatcherContext internal constructor(
     /**
      * Returns a rule matching text satisfying the pattern given by the expression.
      * @throws MalformedPatternException the text expression is malformed
-     * @see ImperativeMatcherContext.lengthByText
+     * @see ImperativeMatcherContext.lengthOfTextBy
      * @see TextExpression.Grammar
      */
-    public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthByText(expr)) }
+    public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthOfTextBy(expr)) }
 
     /**
      * Returns a rule matching this one, then the [separator][match], then the other.

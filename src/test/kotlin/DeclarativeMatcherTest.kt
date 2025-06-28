@@ -1,5 +1,4 @@
 import io.github.aeckar.parsing.*
-import io.github.aeckar.parsing.dsl.invoke
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.ruleUsing

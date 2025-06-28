@@ -10,16 +10,16 @@ import io.github.oshai.kotlinlogging.KLogger
 internal class ProximityRule(
     logger: KLogger?,
     context: DeclarativeMatcherContext,
-    private val candidates: List<RichMatcher>
-) : CompoundRule(logger, context, emptyList()) {
-    override fun resolveDescription(): String = candidates.joinToString(prefix = "[", postfix = "]")
+    subMatchers: List<RichMatcher>
+) : CompoundRule(logger, context, subMatchers) {
+    override fun resolveDescription(): String = subMatchers.joinToString(prefix = "[", postfix = "]")
 
     override fun collectSubMatches(driver: Driver) {
         if (driver.anchor != null) {
             return
         }
-        val nearestMatcher = candidates.minBy { candidate ->
-            val distance = driver.matchers().asReversed().indexOf(candidate)
+        val nearestMatcher = subMatchers.minBy { matcher ->
+            val distance = driver.matchers().asReversed().indexOf(matcher)
             if (distance == -1) Int.MAX_VALUE else distance
         }
         if (nearestMatcher !in driver.matchers()) {

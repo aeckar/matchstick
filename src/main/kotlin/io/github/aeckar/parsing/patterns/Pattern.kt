@@ -3,6 +3,7 @@ package io.github.aeckar.parsing.patterns
 import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.state.escaped
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.experimental.ExperimentalTypeInference
 
 // todo fail on end-of-input, instead of throw
 
@@ -10,30 +11,44 @@ import java.util.concurrent.ConcurrentHashMap
  * When matched to a character in a sequence, returns
  * the length of the subsequence satisfying some condition.
  */
-public typealias Pattern = (CharSequence, Int) -> Int
+public fun interface Pattern {
+    /** Returns the length of the subsequence satisfying some condition. */
+    public fun accept(sequence: CharSequence, index: Int): Int
+}
 
-private val charPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
-    .apply { put("") { _, _ -> 0 } }
+public interface RichPattern : Pattern {
+    public val description: String
+}
 
-private val textPatternCache: MutableMap<String, Pattern> = ConcurrentHashMap<String, Pattern>()
-    .apply { put("") { _, _ -> 0 } }
+private val charPatternCache: MutableMap<String, RichPattern> = ConcurrentHashMap<String, RichPattern>().apply {
+    this[""] = newPattern("") { _, _ -> 0 }
+}
+
+private val textPatternCache: MutableMap<String, RichPattern> = ConcurrentHashMap<String, RichPattern>().apply {
+    this[""] = newPattern("") { _, _ -> 0 }
+}
 
 /* ------------------------------ factories ------------------------------ */
 
-internal inline fun singlePattern(
+@JvmName("newConditionalPattern")
+@OptIn(ExperimentalTypeInference::class)
+@OverloadResolutionByLambdaReturnType
+internal inline fun newPattern(
     descriptiveString: String,
     crossinline predicate: (sequence: CharSequence, index: Int) -> Boolean
-): Pattern {
-    return pattern(descriptiveString) { s, i -> if (predicate(s, i)) 1 else -1 }
+): RichPattern {
+    return newPattern(descriptiveString) { s, i -> if (predicate(s, i)) 1 else -1 }
 }
 
-internal fun pattern(
-    descriptiveString: String,
-    pattern: (sequence: CharSequence, index: Int) -> Int
-): Pattern {
-    return object : Pattern by pattern {
-        val stringRep by lazy { descriptiveString.escaped() }
+internal fun newPattern(
+    description: String,
+    measure: (CharSequence, Int) -> Int
+): RichPattern {
+    return object : RichPattern {
+        override val description get() = description
+        val stringRep by lazy(description::escaped)
 
+        override fun accept(sequence: CharSequence, index: Int) = measure(sequence, index)
         override fun toString(): String = stringRep
     }
 }

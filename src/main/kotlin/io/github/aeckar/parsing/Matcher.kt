@@ -21,7 +21,7 @@ import io.github.oshai.kotlinlogging.KLogger
  *
  * Operates over regular [matchers][Matcher] to be later typecast by [CompoundRule].
  */
-internal inline fun <reified T: CompoundRule> Matcher.group(isContiguous: Boolean = false): List<Matcher> {
+internal inline fun <reified T: CompoundRule> Matcher.groupBy(isContiguous: Boolean = false): List<Matcher> {
     if (this !is T || this is SequenceMatcher && this.isContiguous != isContiguous) {
         return listOf(this)
     }

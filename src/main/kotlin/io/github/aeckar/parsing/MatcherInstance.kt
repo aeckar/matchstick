@@ -20,14 +20,14 @@ internal abstract class MatcherInstance() : RichMatcher {
 internal class ImperativeMatcher(
     override val logger: KLogger? = null,
     lazySeparator: () -> RichMatcher = ::EMPTY,
-    private val descriptiveString: String? = null,
+    private val description: String? = null,
     cacheable: Boolean = false,
     private val scope: ImperativeMatcherScope
 ) : MatcherInstance() {
     override val isCacheable = cacheable
     override val separator by lazy(lazySeparator)
 
-    override fun toString() = descriptiveString ?: UNKNOWN_ID
+    override fun toString() = description ?: UNKNOWN_ID
     override fun coreLogic() = this
     override fun coreScope() = this
 
@@ -43,16 +43,18 @@ internal class ImperativeMatcher(
 internal class DeclarativeMatcher(
     override val logger: KLogger?,
     greedy: Boolean,
+    nonRecursive: Boolean,
     lazySeparator: () -> RichMatcher = ImperativeMatcher::EMPTY,
     private val scope: DeclarativeMatcherScope
 ) : MatcherInstance() {
     val context = DeclarativeMatcherContext(logger, greedy, lazySeparator)
+    val isNonRecursive = nonRecursive
     override val separator get() = identity.separator
     override val isCacheable get() = true
     private var isInitializingIdentity = false
     private var matcher: RichMatcher? = null
-    private val lazyCoreIdentity by lazy(identity::coreIdentity)
-    private val lazyCoreLogic by lazy(identity::coreLogic)
+    private val lazyCoreIdentity by lazy { identity.coreIdentity() }
+    private val lazyCoreLogic by lazy { identity.coreLogic() }
 
     override val identity: RichMatcher get() {
         matcher?.let { return it }
@@ -71,10 +73,16 @@ internal class DeclarativeMatcher(
     }
 
     override fun toString() = identity.toString()
-    override fun collectMatches(driver: Driver) = identity.collectMatches(driver)
     override fun coreIdentity() = lazyCoreIdentity
     override fun coreLogic() = lazyCoreLogic
     override fun coreScope() = this
+
+    override fun collectMatches(driver: Driver): Int {
+        if (isNonRecursive) {
+            driver.discardNextRecursion()
+        }
+        return identity.collectMatches(driver)
+    }
 
     private fun checkUnresolvableRecursion(matcher: RichMatcher) {
         when (matcher) {
@@ -86,9 +94,9 @@ internal class DeclarativeMatcher(
 
 /**
  * A matcher whose syntax subtree does not get transformed during parsing.
- * @see DeclarativeMatcherContext.inert
+ * @see DeclarativeMatcherContext.stump
  */
-internal class InertMatcher(
+internal class StumpMatcher(
     override val subMatcher: RichMatcher
 ) : MatcherInstance(), ModifierMatcher, RichMatcher by subMatcher {
     override val identity = subMatcher.identity

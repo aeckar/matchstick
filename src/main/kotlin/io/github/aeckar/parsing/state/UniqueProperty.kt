@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing.state
 
-import io.github.aeckar.parsing.provideDelegate
+import io.github.aeckar.parsing.dsl.provideDelegate
 
 /**
  * An object named using delegation.

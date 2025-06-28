@@ -23,7 +23,7 @@ public infix fun <R> Matcher.with(transform: Transform<R>): Parser<R> {
  * modifications of its state by sub-matchers.
  */
 @JvmName("withAction")
-public inline fun <reified R> Matcher.parser(): Parser<R> {
+public inline fun <reified R> Matcher.returns(): Parser<R> {
     return this with (actionUsing<R>()) {}
 }
 

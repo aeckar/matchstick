@@ -12,62 +12,62 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
 /**
  * Contains data pertaining to text expressions.
  * @see DeclarativeMatcherContext.textBy
- * @see ImperativeMatcherContext.lengthByText
+ * @see ImperativeMatcherContext.lengthOfTextBy
  */
 public class TextExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse text expressions. */
     public companion object Grammar {
-        private val action = actionUsing<TextExpression>(preOrder = true)
         private val rule = ruleUsing(logger(Grammar::class.qualifiedName!!))
+        private val action = actionUsing<TextExpression>(preOrder = true)
         private const val END_OF_INPUT = '\u0000'
 
         private val modifiers = mapOf(
-            '+' to { subPattern: Pattern ->
-                pattern("{$subPattern}+") { s, i ->
+            '+' to { subPattern: RichPattern ->
+                newPattern("{${subPattern.description}}+") { s, i ->
                     var length = 0
                     var matchCount = 0
-                    generateSequence { subPattern(s, i + length) }
+                    generateSequence { subPattern.accept(s, i + length) }
                         .onEach { if (it != -1) ++matchCount }
                         .takeWhile { i + length < s.length && it != -1 }
                         .forEach { length += it }
                     if (matchCount == 0) -1 else length
                 }
             },
-            '*' to { subPattern: Pattern ->
-                pattern("{$subPattern}*") { s, i ->
+            '*' to { subPattern: RichPattern ->
+                newPattern("{${subPattern.description}}*") { s, i ->
                     var length = 0
-                    generateSequence { subPattern(s, i + length) }
+                    generateSequence { subPattern.accept(s, i + length) }
                         .takeWhile { i + length < s.length && it != -1 }
                         .forEach { length += it }
                     length
                 }
             },
-            '?' to { subPattern: Pattern ->
-                pattern("{$subPattern}?") { s, i -> subPattern(s, i).coerceAtLeast(0) }
+            '?' to { subPattern: RichPattern ->
+                newPattern("{${subPattern.description}}?") { s, i -> subPattern.accept(s, i).coerceAtLeast(0) }
             }
         )
 
-        private val charExpr by rule {
+        private val embeddedCharExpr by rule {
             CharExpression.start
         } with action {
             val charPattern = resultsOf(CharExpression.start).single().rootPattern()
-            state.patterns += pattern(charPattern.toString()) { s, i ->
-                if (charPattern(s, i) == 1) 1 else -1
+            state.patterns += newPattern(charPattern.description) { s, i ->
+                if (charPattern.accept(s, i) == 1) 1 else -1
             }
         }
 
         public val captureGroup: Matcher by rule {
-            char('{') * (charExpr or textExpr) * char('}') * maybe(charIn("+*?"))
+            char('{') * (embeddedCharExpr or textExpr) * char('}') * maybe(charIn("+*?"))
         } with action {
-            val pattern = state.patterns.removeLast()
+            val subPattern = state.patterns.removeLast()
             state.patterns += when (children[3].choice) {
-                0 -> modifiers.getValue(children[3].capture.single())(pattern)
-                else /* -1 */ -> pattern("{$pattern}", pattern)
+                0 -> modifiers.getValue(children[3].capture.single())(subPattern)
+                else /* -1 */ -> newPattern("{${subPattern.description}}", subPattern::accept)
             }
         }
 
         public val substring: Matcher by rule {
-            oneOrMore(char('^') or charOrEscape(rule, "^|{}+*?"))
+            oneOrMore(char('^') or charOrEscape(rule, "^|{}+*?;"))
         } with action {
             val expansion = children.joinToString("") { child ->
                 if (child.choice == 0) END_OF_INPUT.toString() else state.charData.removeFirst().toString()
@@ -77,7 +77,7 @@ public class TextExpression internal constructor() : Expression() {
             } else {
                 expansion.length
             }
-            state.patterns += pattern(expansion) { s, i ->
+            state.patterns += newPattern(expansion) { s, i ->
                 val success = expansion.withIndex().all { (ei, c) ->
                     if (c == END_OF_INPUT) i >= s.length else i + ei < s.length && s[i + ei] == c
                 }
@@ -89,11 +89,11 @@ public class TextExpression internal constructor() : Expression() {
             oneOrMore(substring or captureGroup)
         } with action {
             val patterns = state.patterns.removeLast(children.size)
-            state.patterns += pattern(patterns.joinToString("")) { s, i ->
+            state.patterns += newPattern(patterns.joinToString("") { it.description }) { s, i ->
                 var offset = 0
                 var matchCount = 0
                 for (pattern in patterns) {
-                    val result = pattern(s, i + offset)
+                    val result = pattern.accept(s, i + offset)
                     if (result != -1) {
                         ++matchCount
                     }
@@ -110,11 +110,11 @@ public class TextExpression internal constructor() : Expression() {
             sequence * char('|') * sequence * zeroOrMore(char('|') * sequence)
         } with action {
             val patterns = state.patterns.removeLast(2 + children[3].children.size)
-            state.patterns += pattern(patterns.joinToString("|")) { s, i ->
+            state.patterns += newPattern(patterns.joinToString("|") { it.description }) { s, i ->
                 patterns.forEach { pattern ->
-                    val result = pattern(s, i)
+                    val result = pattern.accept(s, i)
                     if (result != -1) {
-                        return@pattern result
+                        return@newPattern result
                     }
                 }
                 -1
@@ -128,6 +128,6 @@ public class TextExpression internal constructor() : Expression() {
                     captureGroup
         }
 
-        internal val start = textExpr.parser<TextExpression>()
+        internal val start = textExpr.returns<TextExpression>()
     }
 }

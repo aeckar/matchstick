@@ -14,7 +14,7 @@ internal class Repetition(
     private val minMatchCount = if (acceptsZero) 0 else 1
 
     override fun resolveDescription(): String {
-        val modifier = "~".takeIf { isContiguous }.orEmpty()
+        val modifier = if (isContiguous) "~" else ""
         val symbol = if (minMatchCount == 0) "*" else "+"
         return "${this.subMatcher.coreIdentity().unambiguousString()}$modifier$symbol"
     }

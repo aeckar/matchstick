@@ -4,6 +4,7 @@ import io.github.aeckar.ansi.*
 import io.github.aeckar.parsing.dsl.ImperativeMatcherScope
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.rules.CompoundRule
+import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.getOrSet
@@ -27,6 +28,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     private val matchers = mutableListOf<RichMatcher>()
     private val failures = mutableListOf<MatchFailure>()
     private var isPersistenceEnabled = true
+    private var isRecursionsAllowed = true
     var depth = 0                                   // Expose to 'CompoundMatcher' during greedy parsing
 
     /** The matcher to be appended to a greedy match, if successful. */
@@ -77,6 +79,9 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     /** Returns a list of all chained failures */
     fun failures(): List<MatchFailure> = failures
 
+    /** Ensures that the next capture cannot be matched by a recursive matcher. */
+    fun discardNextRecursion() { isRecursionsAllowed = false }
+
     /**
      * Adds the given matcher as a dependency.
      *
@@ -110,30 +115,36 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
      * Searches for viable cached results beforehand, and caches the result if possible.
      */
     fun captureSubstring(matcher: RichMatcher, scope: ImperativeMatcherScope, context: ImperativeMatcherContext): Int {
-        val delegate = if (root != null) root!!.also { root = null } else matcher
+        val root = if (this@Driver.root != null) this@Driver.root!!.also { this@Driver.root = null } else matcher
         val begin = tape.offset
         val beginMatchCount = matches.size
-        val logger = delegate.logger
-        if (localMatchers().count { it == delegate } > 1) {
+        val logger = root.logger
+        if (!isRecursionsAllowed && root in matchers) {
+            debug(logger, begin) { "Recursion found for non-recursive matcher" }
+            isRecursionsAllowed = true
+            return -1
+        }
+        isRecursionsAllowed = true
+        if (localMatchers().count { it == root } > 1) {
             debug(logger, begin) { "Unrecoverable recursion found" }
             return -1
         }
-        matchers += delegate
-        matchersPerIndex.getOrSet(begin) += delegate
+        matchers += root
+        matchersPerIndex.getOrSet(begin) += root
         choiceCounts += 0
         ++depth
         debug(logger, begin) {
             buildString {
-                append("Attempting match to ${blue(delegate)}")
-                val uniqueMatcher = delegate.coreLogic()
-                if (uniqueMatcher !== delegate) {
+                append("Attempting match to ${blue(root)}")
+                val uniqueMatcher = root.coreLogic()
+                if (uniqueMatcher !== root) {
                     append(" ($uniqueMatcher)")
                 }
             }
         }
         try {
-            if (delegate.isCacheable) {
-                val result = lookupMatchResult(delegate)
+            if (root.isCacheable) {
+                val result = lookupMatchResult(root)
                 if (result is MatchSuccess) {
                     matches += result.matches
                         // Preserve persistence of nested separators
@@ -150,13 +161,13 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             }
             context.apply(scope)
             context.yieldRemaining()
-            recordMatch(delegate, begin)
+            recordMatch(root, begin)
             debug(logger, begin) {
                 val substring = if (begin < tape.input.length) tape.input.substring(begin, tape.offset) else ""
-                "Match to ${blue(delegate)} ${green("succeeded")} ${"(${yellow("'${substring.escaped()}'")})"}"
+                "Match to ${blue(root)} ${green("succeeded")} ${"(${yellow("'${substring.escaped()}'")})"}"
             }
             val length = tape.offset - begin
-            if (delegate.isCacheable) {
+            if (root.isCacheable) {
                 val newMatches = matches.slice(beginMatchCount..<matches.size)
                 val success = MatchSuccess(newMatches, dependencies.toSet())
                 successesPerIndex.getOrSet(begin) += success
@@ -165,10 +176,10 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             failures.clear()
             return length
         } catch (e: MatchInterrupt) {
-            debug(logger, begin) { "Match to ${blue(delegate)} ${red("failed")}" }
-            val failure = MatchFailure(e.lazyCause, tape.offset, delegate, dependencies.toSet())
+            debug(logger, begin) { "Match to ${blue(root)} ${red("failed")}" }
+            val failure = MatchFailure(e.lazyCause, tape.offset, root, dependencies.toSet())
             failures += failure
-            if (delegate.isCacheable) {
+            if (root.isCacheable) {
                 failuresPerIndex.getOrSet(begin) += failure
                 debug(logger, begin) { "Cached failure" }
             }

@@ -62,7 +62,9 @@ internal sealed class CompoundRule(
          * - `null`: An non-compound matcher
          */
         private fun linkSubMatchers(link: Link): List<*> {
-            matchers += link.matcher
+            if (link.matcher !is IdentityRule) {    // Will flag false recursions
+                matchers += link.matcher
+            }
             return link.matcher.subMatchers.map { matcher ->
                 when (val logic = matcher.coreLogic()) {
                     !is CompoundRule -> null
@@ -127,7 +129,7 @@ internal sealed class CompoundRule(
      *
      * If this rule is already initialized, this function does nothing.
      */
-    fun initialize() {
+    private fun initialize() {
         if (isInitialized) {
             return
         }
@@ -135,7 +137,7 @@ internal sealed class CompoundRule(
         Initializer().execute()
     }
 
-    final override fun collectMatches(driver: Driver): Int {
+    override fun collectMatches(driver: Driver): Int {
         initialize()    // Must call here, as may be constructed in explicit matcher
         driver.root = this
         return ImperativeMatcher(cacheable = isCacheable) {
@@ -167,5 +169,6 @@ internal sealed class CompoundRule(
         driver.debug(logger) { "Begin separator matches" }
         return driver.discardMatches { separator.collectMatches(driver) }
             .also { driver.debug(logger) { "End separator matches" } }
+            .coerceAtLeast(0)
     }
 }

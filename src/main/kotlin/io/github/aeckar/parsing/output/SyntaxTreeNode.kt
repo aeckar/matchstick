@@ -103,7 +103,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     internal fun <R> transform(outerContext: TransformContext<R>): R {
         val state = outerContext.state
         if (matcher !is Transform<*>) {
-            if (matcher !is InertMatcher) {
+            if (matcher !is StumpMatcher) {
                 children.forEach { it.transform(outerContext) }  // Invoke child transforms directly
             }
             return state
@@ -125,10 +125,7 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     }
 
     override fun toString(): String {
-        if (matcher == null) {
-            return "\"$capture\""
-        }
-        return "\"${capture.escaped()}\" @ $matcher"
+        return if (matcher == null) "\"${capture.escaped()}\"" else "\"${capture.escaped()}\" @ $matcher"
     }
 
     public companion object {

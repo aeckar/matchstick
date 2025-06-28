@@ -8,6 +8,7 @@ import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.patterns.lookupCharPattern
 import io.github.aeckar.parsing.patterns.lookupTextPattern
 import io.github.oshai.kotlinlogging.KLogger
+import java.util.Collections.unmodifiableList
 
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
@@ -32,6 +33,34 @@ public class ImperativeMatcherContext internal constructor(
 ) : DeclarativeMatcherContext(logger, false, lazySeparator), CharSequence by driver.tape {
     internal var includePos = -1
         private set
+
+    /* ------------------------------ miscellaneous ------------------------------ */
+
+    /** Returns a list of all matchers invoked, in the order they were invoked. */
+    public fun matchers(): List<Matcher> = unmodifiableList(driver.matchers())
+
+    /** Returns an iterator returning the remaining characters in the input, regardless of the current offset. */
+    public fun remaining(): CharIterator = driver.tape.remaining()
+
+    /** Fails the current match. */
+    public fun fail(): Nothing = throw MatchInterrupt.UNCONDITIONAL
+
+    /** Fails the current match with the given cause. */
+    public fun fail(lazyCause: () -> String): Nothing = throw MatchInterrupt(lazyCause)
+
+    /** Fails the current match if the condition is true. */
+    public fun failIf(condition: Boolean) {
+        if (condition) {
+            fail()
+        }
+    }
+
+    /** Fails the current match with the given cause if the condition is true. */
+    public fun failIf(condition: Boolean, lazyCause: () -> String) {
+        if (condition) {
+            fail(lazyCause)
+        }
+    }
 
     /* ------------------------------ match queries ------------------------------ */
 
@@ -85,8 +114,8 @@ public class ImperativeMatcherContext internal constructor(
      * @see charBy
      * @see CharExpression.Grammar
      */
-    public fun lengthByChar(expr: String): Int {
-        return lookupCharPattern(expr)(driver.tape.input, driver.tape.offset)
+    public fun lengthOfCharBy(expr: String): Int {
+        return lookupCharPattern(expr).accept(driver.tape.input, driver.tape.offset)
     }
 
     /**
@@ -94,8 +123,8 @@ public class ImperativeMatcherContext internal constructor(
      * @see textBy
      * @see TextExpression.Grammar
      */
-    public fun lengthByText(expr: String): Int {
-        return lookupTextPattern(expr)(driver.tape.input, driver.tape.offset)
+    public fun lengthOfTextBy(expr: String): Int {
+        return lookupTextPattern(expr).accept(driver.tape.input, driver.tape.offset)
     }
 
     /* ------------------------------ offset modification ------------------------------ */
@@ -123,7 +152,9 @@ public class ImperativeMatcherContext internal constructor(
         yieldRemaining()
         consume(length)
         if (isMatchingEnabled) {
+            ++driver.depth
             driver.recordMatch(null, driver.tape.offset - length)
+            --driver.depth
         }
     }
 
@@ -160,20 +191,9 @@ public class ImperativeMatcherContext internal constructor(
             return
         }
         val tape = driver.tape
-        if (tape.offset + length > tape.input.length + 1) { // Accept end-of-input
+        if (tape.offset + length > tape.input.length) { // Accept end-of-input
             throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.input.length}" }
         }
         tape.offset += length
     }
-
-    /* ------------------------------ miscellaneous ------------------------------ */
-
-    /** Returns an iterator returning the remaining characters in the input, regardless of the current offset. */
-    public fun remaining(): CharIterator = driver.tape.remaining()
-
-    /** Fails the current match. */
-    public fun fail(): Nothing = throw MatchInterrupt.UNCONDITIONAL
-
-    /** Fails the current match with the given cause. */
-    public fun fail(lazyCause: () -> String): Nothing = throw MatchInterrupt(lazyCause)
 }

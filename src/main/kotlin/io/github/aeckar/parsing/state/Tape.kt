@@ -12,6 +12,9 @@ package io.github.aeckar.parsing.state
 internal class Tape(input: CharSequence, offset: Int = 0) : CharSequence {
     var offset = 0
         set(value) {
+            if (value > input.length) {
+                println()
+            }
             if (value < 0) {
                 throw IllegalArgumentException("Offset cannot be negative")
             }

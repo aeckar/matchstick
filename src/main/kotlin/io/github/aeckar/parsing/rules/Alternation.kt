@@ -11,7 +11,7 @@ internal class Alternation(
 ) : CompoundRule(
     logger,
     context,
-    subRule1.group<Alternation>() + subRule2.group<Alternation>()
+    subRule1.groupBy<Alternation>() + subRule2.groupBy<Alternation>()
 ), AggregateMatcher {
     override fun resolveDescription(): String {
         return subMatchers.joinToString(" | ") {

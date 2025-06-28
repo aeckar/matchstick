@@ -15,10 +15,17 @@ public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Match
  * @see newRule
  * @see ruleUsing
  */
-public typealias DeclarativeMatcherFactory = (greedy: Boolean, scope: DeclarativeMatcherScope) -> Matcher
+public interface DeclarativeMatcherTemplate : MatcherTemplate {
+    /** Returns a declarative matcher with the given configuration. */
+    public operator fun invoke(
+        greedy: Boolean = false,
+        shallow: Boolean = false,
+        scope: DeclarativeMatcherScope
+    ): Matcher
+}
 
-/** Returns a reluctant rule. */
-public operator fun DeclarativeMatcherFactory.invoke(scope: DeclarativeMatcherScope): Matcher = this(false, scope)
+/** Returns an imperative matcher template with the same configuration. */
+public fun DeclarativeMatcherTemplate.imperative() = matcherUsing(logger, separator)
 
 /**
  * Configures and returns a declarative matcher whose separator is an empty string.
@@ -31,10 +38,11 @@ public operator fun DeclarativeMatcherFactory.invoke(scope: DeclarativeMatcherSc
 public fun newRule(
     logger: KLogger? = null,
     greedy: Boolean = false,
+    nonRecursive: Boolean = false,
     separator: () -> Matcher,
     scope: DeclarativeMatcherScope
 ): Matcher {
-    return ruleUsing(logger, separator)(greedy, scope)
+    return ruleUsing(logger, separator)(greedy, nonRecursive, scope)
 }
 
 /**
@@ -48,10 +56,11 @@ public fun newRule(
 public fun newRule(
     logger: KLogger? = null,
     greedy: Boolean = false,
+    nonRecursive: Boolean = false,
     separator: Matcher = ImperativeMatcher.EMPTY,
     scope: DeclarativeMatcherScope
 ): Matcher {
-    return ruleUsing(logger, separator)(greedy, scope)
+    return newRule(logger, greedy, nonRecursive, { separator }, scope)
 }
 
 /**
@@ -82,8 +91,15 @@ public fun newRule(
 public fun ruleUsing(
     logger: KLogger? = null,
     separator: () -> Matcher
-): DeclarativeMatcherFactory {
-    return { greedy, scope -> DeclarativeMatcher(logger, greedy, separator as () -> RichMatcher, scope) }
+): DeclarativeMatcherTemplate {
+    return object : DeclarativeMatcherTemplate {
+        override val logger get() = logger
+        override val separator by lazy(separator)
+
+        override fun invoke(greedy: Boolean, shallow: Boolean, scope: DeclarativeMatcherScope): Matcher {
+            return DeclarativeMatcher(logger, greedy, shallow, separator as () -> RichMatcher, scope)
+        }
+    }
 }
 
 /**
@@ -113,6 +129,6 @@ public fun ruleUsing(
 public fun ruleUsing(
     logger: KLogger? = null,
     separator: Matcher = ImperativeMatcher.EMPTY
-): DeclarativeMatcherFactory {
+): DeclarativeMatcherTemplate {
     return ruleUsing(logger) { separator }
 }

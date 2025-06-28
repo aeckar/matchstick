@@ -15,10 +15,13 @@ public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
  * @see newMatcher
  * @see matcherUsing
  */
-public typealias ImperativeMatcherFactory = (cacheable: Boolean, scope: ImperativeMatcherScope) -> Matcher
+public interface ImperativeMatcherTemplate : MatcherTemplate {
+    /** Returns a declarative matcher with the given configuration. */
+    public operator fun invoke(cacheable: Boolean = false, scope: ImperativeMatcherScope): Matcher
+}
 
-/** Returns an explicit matcher that is not cacheable. */
-public operator fun ImperativeMatcherFactory.invoke(scope: ImperativeMatcherScope): Matcher = this(false, scope)
+/** Returns a declarative matcher template with the same configuration. */
+public fun ImperativeMatcherTemplate.declarative() = matcherUsing(logger, separator)
 
 /**
  * Configures and returns an imperative matcher whose separator is an empty string.
@@ -83,8 +86,16 @@ public fun newMatcher(
 public fun matcherUsing(
     logger: KLogger? = null,
     separator: () -> Matcher = ImperativeMatcher::EMPTY
-): ImperativeMatcherFactory {
-    return { cacheable, scope -> ImperativeMatcher(logger, separator as () -> RichMatcher, null, cacheable, scope) }
+): ImperativeMatcherTemplate {
+    return object : ImperativeMatcherTemplate {
+        override val logger get() = logger
+        override val separator by lazy(separator)
+
+        override fun invoke(cacheable: Boolean, scope: ImperativeMatcherScope): Matcher {
+            return ImperativeMatcher(logger, separator as () -> RichMatcher, null, cacheable, scope)
+        }
+
+    }
 }
 
 /**
@@ -109,6 +120,9 @@ public fun matcherUsing(
  * @see DeclarativeMatcherContext.separator
  */
 @Suppress("UNCHECKED_CAST")
-public fun matcherUsing(logger: KLogger? = null, separator: Matcher): ImperativeMatcherFactory {
+public fun matcherUsing(
+    logger: KLogger? = null,
+    separator: Matcher = ImperativeMatcher.EMPTY
+): ImperativeMatcherTemplate {
     return matcherUsing(logger) { separator }
 }

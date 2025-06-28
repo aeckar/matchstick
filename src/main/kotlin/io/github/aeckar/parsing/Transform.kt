@@ -7,14 +7,6 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
 
-/** Returns a property delegate to an equivalent transform whose string representation is the name of the property. */
-public operator fun <R> Transform<R>.provideDelegate(
-    thisRef: Any?,
-    property: KProperty<*>
-): ReadOnlyProperty<Any?, Transform<R>> {
-    return ReadOnlyProperty { _, _ -> ParserProperty(property.name, this as RichParser<R>) }
-}
-
 /**
  * Transforms an input value according to a syntax tree in list form.
  * @param R the type of the input value
