@@ -55,7 +55,18 @@ public class TextExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a string of text with substrings satisfying an
+         * embedded character or text expression a certain number of times.
+         *
+         * Capture groups are denoted by enclosing an embedded expression in braces,
+         * then optionally appending a quantifier character.
+         *
+         * | Quantifier | Meaning                             |
+         * |------------|-------------------------------------|
+         * | `<none>`   | Must be satisfied once              |
+         * | +          | Must be satisfied one or more times |
+         * | *          | May be satisfied zero or more times |
+         * | ?          | May be satisfied once               |
          * ```ebnf
          * captureGroup ::= '{' ( charExpr | textExpr ) '}' [ '+' | '*' | '?' ]
          * ```
@@ -71,7 +82,10 @@ public class TextExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a string of text containing the given characters.
+         *
+         * Within the agreeable substring, the characters `^`, `|`, `{`, `}`, `+`, `*`, and `?`
+         * must be escaped using a percent sign (`%`).
          * ```ebnf
          * char ::= '%' (in '^|{}+*?') | . - (in '^|{}+*?')
          * substring ::= { '^' | char }
@@ -97,7 +111,7 @@ public class TextExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a string of text with substrings satisfying the given conditions, in order.
          * ```ebnf
          * concatenation ::= { substring | captureGroup }
          * ```
@@ -124,7 +138,7 @@ public class TextExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a string of text satisfying the first among multiple conditions.
          * ```ebnf
          * alternation ::= concatenation '|' concatenation [{ '|' concatenation }]
          * ```
@@ -145,7 +159,9 @@ public class TextExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a string of text satisfying a given condition.
+         *
+         * This matcher is the **start rule** for text expressions.
          * ```ebnf
          * textExpr ::= union | sequence | substring | captureGroup
          * ```

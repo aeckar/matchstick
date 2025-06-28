@@ -26,22 +26,10 @@ public class CharExpression internal constructor() : Expression() {
         )
 
         /**
-         * todo
+         * Denotes a pattern accepting a character that satisfies the first among multiple conditions.
          *
-         * ```ebnf
-         * embeddedTextExpr ::= '{' textExpr '}' | textExpr
-         * ```
-         */
-        public val embeddedTextExpr: Matcher by rule {
-            char('{') * TextExpression.start * char('}') or TextExpression.start
-        } with action {
-            state.patterns += resultsOf(TextExpression.start).single().rootPattern()
-        }
-
-        /**
-         * Denotes a pattern accepting characters that satisfy at least one among multiple conditions.
-         *
-         * Unions are denoted using the binary `|` operator, and have the lowest precedence between all operators.
+         * Unions are denoted using the `|` operator between two conditions.
+         * They have the lowest precedence between all operators.
          * ```ebnf
          * condition ::= intersection | atomicCharExpr
          * union ::= condition '|' condition [{ '|' condition }]
@@ -58,10 +46,10 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         /**
-         * Denotes a pattern accepting characters that satisfy several conditions.
+         * Denotes a pattern accepting a character that satisfies several conditions.
          *
-         * Intersections are denoted using the binary `&` operator, and have the second-lowest precedence between
-         * all operators, only higher than the union (`|`) operator.
+         * Intersections are denoted using the `&` operator between two conditions.
+         * They have the second-lowest precedence between all operators, only higher than the union (`|`) operator.
          * ```ebnf
          * intersection ::= atomicCharExpr '&' atomicCharExpr [{ '&' atomicCharExpr }]
          * ```
@@ -88,7 +76,7 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         /**
-         * Denotes a pattern accepting characters that do not satisfying a condition.
+         * Denotes a pattern accepting a character that does not satisfy a condition.
          *
          * Negations are denoted using the unary `!` operator, and may either return a length of 1 or -1.
          * ```ebnf
@@ -103,7 +91,7 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         /**
-         * Denotes a pattern accepting characters that occur within a set.
+         * Denotes a pattern accepting a character that occurs within a set.
          *
          * Character classes are denoted by enclosing (possibly escaped) characters in brackets.
          *
@@ -163,8 +151,9 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a character whose [code][Char.code] is within a certain closed range.
          *
+         * Character ranges are denoted using the `..` operator between two characters.
          * ```ebnf
          * bound ::= '%' (in '.&|()[]{}') | . - (in '.&|()[]{}')
          * charRange ::= bound '..' bound
@@ -187,44 +176,70 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a character directly after another character satisfying some condition.
+         *
+         * Suffixes are denoted using the `>` operator before an character expression.
+         * The operand must be enclosed in parentheses if containing [unions][union] or [intersections][intersection].
          * ```ebnf
-         * suffix ::= '>' [ '=' ] atomicCharExpr
+         * suffix ::= '>' atomicCharExpr
          * ```
          */
         public val suffix: Matcher by rule {
-            char('>') * maybe(char('=')) * atomicCharExpr
+            char('>') * atomicCharExpr
         } with action {
             val subPattern = state.patterns.removeLast()
-            val acceptEquality = children[1].choice != -1
-            state.patterns += newPattern(">${if (acceptEquality) "=" else ""}${subPattern.description}") { s, i ->
-                subPattern.accept(s, i - 1) != -1 || acceptEquality && subPattern.accept(s, i) != -1
+            state.patterns += newPattern(">${subPattern.description}") { s, i ->
+                subPattern.accept(s, i - 1) != -1
             }
         }
 
         /**
-         * todo
+         * Denotes a [text expression][TextExpression.textExpr] embedded within a character expression.
+         *
+         * The bounds of the text expression may be defined using braces.
+         * If not supplied, the expression will only terminate if a closing brace (`}`) is found
+         * or if no characters remain.
          * ```ebnf
-         * prefix ::= '<' [ '=' ] embeddedTextExpr
+         * embeddedTextExpr ::= '{' textExpr '}' | textExpr
+         * ```
+         * @see prefix
+         * @see initial
+         */
+        public val embeddedTextExpr: Matcher by rule {
+            char('{') * TextExpression.start * char('}') or TextExpression.start
+        } with action {
+            state.patterns += resultsOf(TextExpression.start).single().rootPattern()
+        }
+        
+        /**
+         * Denotes a pattern accepting a character before a string of text satisfying some condition.
+         *
+         * Prefixes are denoted using the `<` operator before a text expression.
+         * The operand must be enclosed in braces
+         * if this is not the final condition in the enclosing character expression.
+         * ```ebnf
+         * prefix ::= '<' embeddedTextExpr
          * ```
          */
         public val prefix: Matcher by rule {
-            char('<') * maybe(char('=')) * embeddedTextExpr
+            char('<') * embeddedTextExpr
         } with action {
             val subPattern = state.patterns.removeLast()
-            val acceptEquality = children[1].choice != -1
-            state.patterns += newPattern("<${if (acceptEquality) "=" else ""}${subPattern.description}") { s, i ->
-                subPattern.accept(s, i + 1) != -1 || acceptEquality && subPattern.accept(s, i) != -1
-            }
+            val description = "<${subPattern.description}"
+            state.patterns += newPattern(description) { s, i -> subPattern.accept(s, i + 1) != -1 }
         }
 
         /**
-         * todo
+         * Denotes a pattern accepting a character that is the first in a string of text satisfying some condition.
+         *
+         * Initials are denoted using the `=` operator before a text expression.
+         * The operand must be enclosed in braces
+         * if this is not the final condition in the enclosing character expression.
          * ```ebnf
-         * firstChar ::= '=' embeddedTextExpr
+         * leader ::= '=' embeddedTextExpr
          * ```
          */
-        public val firstChar: Matcher by rule {
+        public val initial: Matcher by rule {
             char('=') * embeddedTextExpr
         } with action {
             val subPattern = state.patterns.removeLast()
@@ -232,19 +247,7 @@ public class CharExpression internal constructor() : Expression() {
         }
 
         /**
-         * todo
-         * ```ebnf
-         * charExpr ::= union | intersection | atomicCharExpr
-         * ```
-         */
-        public val charExpr: Matcher by rule {
-            union or
-                    intersection or
-                    atomicCharExpr
-        }
-
-        /**
-         * todo
+         * A character expression not containing [unions][union] or [intersections][intersection].
          * ```ebnf
          * atomicCharExpr ::= grouping | negation | charClass | suffix | prefix | firstChar | charRange
          * ```
@@ -255,8 +258,22 @@ public class CharExpression internal constructor() : Expression() {
                     charClass or
                     suffix or
                     prefix or
-                    firstChar or
+                    initial or
                     charRange
+        }
+        
+        /**
+         * Denotes a pattern accepting a character satisfying some condition.
+         * 
+         * This matcher is the **start rule** for character expressions.
+         * ```ebnf
+         * charExpr ::= union | intersection | atomicCharExpr
+         * ```
+         */
+        public val charExpr: Matcher by rule {
+            union or
+                    intersection or
+                    atomicCharExpr
         }
 
         internal val start = charExpr.returns<CharExpression>()
