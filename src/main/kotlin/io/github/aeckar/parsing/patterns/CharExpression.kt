@@ -13,24 +13,40 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
  * @see ImperativeMatcherContext.lengthOfCharBy
  */
 public class CharExpression internal constructor() : Expression() {
-    /** Holds the matchers used to parse character expressions. */
+    /** Contains the [matchers][Matcher] used to parse character expressions, and provides documentation for each. */
     public companion object Grammar {
         private val rule = ruleUsing(logger(Grammar::class.qualifiedName!!))
         private val action = actionUsing<CharExpression>(preOrder = true)
 
-        private val charClasses = mapOf(
+        private val charClassEscapes = mapOf(
             'a' to "abcdefghijklmnopqrstuvwxyz",
             'A' to "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
             'd' to "0123456789",
             'h' to " \t\r\u000c"
         )
 
-        private val embeddedTextExpr by rule {
+        /**
+         * todo
+         *
+         * ```ebnf
+         * embeddedTextExpr ::= '{' textExpr '}' | textExpr
+         * ```
+         */
+        public val embeddedTextExpr: Matcher by rule {
             char('{') * TextExpression.start * char('}') or TextExpression.start
         } with action {
             state.patterns += resultsOf(TextExpression.start).single().rootPattern()
         }
 
+        /**
+         * Denotes a pattern accepting characters that satisfy at least one among multiple conditions.
+         *
+         * Unions are denoted using the binary `|` operator, and have the lowest precedence between all operators.
+         * ```ebnf
+         * condition ::= intersection | atomicCharExpr
+         * union ::= condition '|' condition [{ '|' condition }]
+         * ```
+         */
         public val union: Matcher by rule {
             val argument = intersection or atomicCharExpr
             argument * char('|') * argument * zeroOrMore(char('|') * argument)
@@ -41,6 +57,15 @@ public class CharExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * Denotes a pattern accepting characters that satisfy several conditions.
+         *
+         * Intersections are denoted using the binary `&` operator, and have the second-lowest precedence between
+         * all operators, only higher than the union (`|`) operator.
+         * ```ebnf
+         * intersection ::= atomicCharExpr '&' atomicCharExpr [{ '&' atomicCharExpr }]
+         * ```
+         */
         public val intersection: Matcher by rule {
             atomicCharExpr * char('&') * atomicCharExpr * zeroOrMore(char('&') * atomicCharExpr)
         } with action {
@@ -50,10 +75,26 @@ public class CharExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * Specifies the precedence between conditions in a character expression.
+         *
+         * Groupings are denoted by enclosing part of a character expression in parentheses.
+         * ```ebnf
+         * grouping ::= '(' charExpr ')'
+         * ```
+         */
         public val grouping: Matcher by rule {
             char('(') * charExpr * char(')')
         }
 
+        /**
+         * Denotes a pattern accepting characters that do not satisfying a condition.
+         *
+         * Negations are denoted using the unary `!` operator, and may either return a length of 1 or -1.
+         * ```ebnf
+         * negation ::= '!' atomicCharExpr
+         * ```
+         */
         public val negation: Matcher by rule {
             char('!') * atomicCharExpr
         } with action {
@@ -61,8 +102,28 @@ public class CharExpression internal constructor() : Expression() {
             state.patterns += newPattern("!${subPattern.description}") { s, i -> subPattern.accept(s, i) == -1 }
         }
 
+        /**
+         * Denotes a pattern accepting characters that occur within a set.
+         *
+         * Character classes are denoted by enclosing (possibly escaped) characters in brackets.
+         *
+         * Some characters may be escaped using a percent sign (`%`).
+         * Unless escaped, the `^` character represents the end of an input.
+         *
+         * | Escape Code     | Meaning               | Character Range |
+         * |-----------------|-----------------------|-----------------|
+         * | a               | Lowercase letters     | `'a'..'z'`      |
+         * | A               | Uppercase letters     | `'A'..'Z'`      |
+         * | d               | Digits                | `'0'..'9'`      |
+         * | h               | Horizontal whitespace | `' '..'\t'`     |
+         * | ^, `<operator>` | Literal escape        |                 |
+         * ```ebnf
+         * char ::= '%' (in 'aAdh^&|()[]{}%') | . - (in '^&|()[]{}%')
+         * charClass ::= '[' { '^' | char } ']'
+         * ```
+         */
         public val charClass: Matcher by rule {
-            char('[') * oneOrMore(char('^') or char('%') * charIn(charClasses.keys) or charOrEscape(rule, "^{}[]%")) * char(']')
+            char('[') * oneOrMore(char('^') or char('%') * charIn(charClassEscapes.keys) or charOrEscape(rule, "^&|()[]{}%")) * char(']')
         } with action {
             val charClasses = children[1].children
             val isEndAcceptable = charClasses.any { it.choice == 0 }
@@ -101,6 +162,14 @@ public class CharExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * todo
+         *
+         * ```ebnf
+         * bound ::= '%' (in '.&|()[]{}') | . - (in '.&|()[]{}')
+         * charRange ::= bound '..' bound
+         * ```
+         */
         public val charRange: Matcher by rule {
             val rangeCharOrEscape by charOrEscape(rule, ".&|()[]{}")
             rangeCharOrEscape * text("..") * rangeCharOrEscape
@@ -117,6 +186,12 @@ public class CharExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * suffix ::= '>' [ '=' ] atomicCharExpr
+         * ```
+         */
         public val suffix: Matcher by rule {
             char('>') * maybe(char('=')) * atomicCharExpr
         } with action {
@@ -127,6 +202,12 @@ public class CharExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * prefix ::= '<' [ '=' ] embeddedTextExpr
+         * ```
+         */
         public val prefix: Matcher by rule {
             char('<') * maybe(char('=')) * embeddedTextExpr
         } with action {
@@ -137,6 +218,12 @@ public class CharExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * firstChar ::= '=' embeddedTextExpr
+         * ```
+         */
         public val firstChar: Matcher by rule {
             char('=') * embeddedTextExpr
         } with action {
@@ -144,12 +231,24 @@ public class CharExpression internal constructor() : Expression() {
             state.patterns += newPattern("=${subPattern.description}") { s, i -> subPattern.accept(s, i) != -1 }
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * charExpr ::= union | intersection | atomicCharExpr
+         * ```
+         */
         public val charExpr: Matcher by rule {
             union or
                     intersection or
                     atomicCharExpr
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * atomicCharExpr ::= grouping | negation | charClass | suffix | prefix | firstChar | charRange
+         * ```
+         */
         public val atomicCharExpr: Matcher by rule {
             grouping or
                     negation or

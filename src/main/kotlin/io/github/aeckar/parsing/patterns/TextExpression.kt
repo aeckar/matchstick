@@ -7,8 +7,6 @@ import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.state.removeLast
 import io.github.oshai.kotlinlogging.KotlinLogging.logger
 
-// todo document grammar
-
 /**
  * Contains data pertaining to text expressions.
  * @see DeclarativeMatcherContext.textBy
@@ -21,7 +19,7 @@ public class TextExpression internal constructor() : Expression() {
         private val action = actionUsing<TextExpression>(preOrder = true)
         private const val END_OF_INPUT = '\u0000'
 
-        private val modifiers = mapOf(
+        private val captureGroupModifiers = mapOf(
             '+' to { subPattern: RichPattern ->
                 newPattern("{${subPattern.description}}+") { s, i ->
                     var length = 0
@@ -56,18 +54,31 @@ public class TextExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * captureGroup ::= '{' ( charExpr | textExpr ) '}' [ '+' | '*' | '?' ]
+         * ```
+         */
         public val captureGroup: Matcher by rule {
             char('{') * (embeddedCharExpr or textExpr) * char('}') * maybe(charIn("+*?"))
         } with action {
             val subPattern = state.patterns.removeLast()
             state.patterns += when (children[3].choice) {
-                0 -> modifiers.getValue(children[3].capture.single())(subPattern)
+                0 -> captureGroupModifiers.getValue(children[3].capture.single())(subPattern)
                 else /* -1 */ -> newPattern("{${subPattern.description}}", subPattern::accept)
             }
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * char ::= '%' (in '^|{}+*?') | . - (in '^|{}+*?')
+         * substring ::= { '^' | char }
+         * ```
+         */
         public val substring: Matcher by rule {
-            oneOrMore(char('^') or charOrEscape(rule, "^|{}+*?;"))
+            oneOrMore(char('^') or charOrEscape(rule, "^|{}+*?"))
         } with action {
             val expansion = children.joinToString("") { child ->
                 if (child.choice == 0) END_OF_INPUT.toString() else state.charData.removeFirst().toString()
@@ -85,7 +96,13 @@ public class TextExpression internal constructor() : Expression() {
             }
         }
 
-        public val sequence: Matcher by rule {
+        /**
+         * todo
+         * ```ebnf
+         * concatenation ::= { substring | captureGroup }
+         * ```
+         */
+        public val concatenation: Matcher by rule {
             oneOrMore(substring or captureGroup)
         } with action {
             val patterns = state.patterns.removeLast(children.size)
@@ -106,8 +123,14 @@ public class TextExpression internal constructor() : Expression() {
             }
         }
 
-        public val union: Matcher by rule {
-            sequence * char('|') * sequence * zeroOrMore(char('|') * sequence)
+        /**
+         * todo
+         * ```ebnf
+         * alternation ::= concatenation '|' concatenation [{ '|' concatenation }]
+         * ```
+         */
+        public val alternation: Matcher by rule {
+            concatenation * char('|') * concatenation * zeroOrMore(char('|') * concatenation)
         } with action {
             val patterns = state.patterns.removeLast(2 + children[3].children.size)
             state.patterns += newPattern(patterns.joinToString("|") { it.description }) { s, i ->
@@ -121,9 +144,15 @@ public class TextExpression internal constructor() : Expression() {
             }
         }
 
+        /**
+         * todo
+         * ```ebnf
+         * textExpr ::= union | sequence | substring | captureGroup
+         * ```
+         */
         public val textExpr: Matcher by rule {
-            union or
-                    sequence or
+            alternation or
+                    concatenation or
                     substring or
                     captureGroup
         }

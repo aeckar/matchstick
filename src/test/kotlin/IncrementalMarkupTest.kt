@@ -27,7 +27,7 @@ class Markup(
 
     companion object Grammar {
         private val rule = ruleUsing(logger(Markup::class.qualifiedName!!), newRule { charBy("[%h]") })
-        private val markupMatcher = rule.imperative()
+        private val matcher = rule.imperative()
         private val action = actionUsing<Markup>()
 
         private fun TransformContext<Markup>.descendWithHtmlTag(tagName: String, vararg classList: String) {
@@ -51,7 +51,7 @@ class Markup(
             val bullet = "{[-$]}|[{[ x]}]"
             val block = "{%{|``|(|[}{!=\n}*\n"
             val import = "$%{{![\"\n%}]}*\""
-            val assignment = "\${a..z|A..Z|=_}{a..z|A..Z|0..9|=_}*{[%h]}*="
+            val assignment = "\${[%a%A_]}{[%a%A%d_]}*{[%h]}*="
             val label = "{:}?{\"{![\n\"^]}\"|{a..z|A..Z}+}:"
             oneOrSpread(inlineElement or charNotBy("={{[^]}|\n{[%h]}*{#|\n|$bullet|$block|$import|$assignment|$label}}"))
         } with action {
@@ -81,7 +81,7 @@ class Markup(
             oneOrSpread(inlineElement)
         }
 
-        val content: Parser<Markup> by markupMatcher(cacheable = false) {
+        val content: Parser<Markup> by matcher(cacheable = false) {
             matchers().forEach { matcher ->
                 when (matcher) {
                     bold -> failIf(lengthOf("**") != -1)
@@ -141,12 +141,13 @@ class MarkupPreprocessor {
     companion object Grammar {
         private val rule = ruleUsing(logger(MarkupPreprocessor::class.qualifiedName!!), newRule { charBy("[%h]") })
         private val action = actionUsing<MarkupPreprocessor>(preOrder = true)
+        private val markupFileExtension = Regex("\\.dt\\s*$")
 
         /*
             Identifiers must start with a letter or underscore,
             followed by any number of letters, underscores, or digits.
          */
-        val identifier = newRule { textBy("{a..z|A..Z|=_}{a..z|A..Z|0..9|=_}*") }
+        val identifier = newRule { textBy("{%a%A_}{%a%A%d_}*") }
 
         val variable: Parser<MarkupPreprocessor> by rule {
             char('$') * (identifier or char('{') + identifier + char('}'))
@@ -159,7 +160,7 @@ class MarkupPreprocessor {
             text("\${") + textBy("\"{![\"\n]}+\"") + char('}')
         } with action {
             val fileName = children[1].capture.trim('"')
-            if (Regex("\\.dt\\s*$") in fileName) {
+            if (markupFileExtension in fileName) {
                 start.parse(File(fileName).readText(), state)  // Run preprocessor on file
             }
         }
@@ -171,7 +172,11 @@ class MarkupPreprocessor {
                 The newline character is not part of the macro definition.
                 Assignment to an empty string is allowed.
              */
-            char('$') * identifier + char('=') + textBy("({!=\n)}*\n)|%{{!=\n%}}*\n%}|[{!=\n]}*\n]|``{!=\n``}*\n``|{![\n^]}*")
+            val grouping = "({!=\n)}*\n)"
+            val mathBlock = "%{{!=\n%}}*\n%}"
+            val codeBlock = "``{!=\n``}*\n``"
+            val matrix = "[{!=\n]}*\n]"
+            char('$') * identifier + char('=') + textBy("$grouping|$mathBlock|$codeBlock|$matrix|{![\n^]}*")
         } with action {
             state.definitions[children[1].capture] = children[3].capture
         }

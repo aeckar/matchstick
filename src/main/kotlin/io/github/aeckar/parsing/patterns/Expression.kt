@@ -27,8 +27,8 @@ public sealed class Expression {
          * Escape sequences are prefixed by `'%'`, where the percent sign itself must be escaped as `"%%"`.
          */
         @JvmStatic
-        protected fun charOrEscape(factory: DeclarativeMatcherTemplate, forbiddenChars: String): Parser<Expression> {
-            return factory(/* greedy = */ false) {
+        protected fun charOrEscape(template: DeclarativeMatcherTemplate, forbiddenChars: String): Parser<Expression> {
+            return template(greedy = false) {
                 charNotIn("$forbiddenChars%") or char('%') * charIn(forbiddenChars)
             } with (actionUsing<Expression>()) {
                 state.charData += capture[choice]
