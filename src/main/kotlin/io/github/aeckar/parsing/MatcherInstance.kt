@@ -78,8 +78,9 @@ internal class DeclarativeMatcher(
     override fun coreScope() = this
 
     override fun collectMatches(driver: Driver): Int {
-        if (isNonRecursive) {
-            driver.discardNextRecursion()
+        if (isNonRecursive && this in driver.matchers()) {
+            driver.debug(logger, driver.tape.offset) { "Recursion found for non-recursive matcher" }
+            return -1
         }
         return identity.collectMatches(driver)
     }

@@ -57,19 +57,19 @@ internal fun newPattern(
  * Returns the pre-compiled character pattern, or a new one if the pattern has not yet been cached.
  * @see DeclarativeMatcherContext.charBy
  */
-internal fun lookupCharPattern(expr: String) = lookupPattern(expr, charPatternCache, CharExpression.start)
+internal fun resolveCharPattern(expr: String) = lookupPattern(expr, charPatternCache, CharExpression.start)
 
 /**
  * Returns the pre-compiled text pattern, or a new one if the pattern has not yet been cached.
  * @see DeclarativeMatcherContext.textBy
  */
-internal fun lookupTextPattern(expr: String) = lookupPattern(expr, textPatternCache, TextExpression.start)
+internal fun resolveTextPattern(expr: String) = lookupPattern(expr, textPatternCache, TextExpression.start)
 
 /**
  * Returns the text pattern specified by the given expression.
  * @see TextExpression.Grammar
  */
-public fun pattern(expr: String): Pattern = lookupTextPattern(expr)
+public fun pattern(expr: String): Pattern = resolveTextPattern(expr)
 
 @Suppress("UNCHECKED_CAST")
 private inline fun <reified T : Expression, P : Pattern> lookupPattern(

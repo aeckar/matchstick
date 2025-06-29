@@ -42,7 +42,7 @@ public inline fun <reified R> mapUsing(preOrder: Boolean = false): MapTemplate<R
     if (preOrder) {
         return { scope ->
             TransformInstance(typeOf<R>()) {
-                descend()
+                visitRemaining()
                 scope()
             }
         }

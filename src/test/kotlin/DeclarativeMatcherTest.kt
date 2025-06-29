@@ -2,6 +2,7 @@ import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.dsl.ruleUsing
+import io.github.aeckar.parsing.state.classLogger
 import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.Test
@@ -9,6 +10,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DeclarativeMatcherTest {
+    private val logger = classLogger()
+
     @Test
     fun guardsRecursionOfEmptyRepetitionArgument() {    //todo impl
 
@@ -167,9 +170,5 @@ class DeclarativeMatcherTest {
             val rule2 by loggedRule { char() * rule1 }
         }
         assertTrue(grammar.rule1.match("").isFailure())
-    }
-
-    private companion object {
-        val logger = logger(DeclarativeMatcherTest::class.qualifiedName!!)
     }
 }

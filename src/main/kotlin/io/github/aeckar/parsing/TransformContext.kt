@@ -4,6 +4,7 @@ import io.github.aeckar.parsing.dsl.GrammarDSL
 import io.github.aeckar.parsing.dsl.actionUsing
 import io.github.aeckar.parsing.dsl.mapUsing
 import io.github.aeckar.parsing.dsl.with
+import io.github.aeckar.parsing.output.ChildNode
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
 
@@ -17,15 +18,37 @@ import io.github.aeckar.parsing.output.SyntaxTreeNode
  */
 @GrammarDSL
 public class TransformContext<R> @PublishedApi internal constructor(
-    private val root: SyntaxTreeNode,   // Stores properties in single object
+    private val node: SyntaxTreeNode,
     state: R
 ) {
-    private var isChildrenVisited = false
     internal val resultsBySubParser = mutableMapOf<Transform<*>, MutableList<Any?>>()
 
     /** Some state, whose final value is the output. */
     public var state: R = state
         internal set
+
+    /* ------------------------------ node properties ------------------------------ */
+
+    /** The node containing the target node as a child, if one exists. */
+    public val parent: SyntaxTreeNode? get() = node.parent
+
+    /** The substring captured by the target node. */
+    public val capture: String get() = node.capture
+
+    /**
+     * The index of the sub-matcher that the [capture] satisfies.
+     * @see Match.choice
+     */
+    public val choice: Int get() = node.choice
+
+    /** The index of the [capture] in the original input. */
+    public val index: Int get() = node.index
+
+    /** Contains nodes for each section of the [capture] captured by any sub-matchers. */
+    @Suppress("UNCHECKED_CAST")
+    public val children: List<ChildNode> = node.children.map { ChildNode(it, this as TransformContext<Any?>) }
+
+    /* ----------------------------------------------------------------------------- */
 
     internal fun <R> addResult(subParser: Transform<R>, result: R) {
         if (subParser !in resultsBySubParser) {
@@ -51,45 +74,16 @@ public class TransformContext<R> @PublishedApi internal constructor(
         return object : List<R> by resultsBySubParser[subParser].orEmpty() as List<R> {}    // Prevent modification
     }
 
-    /* ------------------------------ root node properties ------------------------------ */
-
-    /** The node containing the target node as a child, if one exists. */
-    public val parent: SyntaxTreeNode? get() = root.parent
-
-    /** The substring captured by the target node. */
-    public val capture: String get() = root.capture
-
     /**
-     * The index of the sub-matcher that the [capture] satisfies.
-     * @see Match.choice
+     * Visits the [children] of the current node that have not been visited yet, in the order they were matched.
+     *
+     * If all children have been visited, this function does nothing.
      */
-    public val choice: Int get() = root.choice
-
-    /** The index of the [capture] in the original input. */
-    public val index: Int get() = root.index
-
-    /** Contains nodes for each section of the [capture] captured by any sub-matchers. */
-    public val children: List<SyntaxTreeNode> get() = root.children
-
-    /* ------------------------------ descent operations ------------------------------ */
-
-    /**
-     * Visits the [children] of the current node, in the order they were matched.
-     * @throws MalformedTransformException this function is called more than once within the same scope
-     */
-    @Suppress("UNCHECKED_CAST")
-    public fun descend() {
-        if (isChildrenVisited) {
-            throw MalformedTransformException("descend() called more than once")
+    public fun visitRemaining() {
+        children.forEach { child ->
+            if (!child.isVisited) {
+                child.visit()
+            }
         }
-        children.forEach { state = it.transform(this) }
-        isChildrenVisited = true
-    }
-
-    internal fun finalState(): R {
-        if (!isChildrenVisited) {
-            descend()
-        }
-        return state
     }
 }

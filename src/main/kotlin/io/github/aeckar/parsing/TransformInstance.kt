@@ -7,6 +7,7 @@ import kotlin.reflect.KType
 internal class TransformInstance<R>(override val stateType: KType, override val scope: MapScope<R>) : RichTransform<R> {
     override fun consumeMatches(context: TransformContext<R>): R {
         context.state = context.run(scope)
-        return context.finalState()
+        context.visitRemaining()
+        return context.state
     }
 }

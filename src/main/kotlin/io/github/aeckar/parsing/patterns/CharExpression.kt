@@ -1,11 +1,15 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.Matcher
-import io.github.aeckar.parsing.ImperativeMatcherContext
 import io.github.aeckar.parsing.DeclarativeMatcherContext
+import io.github.aeckar.parsing.ImperativeMatcherContext
+import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.dsl.*
+import io.github.aeckar.parsing.patterns.CharExpression.Grammar.initial
+import io.github.aeckar.parsing.patterns.CharExpression.Grammar.intersection
+import io.github.aeckar.parsing.patterns.CharExpression.Grammar.prefix
+import io.github.aeckar.parsing.patterns.CharExpression.Grammar.union
+import io.github.aeckar.parsing.state.classLogger
 import io.github.aeckar.parsing.state.removeLast
-import io.github.oshai.kotlinlogging.KotlinLogging.logger
 
 /**
  * Contains data pertaining to character expressions.
@@ -15,7 +19,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
 public class CharExpression internal constructor() : Expression() {
     /** Contains the [matchers][Matcher] used to parse character expressions, and provides documentation for each. */
     public companion object Grammar {
-        private val rule = ruleUsing(logger(Grammar::class.qualifiedName!!))
+        private val rule = ruleUsing(classLogger())
         private val action = actionUsing<CharExpression>(preOrder = true)
 
         private val charClassEscapes = mapOf(
@@ -114,11 +118,14 @@ public class CharExpression internal constructor() : Expression() {
             char('[') * oneOrMore(char('^') or char('%') * charIn(charClassEscapes.keys) or charOrEscape(rule, "^&|()[]{}%")) * char(']')
         } with action {
             val charClasses = children[1].children
-            val isEndAcceptable = charClasses.any { it.choice == 0 }
+            var isEndAcceptable = false
             val expansion = charClasses.mapTo(mutableSetOf()) { charClass ->
                 when (charClass.choice) {
-                    0 -> ""
-                    1 -> charClass.child().capture[1]
+                    0 -> {
+                        isEndAcceptable = true
+                        ""
+                    }
+                    1 -> charClassEscapes.getValue(charClass.child().capture[1])
                     else /* 2 */ -> state.charData.removeFirst()
                 }
             }.joinToString("")

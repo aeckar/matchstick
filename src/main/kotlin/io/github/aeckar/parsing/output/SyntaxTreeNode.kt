@@ -6,62 +6,27 @@ import io.github.aeckar.parsing.state.TreeNode
 import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
-
-// todo test '^' capture
+import java.util.Collections.unmodifiableList
 
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
- * @param input the original input
- * @param matches the matches made on the input, in reverse breadth-first notation
  * @param parent the node containing this one as a child, if one exists
+ * @param capture the captured substring
+ * @param matcher the matcher that captured the [capture], if present
+ * @param choice the index of the sub-matcher that the [capture] satisfies
+ * @param index the index of the [capture] in the original input
+ * @param children contains nodes for each section of the [capture] captured by any sub-matchers
+ * @see Match.choice
  */
-public class SyntaxTreeNode @PublishedApi internal constructor(
-    input: CharSequence,
-    matches: MutableList<Match>,    // Within internal API, reuse existing list
-    public val parent: SyntaxTreeNode?
+public open class SyntaxTreeNode internal constructor(
+    public val parent: SyntaxTreeNode?,
+    public val capture: String,
+    public val matcher: Matcher?,
+    public val choice: Int,
+    public val index: Int,
+    children: List<SyntaxTreeNode>
 ) : TreeNode() {
-    /** The captured substring. */
-    public val capture: String
-
-    /** The matcher that captured the [capture], if present. */
-    public val matcher: Matcher?
-
-    /**
-     * The index of the sub-matcher that the [capture] satisfies.
-     * @see Match.choice
-     */
-    public val choice: Int
-
-    /** The index of the [capture] in the original input. */
-    public val index: Int
-
-    /** Contains nodes for each section of the [capture] captured by any sub-matchers. */
-    override val children: List<SyntaxTreeNode>
-
-    init {
-        /* 1. Initialize root */
-        val match = try {
-            matches.removeLast()
-        } catch (_: NoSuchElementException) {
-            throw NoSuchMatchException("Expected a match")
-        }
-        capture = if (match.begin < input.length) input.substring(match.begin, match.endExclusive) else ""
-        matcher = match.matcher
-        choice = match.choice
-        index = match.begin
-
-        /* 2. Recursively initialize subtree */
-        children = buildList {
-            while (matches.isNotEmpty() && matches.last().depth > match.depth) {
-                if (!matches.last().isPersistent) {
-                    matches.removeLast()
-                    continue
-                }
-                this += SyntaxTreeNode(input, matches, this@SyntaxTreeNode)
-            }
-            reverse()
-        }
-    }
+    override val children: List<SyntaxTreeNode> = unmodifiableList(children)
 
     /**
      * Returns the child at the specified index.
@@ -129,15 +94,67 @@ public class SyntaxTreeNode @PublishedApi internal constructor(
     }
 
     public companion object {
+        private val ROOT_PLACEHOLDER = treeOf("", listOf(Match(null, false, 0, 0, 0, 0)))
+
         /**
          * Returns a new syntax tree according to the matched substrings.
          * @throws NoSuchMatchException a match cannot be made to the input
          */
-        public fun of(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
-            return SyntaxTreeNode(input, matches.toMutableList(), null)
+        public fun treeOf(input: CharSequence, matches: List<Match>): SyntaxTreeNode {
+            return treeOf(input, matches.toMutableList(), null)
         }
 
-        private val ROOT_PLACEHOLDER = of("", listOf(Match(null, false, 0, 0, 0, 0)))
+        /**
+         * @param input the original input
+         * @param matches the matches made on the input, in reverse breadth-first notation
+         */
+        @PublishedApi
+        internal fun treeOf(
+            input: CharSequence,
+            matches: MutableList<Match>,
+            parent: SyntaxTreeNode?
+        ): SyntaxTreeNode {
+            val match = try {
+                matches.removeLast()
+            } catch (_: NoSuchElementException) {
+                throw NoSuchMatchException("Expected a match")
+            }
+            val capture = if (match.begin < input.length) input.substring(match.begin, match.endExclusive) else ""
+            val children = mutableListOf<SyntaxTreeNode>()
+            val node = SyntaxTreeNode(parent, capture, match.matcher, match.choice, match.begin, children)
+            while (matches.isNotEmpty() && matches.last().depth > match.depth) {
+                if (!matches.last().isPersistent) {
+                    matches.removeLast()
+                    continue
+                }
+                children += treeOf(input, matches, node)
+            }
+            children.reverse()
+            return node
+        }
     }
 }
 
+/**
+ * A child of the current node in a [TransformContext].
+ *
+ * Provides the ability to [visit] the subtree rooted by this node.
+ */
+public class ChildNode internal constructor(
+    node: SyntaxTreeNode,
+    private val context: TransformContext<Any?>
+) : SyntaxTreeNode(node.parent, node.capture, node.matcher, node.choice, node.index, node.children) {
+    internal var isVisited = false
+
+    /**
+     * [Transforms][SyntaxTreeNode.transform] the state assigned to each node in the subtree rooted by this node.
+     * @throws MalformedTransformException this node is visited more than once
+     */
+    public fun visit() {
+        if (isVisited) {
+            throw MalformedTransformException("Child '$this' is visited more than once")
+        }
+        context.state = transform(context)
+        isVisited = true
+    }
+}

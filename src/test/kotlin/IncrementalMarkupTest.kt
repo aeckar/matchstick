@@ -1,50 +1,49 @@
 import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.*
+import io.github.aeckar.parsing.state.classLogger
 import io.github.oshai.kotlinlogging.KotlinLogging.logger
-import java.io.File
-import java.io.FileWriter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class Markup(
-    private var prettyPrint: Boolean = false,
-    private val preprocessor: MarkupPreprocessor
-) {
+object Symbols {
+    private val rule = ruleUsing(classLogger())
+
+    val whitespace by rule { charBy("[%h]") }
+    val literal by rule { textBy("\"{{![\"\n]}|\\\"}+\"") }
+}
+
+class Markup @JvmOverloads constructor(private val preprocessor: MarkupPreprocessor = MarkupPreprocessor()) {
     private val output = StringBuilder()
-    private var tabCount = 0
+    private val sectionDepths = mutableListOf(0)
 
-    private fun emit(obj: Any?) {
-        if (prettyPrint) {
-            output.append("\t".repeat(tabCount), obj.toString().trim(), '\n')
-        } else {
-            output.append(obj)
-        }
-    }
-
-    fun sendTo(fileName: String) {
-        FileWriter(fileName).use { it.append(output) }
-    }
+    fun output(): CharSequence = output
 
     companion object Grammar {
-        private val rule = ruleUsing(logger(Markup::class.qualifiedName!!), newRule { charBy("[%h]") })
+        private val rule = ruleUsing(logger(Markup::class.qualifiedName!!), Symbols.whitespace)
         private val matcher = rule.imperative()
         private val action = actionUsing<Markup>()
 
-        private fun TransformContext<Markup>.descendWithHtmlTag(tagName: String, vararg classList: String) {
+        /* ------------------------------ HTML builders ------------------------------ */
+
+        private inline fun TransformContext<Markup>.buildHtml(
+            tagName: String,
+            vararg classList: String,
+            block: StringBuilder.() -> Unit = { visitRemaining() }
+        ) {
             val classes = classList.joinToString(" ", "class='", "'")
-            state.emit("<$tagName $classes>")
-            ++state.tabCount
-            descend()
-            --state.tabCount
-            state.emit("</$tagName>")
+            state.output.append("<$tagName $classes>")
+            block(state.output)
+            state.output.append("</$tagName>")
         }
+
+        private inline fun TransformContext<Markup>.buildHtml(block: StringBuilder.() -> Unit) {
+            block(state.output)
+        }
+
+        /* --------------------------------------------------------------------------- */
 
         val line by rule {
             oneOrSpread(inlineElement or charNotBy("[\n^]"))
-        } with action {
-            children.asSequence()
-                .filter { it.choice == 1 }
-                .forEach { state.output.append(it.capture) }
         }
 
         val paragraph by rule {
@@ -55,21 +54,27 @@ class Markup(
             val label = "{:}?{\"{![\n\"^]}\"|{a..z|A..Z}+}:"
             oneOrSpread(inlineElement or charNotBy("={{[^]}|\n{[%h]}*{#|\n|$bullet|$block|$import|$assignment|$label}}"))
         } with action {
-            children.asSequence()
-                .filter { it.choice == 1 }
-                .forEach { state.output.append(it.capture) }
+            buildHtml("p", "dt-paragraph") {
+                children.forEach { child ->
+                    if (child.choice == 1) {
+                        append(child.capture)
+                    } else {
+                        child.visit()
+                    }
+                }
+            }
         }
 
-        val topLevelElement by rule {
-            char('\n') or paragraph
+        val variable by rule {
+            MarkupPreprocessor.variable
+        } with action {
+            val pp = state.preprocessor
+            state.output.append(pp.definitions[pp.varUsages.single { it.index == index }.varName])
         }
-
-        val start by rule {
-            zeroOrMore(topLevelElement)
-        }.returns<Markup>()
 
         val inlineElement: Matcher by rule {
-            bold or
+            variable or
+                    bold or
                     italics or
                     underline or
                     strikethrough or
@@ -91,40 +96,70 @@ class Markup(
                     highlight -> failIf(lengthOf('|') != -1)
                 }
             }
-            yield(lengthOfTextBy("{![\n^]}{![$%[*|`%{\n^]}*"))
+            yield(lengthOfTextBy("{![\n^]}{![$%[*%|`%{\n^]}*"))
         } with action {
-            state.emit(capture)
+            buildHtml { append(capture) }
         }
 
         val bold: Matcher by rule(shallow = true) {
             text("**") * inlineElements * text("**")
         } with action {
-            descendWithHtmlTag("strong", "dt-bold")
+            buildHtml("strong", "dt-bold")
         }
 
         val italics by rule(shallow = true) {
             char('*') * inlineElements * char('*')
         } with action {
-            descendWithHtmlTag("em", "dt-italics")
+            buildHtml("em", "dt-italics")
         }
 
         val underline by rule(shallow = true) {
             char('_') * inlineElements * char('_')
         } with action {
-            descendWithHtmlTag("u", "dt-underline")
+            buildHtml("u", "dt-underline")
         }
 
         val strikethrough by rule(shallow = true) {
             char('~') * inlineElements * char('~')
         } with action {
-            descendWithHtmlTag("del", "dt-strikethrough")
+            buildHtml("del", "dt-strikethrough")
         }
 
         val highlight by rule(shallow = true) {
             char('|') * inlineElements * char('|')
         } with action {
-            descendWithHtmlTag("mark", "dt-highlight")
+            buildHtml("mark", "dt-highlight")
         }
+
+        val label by rule {
+            (Symbols.literal or variable or textBy("{[%a%A]}+")) * char(':')
+        }
+
+        val heading by rule {
+            textIn("#" * (1..6)) + maybe(textBy("$$|$")) + maybe(label) + line
+        } with action {
+            val depth = children[0].capture.length
+            buildHtml("h$depth", "dt-heading", "dt-h$depth") {
+                if (children[1].choice != -1) {
+                    buildHtml("b") {
+
+                    }
+                }
+                if (children[2].choice != -1) {
+
+                }
+            }
+        }
+
+        val topLevelElement by rule {
+            char('\n') or
+                    heading or
+                    paragraph
+        }
+
+        val start by rule {
+            zeroOrMore(topLevelElement)
+        }.returns<Markup>()
     }
 }
 
@@ -135,19 +170,20 @@ data class VariableUsage(val varName: String, val index: Int)
  * @see Markup
  */
 class MarkupPreprocessor {
-    val definitions = mutableMapOf<String, String>()
+    val definitions = mutableMapOf<String, CharSequence>()
     val varUsages = mutableListOf<VariableUsage>()
+    var maxSectionDepth = 0
 
     companion object Grammar {
-        private val rule = ruleUsing(logger(MarkupPreprocessor::class.qualifiedName!!), newRule { charBy("[%h]") })
-        private val action = actionUsing<MarkupPreprocessor>(preOrder = true)
+        private val rule = ruleUsing(logger(MarkupPreprocessor::class.qualifiedName!!), Symbols.whitespace)
         private val markupFileExtension = Regex("\\.dt\\s*$")
+        private val action = actionUsing<MarkupPreprocessor>(preOrder = true)
 
         /*
             Identifiers must start with a letter or underscore,
             followed by any number of letters, underscores, or digits.
          */
-        val identifier = newRule { textBy("{%a%A_}{%a%A%d_}*") }
+        val identifier = newRule { textBy("{[%a%A_]}{[%a%A%d_]}*") }
 
         val variable: Parser<MarkupPreprocessor> by rule {
             char('$') * (identifier or char('{') + identifier + char('}'))
@@ -157,11 +193,11 @@ class MarkupPreprocessor {
         }
 
         val import: Matcher by rule {
-            text("\${") + textBy("\"{![\"\n]}+\"") + char('}')
+            text("\${") + Symbols.literal + char('}')
         } with action {
             val fileName = children[1].capture.trim('"')
             if (markupFileExtension in fileName) {
-                start.parse(File(fileName).readText(), state)  // Run preprocessor on file
+//                start.parse(File(fileName).readText(), state)  // Run preprocessor on file
             }
         }
 
@@ -178,11 +214,19 @@ class MarkupPreprocessor {
             val matrix = "[{!=\n]}*\n]"
             char('$') * identifier + char('=') + textBy("$grouping|$mathBlock|$codeBlock|$matrix|{![\n^]}*")
         } with action {
-            state.definitions[children[1].capture] = children[3].capture
+            state.definitions[children[0][1].capture] = Markup.start.parse(children[2].capture).result().output()
         }
 
-        val start by newRule(separator = newRule { textBy("{!=$|=\\$}+") }) {
-            separator() * zeroOrSpread(definition or variable or import or char('$'))
+        val heading by rule {
+            textBy("{#}+")
+        } with action {
+            if (state.maxSectionDepth < capture.length) {
+                state.maxSectionDepth = capture.length
+            }
+        }
+
+        val start by newRule(separator = newRule { textBy("{!=$|\\$}+|{!=\n{[%h]}*{#}+}\n{[%h]}*") }) {
+            separator() * zeroOrSpread(definition or variable or import or heading or char('$'))
         }.returns<MarkupPreprocessor>()
     }
 }
@@ -191,26 +235,29 @@ class MarkupIntegrationTest {
     @Test
     fun preprocessorTest() {
         val input = """
-            # This is my markup
+            # This is a heading
             ${'$'}{"subtitle.txt"}
-            ${'$'}{"macros.dt"}
+            ${'$'}{"vars.dt"}
+            ### This is another heading
 
-            ${'$'}macro1 = https://www.en.wikipedia.org/
-            ${'$'}macro2 = ``c
+            ${'$'}var1 = https://www.en.wikipedia.org/
+            ${'$'}var2 = ``c
                 int n = 0;
             ``
 
             - This is an unordered list...
                 $ With an ordered sublist
-                $ This macro is ${'$'}implicit
+                $ ${'$'}var1 is in this bullet
+                $ This variable is ${'$'}implicit
         """.trimIndent()
         println(MarkupPreprocessor.start.treeify(input).result().treeString())
         MarkupPreprocessor.start.parse(input).result().apply {
-            assertEquals(listOf(VariableUsage("implicit", 208)), varUsages)
-            assertEquals(mutableMapOf(
-                "macro1" to "https://www.en.wikipedia.org/",
-                "macro2" to "``c\n    int n = 0;\n``"
+            assertEquals(listOf(VariableUsage("var1", 216), VariableUsage("implicit", 263)), varUsages)
+            assertEquals(mutableMapOf<_, CharSequence>(
+                "var1" to "https://www.en.wikipedia.`org/",
+                "var2" to "``c\n    int n = 0;\n``"
             ), definitions)
+            assertEquals(3, maxSectionDepth)
         }
     }
 

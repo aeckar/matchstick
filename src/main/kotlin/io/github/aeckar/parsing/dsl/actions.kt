@@ -42,7 +42,7 @@ public inline fun <reified R> actionUsing(preOrder: Boolean = false): ActionTemp
     if (preOrder) {
         return { scope ->
             TransformInstance(typeOf<R>()) {
-                descend()
+                visitRemaining()
                 scope()
                 state
             }

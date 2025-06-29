@@ -138,7 +138,7 @@ internal sealed class CompoundRule(
     }
 
     override fun collectMatches(driver: Driver): Int {
-        initialize()    // Must call here, as may be constructed in explicit matcher
+        initialize()    // Must be called here lazily, as may be constructed in explicit matcher
         driver.root = this
         return ImperativeMatcher(cacheable = isCacheable) {
             collectSubMatches(driver)

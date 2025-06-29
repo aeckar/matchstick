@@ -5,8 +5,8 @@ import io.github.aeckar.parsing.dsl.matcherUsing
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
-import io.github.aeckar.parsing.patterns.lookupCharPattern
-import io.github.aeckar.parsing.patterns.lookupTextPattern
+import io.github.aeckar.parsing.patterns.resolveCharPattern
+import io.github.aeckar.parsing.patterns.resolveTextPattern
 import io.github.oshai.kotlinlogging.KLogger
 import java.util.Collections.unmodifiableList
 
@@ -115,7 +115,7 @@ public class ImperativeMatcherContext internal constructor(
      * @see CharExpression.Grammar
      */
     public fun lengthOfCharBy(expr: String): Int {
-        return lookupCharPattern(expr).accept(driver.tape.input, driver.tape.offset)
+        return resolveCharPattern(expr).accept(driver.tape.input, driver.tape.offset)
     }
 
     /**
@@ -124,7 +124,7 @@ public class ImperativeMatcherContext internal constructor(
      * @see TextExpression.Grammar
      */
     public fun lengthOfTextBy(expr: String): Int {
-        return lookupTextPattern(expr).accept(driver.tape.input, driver.tape.offset)
+        return resolveTextPattern(expr).accept(driver.tape.input, driver.tape.offset)
     }
 
     /* ------------------------------ offset modification ------------------------------ */
@@ -167,7 +167,7 @@ public class ImperativeMatcherContext internal constructor(
      */
     public fun include(length: Int) {
         if (length < 0) {
-            throw MatchInterrupt { "Negative yield $length at offset ${driver.tape.offset}" }
+            throw MatchInterrupt { "Yield $length is less than zero" }
         }
         if (includePos == -1) {
             includePos = driver.tape.offset
@@ -192,7 +192,7 @@ public class ImperativeMatcherContext internal constructor(
         }
         val tape = driver.tape
         if (tape.offset + length > tape.input.length) { // Accept end-of-input
-            throw MatchInterrupt { "Yield $length at offset ${tape.offset} exceeds input length ${tape.input.length}" }
+            throw MatchInterrupt { "Yield $length exceeds input length ${tape.input.length}" }
         }
         tape.offset += length
     }

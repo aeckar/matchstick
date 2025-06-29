@@ -4,6 +4,7 @@ import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.ImperativeMatcherContext
 import io.github.aeckar.parsing.DeclarativeMatcherContext
 import io.github.aeckar.parsing.dsl.*
+import io.github.aeckar.parsing.state.classLogger
 import io.github.aeckar.parsing.state.removeLast
 import io.github.oshai.kotlinlogging.KotlinLogging.logger
 
@@ -15,7 +16,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging.logger
 public class TextExpression internal constructor() : Expression() {
     /** Holds the matchers used to parse text expressions. */
     public companion object Grammar {
-        private val rule = ruleUsing(logger(Grammar::class.qualifiedName!!))
+        private val rule = ruleUsing(classLogger())
         private val action = actionUsing<TextExpression>(preOrder = true)
         private const val END_OF_INPUT = '\u0000'
 

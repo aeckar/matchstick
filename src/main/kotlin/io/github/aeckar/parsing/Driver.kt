@@ -4,7 +4,6 @@ import io.github.aeckar.ansi.*
 import io.github.aeckar.parsing.dsl.ImperativeMatcherScope
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.rules.CompoundRule
-import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Tape
 import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.getOrSet
@@ -24,12 +23,11 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     private val matchersPerIndex = arrayOfNulls<MutableList<RichMatcher>>(tape.input.length + 1)
     private val successesPerIndex = arrayOfNulls<MutableSet<MatchSuccess>>(tape.input.length + 1)
     private val failuresPerIndex = arrayOfNulls<MutableSet<MatchFailure>>(tape.input.length + 1)
-    private var choiceCounts = mutableListOf<Int>()
+    private val choiceCounts = mutableListOf<Int>()
     private val matchers = mutableListOf<RichMatcher>()
-    private val failures = mutableListOf<MatchFailure>()
+    private val chainedFailures = mutableListOf<MatchFailure>()
     private var isPersistenceEnabled = true
-    private var isRecursionsAllowed = true
-    var depth = 0                                   // Expose to 'CompoundMatcher' during greedy parsing
+    var depth = 0
 
     /** The matcher to be appended to a greedy match, if successful. */
     var anchor: CompoundRule? = null
@@ -77,10 +75,7 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     fun matchers(): List<RichMatcher> = matchers
 
     /** Returns a list of all chained failures */
-    fun failures(): List<MatchFailure> = failures
-
-    /** Ensures that the next capture cannot be matched by a recursive matcher. */
-    fun discardNextRecursion() { isRecursionsAllowed = false }
+    fun failures(): List<MatchFailure> = chainedFailures
 
     /**
      * Adds the given matcher as a dependency.
@@ -115,16 +110,10 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
      * Searches for viable cached results beforehand, and caches the result if possible.
      */
     fun captureSubstring(matcher: RichMatcher, scope: ImperativeMatcherScope, context: ImperativeMatcherContext): Int {
-        val root = if (this@Driver.root != null) this@Driver.root!!.also { this@Driver.root = null } else matcher
+        val root = if (root != null) root!!.also { root = null } else matcher
         val begin = tape.offset
         val beginMatchCount = matches.size
         val logger = root.logger
-        if (!isRecursionsAllowed && root in matchers) {
-            debug(logger, begin) { "Recursion found for non-recursive matcher" }
-            isRecursionsAllowed = true
-            return -1
-        }
-        isRecursionsAllowed = true
         if (localMatchers().count { it == root } > 1) {
             debug(logger, begin) { "Unrecoverable recursion found" }
             return -1
@@ -159,6 +148,9 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                     throw MatchInterrupt { result.cause.orEmpty() }
                 } // Else, not in cache
             }
+            if (tape.offset == 217) {
+                println()
+            }
             context.apply(scope)
             context.yieldRemaining()
             recordMatch(root, begin)
@@ -173,12 +165,12 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                 successesPerIndex.getOrSet(begin) += success
                 debug(logger, begin) { "Cached success" }
             }
-            failures.clear()
+            chainedFailures.clear()
             return length
         } catch (e: MatchInterrupt) {
             debug(logger, begin) { "Match to ${blue(root)} ${red("failed")}" }
             val failure = MatchFailure(e.lazyCause, tape.offset, root, dependencies.toSet())
-            failures += failure
+            chainedFailures += failure
             if (root.isCacheable) {
                 failuresPerIndex.getOrSet(begin) += failure
                 debug(logger, begin) { "Cached failure" }

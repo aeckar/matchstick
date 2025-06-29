@@ -141,25 +141,31 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see plus
      */
     public operator fun Matcher.times(other: Matcher): Matcher {
-        return Concatenation(logger, this@DeclarativeMatcherContext, this, other, isContiguous = true)
+        return Concatenation(logger, this@DeclarativeMatcherContext, this, other, true)
     }
 
     /** Returns a rule matching this one or the other. */
-    public infix fun Matcher.or(other: Matcher): Matcher = Alternation(logger, this@DeclarativeMatcherContext, this, other)
+    public infix fun Matcher.or(other: Matcher): Matcher {
+        return Alternation(logger, this@DeclarativeMatcherContext, this, other)
+    }
 
     /**
      * Returns a rule matching the given rule one or more times,
      * with the [separator][match] between each match.
      * @see oneOrSpread
      */
-    public fun oneOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, false, true)
+    public fun oneOrMore(subRule: Matcher): Matcher {
+        return Repetition(logger, this@DeclarativeMatcherContext, subRule, false, true)
+    }
 
     /**
      * Returns a rule matching the given rule zero or more times,
      * with the [separator][match] between each match.
      * @see zeroOrSpread
      */
-    public fun zeroOrMore(subRule: Matcher): Matcher = Repetition(logger, this@DeclarativeMatcherContext, subRule, true, true)
+    public fun zeroOrMore(subRule: Matcher): Matcher {
+        return Repetition(logger, this@DeclarativeMatcherContext, subRule, true, true)
+    }
 
     /**
      * Returns a rule matching the given rule one or more times successively.
