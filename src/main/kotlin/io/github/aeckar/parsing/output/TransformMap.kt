@@ -13,9 +13,9 @@ import kotlin.reflect.KType
  * If used, the action assigned to the binding key within this map will be used instead.
  */
 public class TransformMap<R> @PublishedApi internal constructor(   // Inlined by 'bind' and 'bindAll'
-    private val original: Map<Matcher, TransformScope<*>>,
+    private val original: Map<Matcher, TransformScope<R>>,
     internal val stateType: KType
-) : Map<Matcher, TransformScope<*>> by original, TransformScope<R> {
+) : Map<Matcher, TransformScope<R>> by original, TransformScope<R> {
     /**
      * Implements [TransformScope] to allow passage as a binding value.
      * @throws UnsupportedOperationException always

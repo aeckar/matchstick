@@ -1,11 +1,10 @@
 package io.github.aeckar.parsing.patterns
 
-import io.github.aeckar.parsing.ImperativeMatcherContext
 import io.github.aeckar.parsing.DeclarativeMatcherContext
-import io.github.aeckar.parsing.Parser
-import io.github.aeckar.parsing.dsl.DeclarativeMatcherTemplate
-import io.github.aeckar.parsing.dsl.actionUsing
-import io.github.aeckar.parsing.dsl.with
+import io.github.aeckar.parsing.ImperativeMatcherContext
+import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.dsl.DeclarativeMatcherStrategy
+import io.github.aeckar.parsing.output.TransformScope
 
 /**
  * Contains data pertaining to character or text expressions.
@@ -14,24 +13,24 @@ import io.github.aeckar.parsing.dsl.with
  * @see ImperativeMatcherContext.lengthOfCharBy
  * @see ImperativeMatcherContext.lengthOfTextBy
  */
-public sealed class Expression {
-    protected val patterns: MutableList<RichPattern> = mutableListOf()
-    internal val charData = ArrayDeque<Char>()  // todo optimize with custom deque
+public class Expression internal constructor() {
+    internal val patterns = mutableListOf<RichPattern>()
+    internal val charData = ArrayDeque<Char>()
 
-    internal fun rootPattern() = patterns.single()
+    /** Returns the parsed pattern. */
+    public fun pattern(): Pattern = patterns.single()
 
-    protected companion object {
+    internal companion object {
+        val charOrEscapeAction: TransformScope<Expression> = { state.charData += capture[choice] }
+
         /**
          * Returns the next character or mandatory escape sequence.
          *
          * Escape sequences are prefixed by `'%'`, where the percent sign itself must be escaped as `"%%"`.
          */
-        @JvmStatic
-        protected fun charOrEscape(template: DeclarativeMatcherTemplate, forbiddenChars: String): Parser<Expression> {
-            return template(greedy = false) {
+        fun charOrEscape(strategy: DeclarativeMatcherStrategy, forbiddenChars: String): Matcher {
+            return strategy(greedy = false) {
                 charNotIn("$forbiddenChars%") or char('%') * charIn(forbiddenChars)
-            } with (actionUsing<Expression>()) {
-                state.charData += capture[choice]
             }
         }
     }

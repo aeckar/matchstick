@@ -111,7 +111,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * Returns a rule matching a single character satisfying the pattern given by the expression.
      * @throws MalformedPatternException the character expression is malformed
      * @see ImperativeMatcherContext.lengthOfCharBy
-     * @see CharExpression.Grammar
+     * @see CharExpressionGrammar
      */
     public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthOfCharBy(expr)) }
 
@@ -119,7 +119,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * Returns a rule matching a single character not satisfying the pattern given by the expression.
      * @throws MalformedPatternException the character expression is malformed
      * @see ImperativeMatcherContext.lengthOfCharBy
-     * @see CharExpression.Grammar
+     * @see CharExpressionGrammar
      */
     public fun charNotBy(expr: String): Matcher = cacheableMatcher("`$expr`") {
         val length = lengthOfCharBy(expr)
@@ -133,7 +133,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * Returns a rule matching text satisfying the pattern given by the expression.
      * @throws MalformedPatternException the text expression is malformed
      * @see ImperativeMatcherContext.lengthOfTextBy
-     * @see TextExpression.Grammar
+     * @see TextExpressionGrammar
      */
     public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthOfTextBy(expr)) }
 

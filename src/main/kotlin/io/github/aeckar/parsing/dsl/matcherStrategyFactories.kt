@@ -33,8 +33,8 @@ import io.github.aeckar.parsing.state.LoggingStrategy
 public fun using(
     loggingStrategy: LoggingStrategy? = null,
     separator: () -> Matcher
-): MatcherStrategy {
-    return MatcherStrategy(loggingStrategy, separator)
+): GenericMatcherStrategy {
+    return GenericMatcherStrategy(loggingStrategy, separator)
 }
 
 /**
@@ -64,6 +64,6 @@ public fun using(
 public fun using(
     loggingStrategy: LoggingStrategy? = null,
     separator: Matcher = ImperativeMatcher.EMPTY
-): MatcherStrategy {
-    return MatcherStrategy(loggingStrategy) { separator }
+): GenericMatcherStrategy {
+    return GenericMatcherStrategy(loggingStrategy) { separator }
 }

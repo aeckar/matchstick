@@ -21,7 +21,7 @@ public fun newMatcher(
     separator: () -> Matcher,
     scope: ImperativeMatcherScope
 ): Matcher {
-    return using(loggingStrategy, separator).imperative(cacheable, scope)
+    return using(loggingStrategy, separator).imperative()(cacheable, scope)
 }
 
 /**
@@ -56,7 +56,7 @@ public fun newRule(
     separator: () -> Matcher,
     scope: DeclarativeMatcherScope
 ): Matcher {
-    return using(loggingStrategy, separator).declarative(greedy, nonRecursive, scope)
+    return using(loggingStrategy, separator).declarative()(greedy, nonRecursive, scope)
 }
 
 /**

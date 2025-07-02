@@ -1,10 +1,11 @@
 package io.github.aeckar.parsing.output
 
+import io.github.aeckar.parsing.Grammar
 import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.dsl.CombinatorDsl
-import java.util.Collections
-import kotlin.collections.get
+import java.util.*
 
 /**
  * Provides a scope to describe how an instance of type [R] should be modified when a [SyntaxTreeNode]
@@ -71,11 +72,16 @@ public class TransformContext<R> @PublishedApi internal constructor(
      * If the sub-parser was never invoked, returns an empty list.
      */
     @Suppress("UNCHECKED_CAST")
-    public fun <R> resultsOf(subParser: Matcher): List<R> {
-        if (subParser == this) {
+    public fun <R> resultsOf(matcher: Matcher): List<R> {
+        if (matcher == this) {
             return listOf(state) as List<R>
         }
-        return Collections.unmodifiableList(resultsBySubMatcher[subParser].orEmpty()) as List<R>
+        return Collections.unmodifiableList(resultsBySubMatcher[matcher].orEmpty()) as List<R>
+    }
+
+    /** Calls [resultsOf][TransformContext.resultsOf] with the [start][Grammar.start] matcher of the given parser. */
+    public fun <R> resultsOf(parser: Parser<R>): List<R> {
+        return resultsOf(parser.start)
     }
 
     /**

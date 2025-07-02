@@ -65,12 +65,20 @@ public open class SyntaxTreeNode internal constructor(
      * @see parse
      */
     public inline fun <reified R> transform(
+        actions: TransformMap<R>,
+        initialState: R = initialStateOf(typeOf<R>())
+    ): R {
+        val context = TransformContext(actions, ROOT_PLACEHOLDER, initialState)
+        transform(context)
+        return context.state
+    }
+
+    /** Calls [transform][SyntaxTreeNode.transform] using a [TransformMap] with the given bindings. */
+    public inline fun <reified R> transform(
         vararg actions: Pair<Matcher, TransformScope<R>>,
         initialState: R = initialStateOf(typeOf<R>())
     ): R {
-        val context = TransformContext(bind(*actions), ROOT_PLACEHOLDER, initialState)
-        transform(context)
-        return context.state
+        return transform(bind(*actions), initialState)
     }
 
     @PublishedApi

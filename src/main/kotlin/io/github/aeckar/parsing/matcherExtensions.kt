@@ -4,7 +4,9 @@ import io.github.aeckar.ansi.yellow
 import io.github.aeckar.parsing.output.ChildNode
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
+import io.github.aeckar.parsing.output.TransformMap
 import io.github.aeckar.parsing.output.TransformScope
+import io.github.aeckar.parsing.output.bind
 import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.state.Result
 import io.github.aeckar.parsing.state.Tape
@@ -85,7 +87,7 @@ public fun Matcher.treeify(input: CharSequence): Result<SyntaxTreeNode> {
  */
 public inline fun <reified R> Matcher.parse(
     input: CharSequence,
-    vararg actions: Pair<Matcher, TransformScope<R>>,
+    actions: TransformMap<R>,
     initialState: R = initialStateOf(typeOf<R>()),
     complete: Boolean = false
 ): Result<R> {
@@ -101,6 +103,16 @@ public inline fun <reified R> Matcher.parse(
         }
         SyntaxTreeNode
             .treeOf(input, matches as MutableList<Match>, null)
-            .transform(*actions, initialState = initialState)
+            .transform(actions, initialState)
     }
+}
+
+/** Calls [parse][Matcher.parse] using a [TransformMap] with the given bindings. */
+public inline fun <reified R> Matcher.parse(
+    input: CharSequence,
+    vararg actions: Pair<Matcher, TransformScope<R>>,
+    initialState: R = initialStateOf(typeOf<R>()),
+    complete: Boolean = false
+): Result<R> {
+    return parse(input, bind(*actions), initialState, complete)
 }
