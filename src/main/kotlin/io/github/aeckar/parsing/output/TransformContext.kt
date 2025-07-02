@@ -1,27 +1,31 @@
-package io.github.aeckar.parsing
+package io.github.aeckar.parsing.output
 
-import io.github.aeckar.parsing.dsl.GrammarDSL
-import io.github.aeckar.parsing.dsl.actionUsing
-import io.github.aeckar.parsing.dsl.mapUsing
-import io.github.aeckar.parsing.dsl.with
-import io.github.aeckar.parsing.output.ChildNode
-import io.github.aeckar.parsing.output.Match
-import io.github.aeckar.parsing.output.SyntaxTreeNode
+import io.github.aeckar.parsing.Matcher
+import io.github.aeckar.parsing.RichMatcher
+import io.github.aeckar.parsing.dsl.CombinatorDsl
+import java.util.Collections
+import kotlin.collections.get
+
+/**
+ * Provides a scope to describe how an instance of type [R] should be modified when a [SyntaxTreeNode]
+ * produced by a specific [Matcher] is visited when walking the completed syntax tree.
+ */
+public typealias TransformScope<R> = TransformContext<R>.() -> Unit
 
 /**
  * Configures and returns a transform.
  *
  * Itself represents the captured substring.
- * @see mapUsing
- * @see actionUsing
- * @see RichTransform.consumeMatches
+ * @see SyntaxTreeNode.transform
+ * @see io.github.aeckar.parsing.parse
  */
-@GrammarDSL
+@CombinatorDsl
 public class TransformContext<R> @PublishedApi internal constructor(
+    internal val bindings: TransformMap<*>,
     private val node: SyntaxTreeNode,
     state: R
 ) {
-    internal val resultsBySubParser = mutableMapOf<Transform<*>, MutableList<Any?>>()
+    internal val resultsBySubMatcher = mutableMapOf<RichMatcher, MutableList<Any?>>()
 
     /** Some state, whose final value is the output. */
     public var state: R = state
@@ -50,12 +54,12 @@ public class TransformContext<R> @PublishedApi internal constructor(
 
     /* ----------------------------------------------------------------------------- */
 
-    internal fun <R> addResult(subParser: Transform<R>, result: R) {
-        if (subParser !in resultsBySubParser) {
-            resultsBySubParser[subParser] = mutableListOf(result)
+    internal fun <R> addResult(subParser: RichMatcher, result: R) {
+        if (subParser !in resultsBySubMatcher) {
+            resultsBySubMatcher[subParser] = mutableListOf(result)
             return
         }
-        resultsBySubParser.getValue(subParser) += result
+        resultsBySubMatcher.getValue(subParser) += result
     }
 
     /**
@@ -67,11 +71,11 @@ public class TransformContext<R> @PublishedApi internal constructor(
      * If the sub-parser was never invoked, returns an empty list.
      */
     @Suppress("UNCHECKED_CAST")
-    public fun <R> resultsOf(subParser: Parser<R>): List<R> {
+    public fun <R> resultsOf(subParser: Matcher): List<R> {
         if (subParser == this) {
             return listOf(state) as List<R>
         }
-        return object : List<R> by resultsBySubParser[subParser].orEmpty() as List<R> {}    // Prevent modification
+        return Collections.unmodifiableList(resultsBySubMatcher[subParser].orEmpty()) as List<R>
     }
 
     /**

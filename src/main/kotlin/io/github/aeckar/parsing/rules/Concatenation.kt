@@ -14,7 +14,7 @@ internal class Concatenation(
     logger,
     context,
     subMatcher1.groupBy<Concatenation>(isContiguous) + subMatcher2.groupBy<Concatenation>(isContiguous)
-), AggregateMatcher, SequenceMatcher {
+), RichMatcher.Aggregate, RichMatcher.Sequential {
     override fun resolveDescription(): String {
         val symbol = if (isContiguous) "&" else "~&"
         return subMatchers.joinToString(" $symbol ") { it.coreIdentity().unambiguousString() }

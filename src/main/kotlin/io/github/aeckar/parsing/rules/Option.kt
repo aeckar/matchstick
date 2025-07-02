@@ -7,7 +7,7 @@ internal class Option(
     logger : KLogger?,
     context: DeclarativeMatcherContext,
     subMatcher: Matcher
-) : CompoundRule(logger, context, listOf(subMatcher)), ModifierMatcher {
+) : CompoundRule(logger, context, listOf(subMatcher)), RichMatcher.Modifier {
     override val subMatcher = subMatchers.single()
 
     override fun resolveDescription() = "${this.subMatcher.coreIdentity().unambiguousString()}?"

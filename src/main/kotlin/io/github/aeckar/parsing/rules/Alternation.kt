@@ -12,7 +12,7 @@ internal class Alternation(
     logger,
     context,
     subRule1.groupBy<Alternation>() + subRule2.groupBy<Alternation>()
-), AggregateMatcher {
+), RichMatcher.Aggregate {
     override fun resolveDescription(): String {
         return subMatchers.joinToString(" | ") {
             val subMatcher = it.coreIdentity()

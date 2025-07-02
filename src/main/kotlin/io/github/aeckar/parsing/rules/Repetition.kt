@@ -9,7 +9,7 @@ internal class Repetition(
     subMatcher: Matcher,
     acceptsZero: Boolean,
     override val isContiguous: Boolean
-) : CompoundRule(logger, context, listOf(subMatcher)), SequenceMatcher, ModifierMatcher {
+) : CompoundRule(logger, context, listOf(subMatcher)), RichMatcher.Sequential, RichMatcher.Modifier {
     override val subMatcher = subMatchers.single()
     private val minMatchCount = if (acceptsZero) 0 else 1
 

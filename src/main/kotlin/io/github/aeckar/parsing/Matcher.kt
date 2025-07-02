@@ -1,19 +1,16 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.ansi.yellow
-import io.github.aeckar.parsing.dsl.DeclarativeMatcherScope
-import io.github.aeckar.parsing.dsl.newMatcher
-import io.github.aeckar.parsing.dsl.newRule
+import io.github.aeckar.parsing.dsl.*
+import io.github.aeckar.parsing.output.ChildNode
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
+import io.github.aeckar.parsing.output.TransformScope
 import io.github.aeckar.parsing.rules.CompoundRule
-import io.github.aeckar.parsing.state.Enumerated
+import io.github.aeckar.parsing.state.*
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
-import io.github.aeckar.parsing.state.Result
-import io.github.aeckar.parsing.state.Tape
-import io.github.aeckar.parsing.state.escaped
-import io.github.aeckar.parsing.state.truncated
 import io.github.oshai.kotlinlogging.KLogger
+import kotlin.reflect.typeOf
 
 /**
  * If this matcher is of the given type and is of the same contiguosity, returns its sub-rules.
@@ -22,35 +19,10 @@ import io.github.oshai.kotlinlogging.KLogger
  * Operates over regular [matchers][Matcher] to be later typecast by [CompoundRule].
  */
 internal inline fun <reified T: CompoundRule> Matcher.groupBy(isContiguous: Boolean = false): List<Matcher> {
-    if (this !is T || this is SequenceMatcher && this.isContiguous != isContiguous) {
+    if (this !is T || this is RichMatcher.Sequential && this.isContiguous != isContiguous) {
         return listOf(this)
     }
     return subMatchers
-}
-
-/** Returns the string representation of this matcher, parenthesized if it comprises multiple other rules. */
-internal fun RichMatcher.unambiguousString(): String {
-    if (this is AggregateMatcher) {
-        return "($this)"
-    }
-    return toString()   // Descriptive string or ID
-}
-
-/** Returns a string representation of this matcher without calling [toString] on other matchers. */
-internal fun RichMatcher.basicString(): String {
-    return when {
-        id !== UNKNOWN_ID -> id
-        this is ImperativeMatcher -> toString() // Descriptive string or unknown ID
-        else -> UNKNOWN_ID
-    }
-}
-
-internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
-    val length = collectMatches(driver)
-    if (length == -1) {
-        throw MatchInterrupt.UNCONDITIONAL
-    }
-    return length
 }
 
 /**
@@ -59,6 +31,8 @@ internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
  * If the returned list is empty, this sequence does not match the matcher with the given separator.
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
  * @throws UnrecoverableRecursionException there exists a left recursion in the matcher
+ * @see treeify
+ * @see parse
  */
 public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
@@ -74,11 +48,55 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
  * Returns the syntax tree created by applying the matcher to this character sequence, in tree form.
  *
  * The location of the matched substring is given by the bounds of the last element in the returned stack.
+ *
+ * This function is a more efficient shorthand for the following.
+ * ```kotlin
+ * this.match(input).mapResult { SyntaxTreeNode.treeOf(input, it) }
+ * ```
  * @throws UnrecoverableRecursionException there exists a left recursion in the matcher
  * @throws NoSuchMatchException the sequence does not match the matcher with the given separator
+ * @see match
+ * @see parse
  */
-public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
-    return match(sequence).mapResult { SyntaxTreeNode.treeOf(sequence, it as MutableList<Match>, null) }
+public fun Matcher.treeify(input: CharSequence): Result<SyntaxTreeNode> {
+    return match(input).mapResult { SyntaxTreeNode.treeOf(input, it as MutableList<Match>, null) }
+}
+
+/**
+ * Generates an output using [initialState] according to the syntax tree produced from the input.
+ *
+ * If not provided, the initial state is given by the nullary constructor of the concrete class [R].
+ * Alternatively, if the given type is nullable and no nullary constructor is found, `null` is used as the initial state.
+ *
+ * If [complete] is true, [NoSuchMatchException] is thrown if a match cannot be made to the entire input.
+ *
+ * Exceptions thrown when walking the resulting syntax tree are not caught.
+ * @throws UnrecoverableRecursionException there exists a left recursion in the matcher
+ * @throws NoSuchMatchException a match cannot be made to the input
+ * @throws MalformedTransformException any [ChildNode] is visited more than once in the same [TransformScope]
+ * @throws StateInitializerException the initial state is not provided, and the nullary constructor of [R] is inaccessible
+ * @see match
+ * @see parse
+ * @see SyntaxTreeNode.transform
+ */
+public inline fun <reified R> Matcher.parse(
+    input: CharSequence,
+    vararg actions: Pair<Matcher, TransformScope<R>>,
+    initialState: R = initialStateOf(typeOf<R>()),
+    complete: Boolean = false
+): Result<R> {
+    return match(input).mapResult { matches ->
+        if (complete) {
+            val matchLength = matches.last().length
+            if (matchLength != input.length) {
+                throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input ${input.truncated()}")
+            }
+        }
+        (this as RichMatcher).logger?.debug { "Transforming syntax tree of ${yellow(input.truncated().escaped())}" }
+        SyntaxTreeNode
+            .treeOf(input, matches as MutableList<Match>, null)
+            .transform(*actions, initialState = initialState)
+    }
 }
 
 /**
@@ -104,67 +122,9 @@ public fun Matcher.treeify(sequence: CharSequence): Result<SyntaxTreeNode> {
  * Matchers are equivalent according to their matching logic.
  * @see newMatcher
  * @see newRule
+ * @see matcherUsing
+ * @see ruleUsing
  * @see DeclarativeMatcherContext
  * @see ImperativeMatcherContext
- * @see Transform
  */
 public interface Matcher : Enumerated
-
-/**
- * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],
- * and [cache validation][isCacheable].
- *
- * All implementors of [Matcher] also implement this interface.
- */
-@PublishedApi   // Inlined by 'parse'
-internal interface RichMatcher : Matcher {
-    val separator: RichMatcher
-    val isCacheable: Boolean
-    val logger: KLogger?
-
-    /**
-     * The identity assigned to this matcher during debugging.
-     *
-     * Because accessing this property for the first time may invoke a [DeclarativeMatcherScope],
-     * it must not be accessed before all dependent matchers are initialized.
-     * @see DeclarativeMatcher
-     */
-    val identity: RichMatcher
-
-    /**
-     * Returns the size of the matching substring at the beginning
-     * of the remaining input, or -1 if one was not found.
-     */
-    fun collectMatches(driver: Driver): Int
-
-    /** Returns the most fundamental [identity] of this matcher. */
-    fun coreIdentity(): RichMatcher
-
-    /**
-     * Returns the matcher that this one delegates its matching logic to, and so forth.
-     *
-     * Matchers are equal to each other according to the value returned by this function.\
-     */
-    fun coreLogic(): RichMatcher
-
-    /**
-     * Returns the most fundamental [declarative][DeclarativeMatcher] or [imperative][ImperativeMatcher]
-     * matcher this one delegates its matching logic to.
-     *
-     * Returns null if a [CompoundRule] is found.
-     *
-     * The matcher returned by this function is provided its own unique scope,
-     * which holds its own value of [TransformContext.resultsOf].
-     */
-    fun coreScope(): RichMatcher?
-}
-
-internal interface ModifierMatcher : RichMatcher {
-    val subMatcher: RichMatcher
-}
-
-internal interface SequenceMatcher : RichMatcher {
-    val isContiguous: Boolean
-}
-
-internal interface AggregateMatcher : RichMatcher

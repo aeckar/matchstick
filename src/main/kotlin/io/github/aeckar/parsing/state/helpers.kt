@@ -1,12 +1,8 @@
 package io.github.aeckar.parsing.state
 
 import io.github.aeckar.parsing.StateInitializerException
-import io.github.oshai.kotlinlogging.KotlinLogging.logger
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
-
-/** Returns the logger whose name is the qualified name of the class [T]. */
-public inline fun <reified T : Any> T.classLogger() = logger(T::class.qualifiedName!!)
 
 internal fun <E> MutableList<E>.removeLast(count: Int): List<E> {
     val subList = subList(size - count, size)

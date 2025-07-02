@@ -6,7 +6,7 @@ import io.github.aeckar.parsing.state.UniqueProperty
 internal open class MatcherProperty(
     id: String,
     final override val value: RichMatcher
-) : UniqueProperty(), RichMatcher by value, ModifierMatcher {
+) : UniqueProperty(), RichMatcher by value, RichMatcher.Modifier {
     final override val subMatcher get() = value
     final override val identity get() = this
     override val id = if (id == UNKNOWN_ID) id.intern() else id // Keep open to resolve ambiguity
@@ -21,14 +21,4 @@ internal open class MatcherProperty(
         driver.root = this
         return value.collectMatches(driver)
     }
-}
-
-internal class ParserProperty<R>(
-    id: String,
-    value: RichParser<R>
-) : MatcherProperty(id, value), RichParser<R>, RichTransform<R> by value {
-    override val id = if (id == UNKNOWN_ID) id.intern() else id
-    override val isCacheable get() = value.isCacheable
-    override val logger get() = value.logger
-    override val separator get() = value.separator
 }

@@ -4,30 +4,6 @@ import io.github.aeckar.parsing.*
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
- * Provides a scope, evaluated eagerly, to describe the behavior of a rule.
- * @see newRule
- * @see ruleUsing
- */
-public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Matcher
-
-/**
- * When provided with an [DeclarativeMatcherScope], returns a declarative matcher with a specific separator.
- * @see newRule
- * @see ruleUsing
- */
-public interface DeclarativeMatcherTemplate : MatcherTemplate {
-    /** Returns a declarative matcher with the given configuration. */
-    public operator fun invoke(
-        greedy: Boolean = false,
-        shallow: Boolean = false,
-        scope: DeclarativeMatcherScope
-    ): Matcher
-}
-
-/** Returns an imperative matcher template with the same configuration. */
-public fun DeclarativeMatcherTemplate.imperative() = matcherUsing(logger, separator)
-
-/**
  * Configures and returns a declarative matcher whose separator is an empty string.
  *
  * The separator block is invoked only once.

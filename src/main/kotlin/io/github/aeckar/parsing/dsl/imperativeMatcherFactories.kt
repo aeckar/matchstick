@@ -4,26 +4,6 @@ import io.github.aeckar.parsing.*
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
- * Provides a scope, evaluated at runtime, to describe the behavior of an imperative matcher.
- * @see newMatcher
- * @see matcherUsing
- */
-public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
-
-/**
- * When provided with an [ImperativeMatcherScope], returns an imperative matcher with a specific separator.
- * @see newMatcher
- * @see matcherUsing
- */
-public interface ImperativeMatcherTemplate : MatcherTemplate {
-    /** Returns a declarative matcher with the given configuration. */
-    public operator fun invoke(cacheable: Boolean = false, scope: ImperativeMatcherScope): Matcher
-}
-
-/** Returns a declarative matcher template with the same configuration. */
-public fun ImperativeMatcherTemplate.declarative() = matcherUsing(logger, separator)
-
-/**
  * Configures and returns an imperative matcher whose separator is an empty string.
  *
  * [cacheable] should be set to `true` if the code within [scope] does not use any outside mutable state.

@@ -1,5 +1,7 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.output.ChildNode
+import io.github.aeckar.parsing.output.TransformScope
 import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.state.escaped
 
@@ -13,7 +15,7 @@ public class MalformedPatternException internal constructor(
     override val cause: Throwable? = null
 ) : RuntimeException(message.escaped())
 
-/** Thrown when [TransformContext.descend] is called more than once in the same scope. */
+/** Thrown when any [ChildNode] is visited more than once in the same [TransformScope]. */
 public class MalformedTransformException internal constructor(message: String) : RuntimeException(message.escaped())
 
 /** Thrown when there exists no matches from which to derive a syntax tree from. */

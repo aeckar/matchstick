@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.GrammarDSL
+import io.github.aeckar.parsing.dsl.CombinatorDsl
 import io.github.aeckar.parsing.dsl.matcherUsing
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.patterns.CharExpression
@@ -9,6 +9,13 @@ import io.github.aeckar.parsing.patterns.resolveCharPattern
 import io.github.aeckar.parsing.patterns.resolveTextPattern
 import io.github.oshai.kotlinlogging.KLogger
 import java.util.Collections.unmodifiableList
+
+/**
+ * Provides a scope, evaluated lazily, to describe the behavior of an imperative matcher.
+ * @see newMatcher
+ * @see matcherUsing
+ */
+public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
 
 /**
  * Configures a [Matcher] that is evaluated each time it is invoked,
@@ -25,7 +32,7 @@ import java.util.Collections.unmodifiableList
  * @see matcherUsing
  * @see RichMatcher.collectMatches
  */
-@GrammarDSL
+@CombinatorDsl
 public class ImperativeMatcherContext internal constructor(
     logger: KLogger?,
     internal val driver: Driver,

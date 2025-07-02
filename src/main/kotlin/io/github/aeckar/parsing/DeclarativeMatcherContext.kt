@@ -8,6 +8,13 @@ import io.github.aeckar.parsing.state.escaped
 import io.github.oshai.kotlinlogging.KLogger
 
 /**
+ * Provides a scope, evaluated eagerly, to describe the behavior of a rule.
+ * @see newRule
+ * @see ruleUsing
+ */
+public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Matcher
+
+/**
  * Configures a [Matcher] that is evaluated once, evaluating input according to a set of simple rules.
  *
  * The resulting matcher is analogous to a *rule* in a context-free grammar,
@@ -17,7 +24,7 @@ import io.github.oshai.kotlinlogging.KLogger
  * @see ImperativeMatcherContext
  * @see RichMatcher.collectMatches
  */
-@GrammarDSL
+@CombinatorDsl
 public open class DeclarativeMatcherContext internal constructor(
     private val logger: KLogger?,
     greedy: Boolean,

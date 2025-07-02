@@ -7,7 +7,7 @@ internal class IdentityRule(
     logger : KLogger?,
     context: DeclarativeMatcherContext,
     subMatcher: Matcher
-) : CompoundRule(logger, context, listOf(subMatcher)), ModifierMatcher {
+) : CompoundRule(logger, context, listOf(subMatcher)), RichMatcher.Modifier {
     override val subMatcher = subMatchers.single()
     private val lazyCoreLogic by lazy((subMatcher as RichMatcher)::coreLogic)
 

@@ -7,6 +7,7 @@ import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.instanceOf
 import java.util.Collections.unmodifiableList
+import kotlin.reflect.typeOf
 
 /**
  * Contains the substring in the input captured by the given matcher, if present, alongside matches to any sub-matchers.
@@ -61,32 +62,46 @@ public open class SyntaxTreeNode internal constructor(
      * Transforms the given object using the transforms defined by the matchers that produced each.
      *
      * The transforms are encountered during post-order traversal of the syntax tree whose root is this node.
+     * @see parse
      */
-    public fun <R> transform(initialState: R): R = transform(TransformContext(ROOT_PLACEHOLDER, initialState))
+    public inline fun <reified R> transform(
+        vararg actions: Pair<Matcher, TransformScope<R>>,
+        initialState: R = initialStateOf(typeOf<R>())
+    ): R {
+        val context = TransformContext(bind(*actions), ROOT_PLACEHOLDER, initialState)
+        transform(context)
+        return context.state
+    }
 
+    @PublishedApi
     @Suppress("UNCHECKED_CAST")
-    internal fun <R> transform(outerContext: TransformContext<R>): R {
-        val state = outerContext.state
-        if (matcher !is Transform<*>) {
+    internal fun <R> transform(context: TransformContext<R>) {
+        var bindings = context.bindings
+        var action = bindings[matcher as RichMatcher]
+        while (action is TransformMap<*>) { // Resolve base action if using inherited bindings
+            bindings = action
+            action = bindings[matcher]
+        }
+        if (action == null) {
             if (matcher !is StumpMatcher) {
-                children.forEach { it.transform(outerContext) }  // Invoke child transforms directly
+                children.forEach { it.transform(context) }  // Invoke child transforms directly
             }
-            return state
+            return
         }
-        matcher as RichParser<R>
-        return if (state instanceOf matcher.stateType) {
-            matcher.consumeMatches(TransformContext(this, state))   // Invokes this function recursively
-        } else {
-            val subParserContext = TransformContext(this, initialStateOf<Any?>(matcher.stateType) as R)
-            val result = matcher.consumeMatches(subParserContext) // Visit sub-transform
-            if (matcher.id === UNKNOWN_ID && matcher.coreScope() == null) {
-                // Scope check ensures results are only hoisted from the same scope
-                subParserContext.resultsBySubParser.forEach { (key, value) -> outerContext.addResult(key, value) }
-            } else {
-                outerContext.addResult(matcher, result)
-            }
-            state
+        val state = context.state
+        if (state instanceOf bindings.stateType) {
+            action(TransformContext(bindings, this, state)) // Invokes this function recursively
+            return
         }
+        val subContext = TransformContext(bindings, this, initialStateOf<R>(bindings.stateType))
+        val result = action(subContext) // Visit sub-context
+        if (matcher.id === UNKNOWN_ID && matcher.coreScope() == null) {
+            // Hoist results of unnamed compound rules
+            // Scope check ensures results are only hoisted from the same matcher scope
+            subContext.resultsBySubMatcher.forEach { (key, value) -> context.addResult(key, value) }
+            return
+        }
+        context.addResult(matcher, result)
     }
 
     override fun toString(): String {
@@ -94,7 +109,8 @@ public open class SyntaxTreeNode internal constructor(
     }
 
     public companion object {
-        private val ROOT_PLACEHOLDER = treeOf("", listOf(Match(null, false, 0, 0, 0, 0)))
+        @PublishedApi
+        internal val ROOT_PLACEHOLDER: SyntaxTreeNode = treeOf("", listOf(Match(null, false, 0, 0, 0, 0)))
 
         /**
          * Returns a new syntax tree according to the matched substrings.
@@ -132,29 +148,5 @@ public open class SyntaxTreeNode internal constructor(
             children.reverse()
             return node
         }
-    }
-}
-
-/**
- * A child of the current node in a [TransformContext].
- *
- * Provides the ability to [visit] the subtree rooted by this node.
- */
-public class ChildNode internal constructor(
-    node: SyntaxTreeNode,
-    private val context: TransformContext<Any?>
-) : SyntaxTreeNode(node.parent, node.capture, node.matcher, node.choice, node.index, node.children) {
-    internal var isVisited = false
-
-    /**
-     * [Transforms][SyntaxTreeNode.transform] the state assigned to each node in the subtree rooted by this node.
-     * @throws MalformedTransformException this node is visited more than once
-     */
-    public fun visit() {
-        if (isVisited) {
-            throw MalformedTransformException("Child '$this' is visited more than once")
-        }
-        context.state = transform(context)
-        isVisited = true
     }
 }
