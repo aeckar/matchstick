@@ -1,15 +1,15 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
-import io.github.oshai.kotlinlogging.KLogger
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 internal class Repetition(
-    logger : KLogger?,
+    loggingStrategy : LoggingStrategy?,
     context: DeclarativeMatcherContext,
     subMatcher: Matcher,
     acceptsZero: Boolean,
     override val isContiguous: Boolean
-) : CompoundRule(logger, context, listOf(subMatcher)), RichMatcher.Sequential, RichMatcher.Modifier {
+) : CompoundRule(loggingStrategy, context, listOf(subMatcher)), RichMatcher.Sequential, RichMatcher.Modifier {
     override val subMatcher = subMatchers.single()
     private val minMatchCount = if (acceptsZero) 0 else 1
 

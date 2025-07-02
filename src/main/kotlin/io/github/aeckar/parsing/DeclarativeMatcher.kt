@@ -2,16 +2,16 @@ package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.rules.IdentityRule
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
-import io.github.oshai.kotlinlogging.KLogger
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 internal class DeclarativeMatcher(
-    override val logger: KLogger?,
+    override val loggingStrategy: LoggingStrategy?,
     greedy: Boolean,
     nonRecursive: Boolean,
     lazySeparator: () -> RichMatcher = ImperativeMatcher::EMPTY,
     private val scope: DeclarativeMatcherScope
 ) : MatcherInstance() {
-    val context = DeclarativeMatcherContext(logger, greedy, lazySeparator)
+    val context = DeclarativeMatcherContext(loggingStrategy, greedy, lazySeparator)
     val isNonRecursive = nonRecursive
     override val separator get() = identity.separator
     override val isCacheable get() = true
@@ -30,7 +30,7 @@ internal class DeclarativeMatcher(
         checkUnresolvableRecursion(field)
         isInitializingIdentity = false
         if (field.id !== UNKNOWN_ID) {  // Ensure original and new transforms (if provided) are both invoked
-            field = IdentityRule(logger, context, field)
+            field = IdentityRule(loggingStrategy, context, field)
         }
         matcher = field
         return field
@@ -43,7 +43,7 @@ internal class DeclarativeMatcher(
 
     override fun collectMatches(driver: Driver): Int {
         if (isNonRecursive && this in driver.matchers()) {
-            driver.debug(logger, driver.tape.offset) { "Recursion found for non-recursive matcher" }
+            driver.debugWithTrace(loggingStrategy, driver.tape.offset) { "Recursion found for non-recursive matcher" }
             return -1
         }
         return identity.collectMatches(driver)

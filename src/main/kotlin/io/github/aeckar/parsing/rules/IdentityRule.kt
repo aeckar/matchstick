@@ -1,13 +1,14 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
+import io.github.aeckar.parsing.state.LoggingStrategy
 import io.github.oshai.kotlinlogging.KLogger
 
 internal class IdentityRule(
-    logger : KLogger?,
+    loggingStrategy : LoggingStrategy?,
     context: DeclarativeMatcherContext,
     subMatcher: Matcher
-) : CompoundRule(logger, context, listOf(subMatcher)), RichMatcher.Modifier {
+) : CompoundRule(loggingStrategy, context, listOf(subMatcher)), RichMatcher.Modifier {
     override val subMatcher = subMatchers.single()
     private val lazyCoreLogic by lazy((subMatcher as RichMatcher)::coreLogic)
 

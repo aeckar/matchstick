@@ -7,7 +7,7 @@ import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.patterns.resolveCharPattern
 import io.github.aeckar.parsing.patterns.resolveTextPattern
-import io.github.oshai.kotlinlogging.KLogger
+import io.github.aeckar.parsing.state.LoggingStrategy
 import java.util.Collections.unmodifiableList
 
 /**
@@ -34,10 +34,10 @@ public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
  */
 @CombinatorDsl
 public class ImperativeMatcherContext internal constructor(
-    logger: KLogger?,
+    loggingStrategy: LoggingStrategy?,
     internal val driver: Driver,
     lazySeparator: () -> RichMatcher,
-) : DeclarativeMatcherContext(logger, false, lazySeparator), CharSequence by driver.tape {
+) : DeclarativeMatcherContext(loggingStrategy, false, lazySeparator), CharSequence by driver.tape {
     internal var includePos = -1
         private set
 

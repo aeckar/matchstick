@@ -1,11 +1,13 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.*
+import io.github.aeckar.parsing.dsl.CombinatorDsl
+import io.github.aeckar.parsing.dsl.newRule
+import io.github.aeckar.parsing.dsl.ruleUsing
 import io.github.aeckar.parsing.patterns.CharExpression
 import io.github.aeckar.parsing.patterns.TextExpression
 import io.github.aeckar.parsing.rules.*
+import io.github.aeckar.parsing.state.LoggingStrategy
 import io.github.aeckar.parsing.state.escaped
-import io.github.oshai.kotlinlogging.KLogger
 
 /**
  * Provides a scope, evaluated eagerly, to describe the behavior of a rule.
@@ -26,7 +28,7 @@ public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Match
  */
 @CombinatorDsl
 public open class DeclarativeMatcherContext internal constructor(
-    private val logger: KLogger?,
+    private val loggingStrategy: LoggingStrategy?,
     greedy: Boolean,
     lazySeparator: () -> RichMatcher
 ) {
@@ -39,7 +41,7 @@ public open class DeclarativeMatcherContext internal constructor(
         descriptiveString: String,
         crossinline scope: ImperativeMatcherScope
     ): RichMatcher {
-        return ImperativeMatcher(logger, ImperativeMatcher::EMPTY, descriptiveString.escaped(), cacheable = true) {
+        return ImperativeMatcher(loggingStrategy, ImperativeMatcher::EMPTY, descriptiveString.escaped(), cacheable = true) {
             val isMatching = isMatchingEnabled
             isMatchingEnabled = false
             try {
@@ -140,7 +142,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see times
      */
     public operator fun Matcher.plus(other: Matcher): Matcher {
-        return Concatenation(logger, this@DeclarativeMatcherContext, this, other, false)
+        return Concatenation(loggingStrategy, this@DeclarativeMatcherContext, this, other, false)
     }
 
     /**
@@ -148,12 +150,12 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see plus
      */
     public operator fun Matcher.times(other: Matcher): Matcher {
-        return Concatenation(logger, this@DeclarativeMatcherContext, this, other, true)
+        return Concatenation(loggingStrategy, this@DeclarativeMatcherContext, this, other, true)
     }
 
     /** Returns a rule matching this one or the other. */
     public infix fun Matcher.or(other: Matcher): Matcher {
-        return Alternation(logger, this@DeclarativeMatcherContext, this, other)
+        return Alternation(loggingStrategy, this@DeclarativeMatcherContext, this, other)
     }
 
     /**
@@ -162,7 +164,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see oneOrSpread
      */
     public fun oneOrMore(subRule: Matcher): Matcher {
-        return Repetition(logger, this@DeclarativeMatcherContext, subRule, false, true)
+        return Repetition(loggingStrategy, this@DeclarativeMatcherContext, subRule, false, true)
     }
 
     /**
@@ -171,7 +173,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see zeroOrSpread
      */
     public fun zeroOrMore(subRule: Matcher): Matcher {
-        return Repetition(logger, this@DeclarativeMatcherContext, subRule, true, true)
+        return Repetition(loggingStrategy, this@DeclarativeMatcherContext, subRule, true, true)
     }
 
     /**
@@ -179,7 +181,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see oneOrMore
      */
     public fun oneOrSpread(subRule: Matcher): Matcher {
-        return Repetition(logger, this@DeclarativeMatcherContext, subRule, false, false)
+        return Repetition(loggingStrategy, this@DeclarativeMatcherContext, subRule, false, false)
     }
 
     /**
@@ -187,11 +189,11 @@ public open class DeclarativeMatcherContext internal constructor(
      * @see zeroOrMore
      */
     public fun zeroOrSpread(subRule: Matcher): Matcher {
-        return Repetition(logger, this@DeclarativeMatcherContext, subRule, true, false)
+        return Repetition(loggingStrategy, this@DeclarativeMatcherContext, subRule, true, false)
     }
 
     /** Returns a rule matching the given rule zero or one time. */
-    public fun maybe(subRule: Matcher): Matcher = Option(logger, this@DeclarativeMatcherContext, subRule)
+    public fun maybe(subRule: Matcher): Matcher = Option(loggingStrategy, this@DeclarativeMatcherContext, subRule)
 
     /**
      * Returns a rule matching the rule among those given that was invoked most recently
@@ -203,6 +205,6 @@ public open class DeclarativeMatcherContext internal constructor(
      */
     @Suppress("UNCHECKED_CAST")
     public fun nearestOf(subRule1: Matcher, subRule2: Matcher, vararg others: Matcher): Matcher {
-        return ProximityRule(logger, this@DeclarativeMatcherContext, (listOf(subRule1, subRule2) + others) as List<RichMatcher>)
+        return ProximityRule(loggingStrategy, this@DeclarativeMatcherContext, (listOf(subRule1, subRule2) + others) as List<RichMatcher>)
     }
 }

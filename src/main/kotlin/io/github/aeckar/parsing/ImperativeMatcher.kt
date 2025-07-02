@@ -1,10 +1,10 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
-import io.github.oshai.kotlinlogging.KLogger
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 internal class ImperativeMatcher(
-    override val logger: KLogger? = null,
+    override val loggingStrategy: LoggingStrategy? = null,
     lazySeparator: () -> RichMatcher = ::EMPTY,
     private val description: String? = null,
     cacheable: Boolean = false,
@@ -18,7 +18,7 @@ internal class ImperativeMatcher(
     override fun coreScope() = this
 
     override fun collectMatches(driver: Driver): Int {
-        return driver.captureSubstring(this, scope, ImperativeMatcherContext(logger, driver, ::separator))
+        return driver.captureSubstring(this, scope, ImperativeMatcherContext(loggingStrategy, driver, ::separator))
     }
 
     companion object {

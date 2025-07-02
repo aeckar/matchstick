@@ -1,13 +1,13 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
-import io.github.oshai.kotlinlogging.KLogger
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 internal class Option(
-    logger : KLogger?,
+    loggingStrategy : LoggingStrategy?,
     context: DeclarativeMatcherContext,
     subMatcher: Matcher
-) : CompoundRule(logger, context, listOf(subMatcher)), RichMatcher.Modifier {
+) : CompoundRule(loggingStrategy, context, listOf(subMatcher)), RichMatcher.Modifier {
     override val subMatcher = subMatchers.single()
 
     override fun resolveDescription() = "${this.subMatcher.coreIdentity().unambiguousString()}?"

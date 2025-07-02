@@ -5,13 +5,13 @@ import io.github.aeckar.parsing.MatchInterrupt
 import io.github.aeckar.parsing.RichMatcher
 import io.github.aeckar.parsing.DeclarativeMatcherContext
 import io.github.aeckar.parsing.collectMatchesOrFail
-import io.github.oshai.kotlinlogging.KLogger
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 internal class ProximityRule(
-    logger: KLogger?,
+    loggingStrategy: LoggingStrategy?,
     context: DeclarativeMatcherContext,
     subMatchers: List<RichMatcher>
-) : CompoundRule(logger, context, subMatchers) {
+) : CompoundRule(loggingStrategy, context, subMatchers) {
     override fun resolveDescription(): String = subMatchers.joinToString(prefix = "[", postfix = "]")
 
     override fun collectSubMatches(driver: Driver) {

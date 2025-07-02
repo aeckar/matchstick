@@ -1,12 +1,10 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
-import io.github.oshai.kotlinlogging.KLogger
-
-// todo log using ANSI conditionally
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 internal sealed class CompoundRule(
-    final override val logger: KLogger?,
+    final override val loggingStrategy: LoggingStrategy?,
     private val context: DeclarativeMatcherContext,
     subMatchers: List<Matcher>
 ) : MatcherInstance() {
@@ -166,9 +164,9 @@ internal sealed class CompoundRule(
         if (separator === ImperativeMatcher.EMPTY) {
             return 0
         }
-        driver.debug(logger) { "Begin separator matches" }
+        driver.debugWithTrace(loggingStrategy) { "Begin separator matches" }
         return driver.discardMatches { separator.collectMatches(driver) }
-            .also { driver.debug(logger) { "End separator matches" } }
+            .also { driver.debugWithTrace(loggingStrategy) { "End separator matches" } }
             .coerceAtLeast(0)
     }
 }

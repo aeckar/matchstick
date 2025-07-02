@@ -1,17 +1,17 @@
 package io.github.aeckar.parsing.rules
 
 import io.github.aeckar.parsing.*
+import io.github.aeckar.parsing.state.LoggingStrategy
 import io.github.oshai.kotlinlogging.KLogger
 
-// todo implement eager
 internal class Concatenation(
-    logger: KLogger?,
+    loggingStrategy: LoggingStrategy?,
     context: DeclarativeMatcherContext,
     subMatcher1: Matcher,
     subMatcher2: Matcher,
     override val isContiguous: Boolean
 ) : CompoundRule(
-    logger,
+    loggingStrategy,
     context,
     subMatcher1.groupBy<Concatenation>(isContiguous) + subMatcher2.groupBy<Concatenation>(isContiguous)
 ), RichMatcher.Aggregate, RichMatcher.Sequential {

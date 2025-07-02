@@ -1,33 +1,8 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.output.TransformContext
 import io.github.aeckar.parsing.rules.CompoundRule
-import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
-import io.github.oshai.kotlinlogging.KLogger
-
-/** Returns the string representation of this matcher, parenthesized if it comprises multiple other rules. */
-internal fun RichMatcher.unambiguousString(): String {
-    if (this is RichMatcher.Aggregate) {
-        return "($this)"
-    }
-    return toString()   // Descriptive string or ID
-}
-
-/** Returns a string representation of this matcher without calling [toString] on other matchers. */
-internal fun RichMatcher.basicString(): String {
-    return when {
-        id !== UNKNOWN_ID -> id
-        this is ImperativeMatcher -> toString() // Descriptive string or unknown ID
-        else -> UNKNOWN_ID
-    }
-}
-
-internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
-    val length = collectMatches(driver)
-    if (length == -1) {
-        throw MatchInterrupt.UNCONDITIONAL
-    }
-    return length
-}
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 /**
  * Extends [Matcher] with [match collection][collectMatches], [separator tracking][separator],
@@ -39,7 +14,7 @@ internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
 internal interface RichMatcher : Matcher {
     val separator: RichMatcher
     val isCacheable: Boolean
-    val logger: KLogger?
+    val loggingStrategy: LoggingStrategy?
 
     interface Modifier : RichMatcher {
         val subMatcher: RichMatcher
@@ -83,7 +58,7 @@ internal interface RichMatcher : Matcher {
      * Returns null if a [CompoundRule] is found.
      *
      * The matcher returned by this function is provided its own unique scope,
-     * which holds its own value of [io.github.aeckar.parsing.output.TransformContext.resultsOf].
+     * which holds its own value of [TransformContext.resultsOf].
      */
     fun coreScope(): RichMatcher?
 }

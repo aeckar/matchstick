@@ -1,15 +1,16 @@
 package io.github.aeckar.parsing.rules
 
+import io.github.aeckar.ansi.blue
 import io.github.aeckar.parsing.*
-import io.github.oshai.kotlinlogging.KLogger
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 internal class Alternation(
-    logger: KLogger?,
+    loggingStrategy: LoggingStrategy?,
     context: DeclarativeMatcherContext,
     subRule1: Matcher,
     subRule2: Matcher
 ) : CompoundRule(
-    logger,
+    loggingStrategy,
     context,
     subRule1.groupBy<Alternation>() + subRule2.groupBy<Alternation>()
 ), RichMatcher.Aggregate {
@@ -24,7 +25,9 @@ internal class Alternation(
         for ((index, matcher) in subMatchers.withIndex()) {  // Loops at least once
             if (matcher.coreLogic() in driver.localMatchers()) {
                 driver.addDependency(matcher)
-                driver.debug(logger) { "Left recursion found for $matcher" }
+                loggingStrategy?.apply {
+                    driver.debugWithTrace(loggingStrategy) { "Left recursion found for ${blue.ifSupported()(matcher)}" }
+                }
                 continue
             }
             if ((driver.anchor == null || containsAnchor(driver, index)) && matcher.collectMatches(driver) != -1) {
