@@ -2,6 +2,7 @@ import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.dsl.*
 import io.github.aeckar.parsing.state.classLogger
 import io.github.oshai.kotlinlogging.KotlinLogging.logger
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -12,33 +13,106 @@ object Symbols {
     val literal by rule { textBy("\"{{![\"\n]}|\\\"}+\"") }
 }
 
-class Markup @JvmOverloads constructor(private val preprocessor: MarkupPreprocessor = MarkupPreprocessor()) {
-    private val output = StringBuilder()
-    private val sectionDepths = mutableListOf(0)
+// https://stackoverflow.com/a/19759564
+val uppercaseRomanDigits = TreeMap(mapOf(
+    1000 to "M",
+    900 to "CM",
+    500 to "D",
+    400 to "CD",
+    100 to "C",
+    90 to "XC",
+    50 to "L",
+    40 to "XL",
+    10 to "X",
+    9 to "IX",
+    5 to "V",
+    4 to "IV",
+    1 to "I",
+))
 
-    fun output(): CharSequence = output
+val lowercaseRomanDigits: TreeMap<Int, String> = TreeMap(mapOf(
+    1000 to "m",
+    900 to "cm",
+    500 to "d",
+    400 to "cd",
+    100 to "c",
+    90 to "xc",
+    50 to "l",
+    40 to "xl",
+    10 to "x",
+    9 to "ix",
+    5 to "v",
+    4 to "iv",
+    1 to "i",
+))
+
+fun toRomanNumeral(): String {
+    val key = romanDigits.floorKey(this)
+    if (this == key) {
+        return romanDigits.getValue(this)
+    }
+    return romanDigits[key] + (this - key).toRomanNumeral()
+}
+
+enum class NumberingFormat(private val numberingSupplier: (depth: Int) -> String) {
+    NUMBER({ it.toString() }),
+    LOWER({
+        var remaining = it
+        buildString {
+            do {
+                insert(0, 'a' + (remaining % 26))
+                remaining -= 26
+            } while (remaining >= 0)
+        }
+    }),
+    ROMAN_LOWER(Int::toRomanNumeral),
+    UPPER({
+
+    }),
+    ROMAN_UPPER({
+        romanDigits.mapValues { (_, value) -> value.lowercase() }
+    });
+
+    /** Returns the numbering according to the depth and format. */
+    fun numbering(depth: Int) = numberingSupplier(depth)
+
+    companion object {
+        /** Returns the default numbering format for the given depth. */
+        fun default(depth: Int) = entries[depth % 3]
+    }
+}
+
+class Markup @JvmOverloads constructor(private val preprocessor: MarkupPreprocessor = MarkupPreprocessor()) {
+    private val out = StringBuilder()
+    private val depths = mutableListOf(0)
+    private val headingOrderings = mutableListOf<Ordering>()
+    private val listOrderings = mutableListOf<Ordering>()
+    // layers: number, alpha, alpha-cap, roman, roman-cap
+
+    fun output(): CharSequence = out
+
+    private inline fun htmlTag(
+        tag: String,
+        vararg classes: String,
+        attributes: Map<String, Any?> = emptyMap(),
+        block: StringBuilder.() -> Unit
+    ) {
+        out.append('<', tag)
+        classes.joinTo(out, " ", "class='", "'")
+        attributes.entries.forEach { (key, value) -> out.append(' ', key, '=', '\'', value, '\'') }
+        out.append('>')
+        block(out)
+        out.append("</", tag, '>')
+    }
+
+    private inline fun html(block: StringBuilder.() -> Unit) {
+        block(out)
+    }
 
     companion object Grammar {
         private val rule = ruleUsing(logger(Markup::class.qualifiedName!!), Symbols.whitespace)
         private val matcher = rule.imperative()
         private val action = actionUsing<Markup>()
-
-        /* ------------------------------ HTML builders ------------------------------ */
-
-        private inline fun TransformContext<Markup>.buildHtml(
-            tagName: String,
-            vararg classList: String,
-            block: StringBuilder.() -> Unit = { visitRemaining() }
-        ) {
-            val classes = classList.joinToString(" ", "class='", "'")
-            state.output.append("<$tagName $classes>")
-            block(state.output)
-            state.output.append("</$tagName>")
-        }
-
-        private inline fun TransformContext<Markup>.buildHtml(block: StringBuilder.() -> Unit) {
-            block(state.output)
-        }
 
         /* --------------------------------------------------------------------------- */
 
@@ -54,7 +128,7 @@ class Markup @JvmOverloads constructor(private val preprocessor: MarkupPreproces
             val label = "{:}?{\"{![\n\"^]}\"|{a..z|A..Z}+}:"
             oneOrSpread(inlineElement or charNotBy("={{[^]}|\n{[%h]}*{#|\n|$bullet|$block|$import|$assignment|$label}}"))
         } with action {
-            buildHtml("p", "dt-paragraph") {
+            state.htmlTag("p", "dt-paragraph") {
                 children.forEach { child ->
                     if (child.choice == 1) {
                         append(child.capture)
@@ -69,7 +143,7 @@ class Markup @JvmOverloads constructor(private val preprocessor: MarkupPreproces
             MarkupPreprocessor.variable
         } with action {
             val pp = state.preprocessor
-            state.output.append(pp.definitions[pp.varUsages.single { it.index == index }.varName])
+            state.out.append(pp.definitions[pp.varUsages.single { it.index == index }.varName])
         }
 
         val inlineElement: Matcher by rule {
@@ -98,37 +172,37 @@ class Markup @JvmOverloads constructor(private val preprocessor: MarkupPreproces
             }
             yield(lengthOfTextBy("{![\n^]}{![$%[*%|`%{\n^]}*"))
         } with action {
-            buildHtml { append(capture) }
+            state.html { append(capture) }
         }
 
         val bold: Matcher by rule(shallow = true) {
             text("**") * inlineElements * text("**")
         } with action {
-            buildHtml("strong", "dt-bold")
+            state.htmlTag("strong", "dt-bold") { visitRemaining() }
         }
 
         val italics by rule(shallow = true) {
             char('*') * inlineElements * char('*')
         } with action {
-            buildHtml("em", "dt-italics")
+            state.htmlTag("em", "dt-italics") { visitRemaining() }
         }
 
         val underline by rule(shallow = true) {
             char('_') * inlineElements * char('_')
         } with action {
-            buildHtml("u", "dt-underline")
+            state.htmlTag("u", "dt-underline") { visitRemaining() }
         }
 
         val strikethrough by rule(shallow = true) {
             char('~') * inlineElements * char('~')
         } with action {
-            buildHtml("del", "dt-strikethrough")
+            state.htmlTag("del", "dt-strikethrough") { visitRemaining() }
         }
 
         val highlight by rule(shallow = true) {
             char('|') * inlineElements * char('|')
         } with action {
-            buildHtml("mark", "dt-highlight")
+            state.htmlTag("mark", "dt-highlight") { visitRemaining() }
         }
 
         val label by rule {
@@ -136,13 +210,15 @@ class Markup @JvmOverloads constructor(private val preprocessor: MarkupPreproces
         }
 
         val heading by rule {
-            textIn("#" * (1..6)) + maybe(textBy("$$|$")) + maybe(label) + line
+            textIn("#" * (1..6)) + textBy("{$$|$}?") + maybe(label) + line
         } with action {
             val depth = children[0].capture.length
-            buildHtml("h$depth", "dt-heading", "dt-h$depth") {
-                if (children[1].choice != -1) {
-                    buildHtml("b") {
+            state.htmlTag("h$depth", "dt-heading", "dt-h$depth") {
+                if (children[1].capture.isNotEmpty()) {
+                    state.htmlTag("b") {
+                        if (children[1].capture == "$") {
 
+                        }
                     }
                 }
                 if (children[2].choice != -1) {
