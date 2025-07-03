@@ -54,19 +54,26 @@ class MarkupState @JvmOverloads constructor(val preprocessor: PreprocessorState 
     fun variableNameByIndex(index: Int) = preprocessor.variables.first { it.index == index }.name
 
     fun toTitleCase(string: String): String {
-        Regex("(\\s+)|\"|(\\S+)").findAll(string).map { result ->
-            val match = result.value
-            if (result.groups[2] == null) {
-                return@map match
-            }
-            if (result.range.start != 0 && result.range.endInclusive != string.lastIndex) {
-                val conjunction = conjunctions.find { it == match }
-                if (conjunction != null) {
-                    return@map conjunction
+        return Regex("(\\s+)|(\"\\S+\")|(\\S+)")
+            .findAll(string)
+            .map { result ->
+                val match = result.value
+                if (result.groups[1] != null) {
+                    return@map match
                 }
-            }
-
-        }.toList()
+                if (result.groups[2] != null) {
+                    return@map toTitleCase(match.trim('"'))
+                }
+                if (result.range.start != 0 && result.range.endInclusive != string.lastIndex) {
+                    val conjunction = conjunctions.find { it == match }
+                    if (conjunction != null) {
+                        return@map conjunction
+                    }
+                }
+                val lowercase = match.lowercase()
+                val initialIndex = lowercase.indexOfFirst { it.isLetter() }
+                lowercase.mapIndexed { i, c -> if (i == initialIndex) c.uppercase() else c }.toString()
+            }.joinToString("")
     }
 
     inline fun emitHtmlTag(

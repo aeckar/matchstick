@@ -3,8 +3,8 @@ package io.github.aeckar.parsing.state
 import io.github.aeckar.parsing.MatchFailure
 
 /**
- * todo document
- * @param failures todo document
+ * Contains a value that only exists if the operation returning this instance was a success.
+ * @param failures the failures chained before this result was returned, or an empty list if the result was a success
  */
 public class Result<R> @PublishedApi internal constructor(
     public val failures: List<MatchFailure>,

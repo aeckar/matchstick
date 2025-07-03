@@ -9,7 +9,6 @@ import io.github.aeckar.parsing.output.TransformMap
 import io.github.aeckar.parsing.output.bindFinal
 import io.github.aeckar.parsing.patterns.TextExpressionParser.start
 import io.github.aeckar.parsing.state.classLogger
-import io.github.aeckar.parsing.state.removeLast
 
 /**
  * Parses text expressions.

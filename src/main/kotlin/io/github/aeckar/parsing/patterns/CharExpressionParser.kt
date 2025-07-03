@@ -14,7 +14,6 @@ import io.github.aeckar.parsing.patterns.CharExpressionParser.prefix
 import io.github.aeckar.parsing.patterns.CharExpressionParser.start
 import io.github.aeckar.parsing.patterns.CharExpressionParser.union
 import io.github.aeckar.parsing.state.classLogger
-import io.github.aeckar.parsing.state.removeLast
 
 /**
  * Parses character expressions.

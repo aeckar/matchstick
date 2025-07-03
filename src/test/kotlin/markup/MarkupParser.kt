@@ -9,6 +9,8 @@ import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.output.bind
 import io.github.aeckar.parsing.state.classLogger
 
+// tid
+
 object MarkupParser : Parser<MarkupState>() {
     private val rule: DeclarativeMatcherStrategy
     private val matcher: ImperativeMatcherStrategy
@@ -145,18 +147,18 @@ object MarkupParser : Parser<MarkupState>() {
                 val label = when (children[0].choice) {
                     0 -> {
                         val literal = children[0][1].capture
-
+                        append(state.toTitleCase(literal))
                     }
                     1 -> {
                         val variable = state.variableNameByIndex(index)
-                        state.preprocessor.definitions[variable]
+                        append(state.preprocessor.definitions[variable])
                     }
                     else /* 2 */ -> {
                         val word = children[0].capture
-                        if ()
+                        append(state.toTitleCase(word))
                     }
                 }
-                append(label, ' ')
+                append(label, ": ")
             }
         },
         headingNumbering to {
