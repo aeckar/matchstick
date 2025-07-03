@@ -13,7 +13,7 @@ import io.github.aeckar.parsing.output.TransformScope
  * @see ImperativeMatcherContext.lengthOfCharBy
  * @see ImperativeMatcherContext.lengthOfTextBy
  */
-public class Expression internal constructor() {
+public class ExpressionState internal constructor() {
     internal val patterns = mutableListOf<RichPattern>()
     internal val charData = ArrayDeque<Char>()
 
@@ -21,7 +21,7 @@ public class Expression internal constructor() {
     public fun pattern(): Pattern = patterns.single()
 
     internal companion object {
-        val charOrEscapeAction: TransformScope<Expression> = { state.charData += capture[choice] }
+        val charOrEscapeAction: TransformScope<ExpressionState> = { state.charData += capture[choice] }
 
         /**
          * Returns the next character or mandatory escape sequence.

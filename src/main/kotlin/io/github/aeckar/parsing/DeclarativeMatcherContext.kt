@@ -1,18 +1,18 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.CombinatorDsl
+import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.newRule
-import io.github.aeckar.parsing.dsl.ruleUsing
-import io.github.aeckar.parsing.patterns.CharExpression
-import io.github.aeckar.parsing.patterns.TextExpression
+import io.github.aeckar.parsing.patterns.CharExpressionParser
+import io.github.aeckar.parsing.patterns.TextExpressionParser
 import io.github.aeckar.parsing.rules.*
 import io.github.aeckar.parsing.state.LoggingStrategy
 import io.github.aeckar.parsing.state.escaped
 
 /**
  * Provides a scope, evaluated eagerly, to describe the behavior of a rule.
+ * @see matcher
  * @see newRule
- * @see ruleUsing
  */
 public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Matcher
 
@@ -21,8 +21,8 @@ public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Match
  *
  * The resulting matcher is analogous to a *rule* in a context-free grammar,
  * and is thus referred to as one within this context.
+ * @see matcher
  * @see newRule
- * @see ruleUsing
  * @see ImperativeMatcherContext
  * @see RichMatcher.collectMatches
  */
@@ -52,14 +52,15 @@ public open class DeclarativeMatcherContext internal constructor(
         }
     }
 
-    /* ------------------------------ utility ------------------------------ */
-
     /** Maps each integer to the receiver repeated that number of times. */
     public operator fun String.times(counts: Iterable<Int>): List<String> {
         return counts.map { repeat(it) }
     }
 
     /* ------------------------------ matcher factories ------------------------------ */
+
+    /** Returns the [start][Grammar.start] symbol of this grammar. */
+    public operator fun Grammar.invoke(): Matcher = start
 
     /** Used to identify meaningless characters between captured substrings, such as whitespace. */
     public fun separator(): Matcher = separator
@@ -111,7 +112,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * Returns a rule matching a single character satisfying the pattern given by the expression.
      * @throws MalformedPatternException the character expression is malformed
      * @see ImperativeMatcherContext.lengthOfCharBy
-     * @see CharExpressionGrammar
+     * @see CharExpressionParser
      */
     public fun charBy(expr: String): Matcher = cacheableMatcher("`$expr`") { yield(lengthOfCharBy(expr)) }
 
@@ -119,7 +120,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * Returns a rule matching a single character not satisfying the pattern given by the expression.
      * @throws MalformedPatternException the character expression is malformed
      * @see ImperativeMatcherContext.lengthOfCharBy
-     * @see CharExpressionGrammar
+     * @see CharExpressionParser
      */
     public fun charNotBy(expr: String): Matcher = cacheableMatcher("`$expr`") {
         val length = lengthOfCharBy(expr)
@@ -133,7 +134,7 @@ public open class DeclarativeMatcherContext internal constructor(
      * Returns a rule matching text satisfying the pattern given by the expression.
      * @throws MalformedPatternException the text expression is malformed
      * @see ImperativeMatcherContext.lengthOfTextBy
-     * @see TextExpressionGrammar
+     * @see TextExpressionParser
      */
     public fun textBy(expr: String): Matcher = cacheableMatcher("``$expr``") { yield(lengthOfTextBy(expr)) }
 

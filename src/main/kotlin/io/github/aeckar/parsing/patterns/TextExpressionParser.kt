@@ -16,8 +16,8 @@ import io.github.aeckar.parsing.state.removeLast
  * @see DeclarativeMatcherContext.textBy
  * @see ImperativeMatcherContext.lengthOfTextBy
  */
-public object TextExpressionParser : Parser<Expression>() {
-    private val rule = using(classLogger()).declarative()
+public object TextExpressionParser : Parser<ExpressionState>() {
+    private val rule = matcher(classLogger()).declarative()
     private const val END_OF_INPUT = '\u0000'
 
     private val captureGroupModifiers = mapOf<_, (RichPattern) -> RichPattern>(
@@ -46,10 +46,10 @@ public object TextExpressionParser : Parser<Expression>() {
         }
     )
 
-    private val charOrEscape = Expression.charOrEscape(rule, "^|{}+*?")
+    private val charOrEscape = ExpressionState.charOrEscape(rule, "^&|()[]{}+*?")
 
     private val embeddedCharExpr by rule {
-        CharExpressionParser.start
+        CharExpressionParser()
     }
 
     /**
@@ -76,10 +76,15 @@ public object TextExpressionParser : Parser<Expression>() {
     /**
      * Denotes a pattern accepting a string of text containing the given characters.
      *
-     * Within the agreeable substring, the characters `^`, `|`, `{`, `}`, `+`, `*`, and `?`
-     * must be escaped using a percent sign (`%`).
+     * Within the agreeable substring, the following characters must be escaped using a percent sign (`%`).
+     *
+     * |   |   |   |   |
+     * |---|---|---|---|
+     * | ^ | & | ｜ | ( |
+     * | ) | [ | ] | { |
+     * | } | + | * | ? |
      * ```ebnf
-     * char ::= '%' (in '^|{}+*?') | . - (in '^|{}+*?')
+     * char ::= '%' (in '^&|()[]{}+*?') | . - (in '^&|()[]{}+*?')
      * substring ::= { '^' | char }
      * ```
      */
@@ -100,7 +105,7 @@ public object TextExpressionParser : Parser<Expression>() {
     /**
      * Denotes a pattern accepting a string of text satisfying the first among multiple conditions.
      * ```ebnf
-     * alternation ::= concatenation '|' concatenation [{ '|' concatenation }]
+     * alternation ::= concatenation '|' concatenation [ { '|' concatenation } ]
      * ```
      */
     public val alternation: Matcher by rule {
@@ -124,68 +129,66 @@ public object TextExpressionParser : Parser<Expression>() {
 
     override val start: Matcher = textExpr
 
-    override fun actions(): TransformMap<Expression> {
-        return bindFinal(
-            charOrEscape to Expression.charOrEscapeAction,
-            embeddedCharExpr to {
-                val charPattern = resultsOf(CharExpressionParser).single().pattern() as RichPattern
-                state.patterns += newPattern(charPattern.description) { s, i ->
-                    if (charPattern.accept(s, i) == 1) 1 else -1
-                }
-            },
-            captureGroup to {
-                val subPattern = state.patterns.removeLast()
-                state.patterns += when (children[3].choice) {
-                    0 -> captureGroupModifiers.getValue(children[3].capture.single())(subPattern)
-                    else /* -1 */ -> newPattern("{${subPattern.description}}", subPattern::accept)
-                }
-            },
-            substring to {
-                val expansion = children.joinToString("") { child ->
-                    if (child.choice == 0) END_OF_INPUT.toString() else state.charData.removeFirst().toString()
-                }
-                val matchLength = if (END_OF_INPUT in expansion) {
-                    expansion.dropLastWhile { it != END_OF_INPUT }.length
-                } else {
-                    expansion.length
-                }
-                state.patterns += newPattern(expansion) { s, i ->
-                    val success = expansion.withIndex().all { (ei, c) ->
-                        if (c == END_OF_INPUT) i >= s.length else i + ei < s.length && s[i + ei] == c
-                    }
-                    if (success) matchLength else -1
-                }
-            },
-            concatenation to {
-                val patterns = state.patterns.removeLast(children.size)
-                state.patterns += newPattern(patterns.joinToString("") { it.description }) { s, i ->
-                    var offset = 0
-                    var matchCount = 0
-                    for (pattern in patterns) {
-                        val result = pattern.accept(s, i + offset)
-                        if (result != -1) {
-                            ++matchCount
-                        }
-                        if (i + offset >= s.length || result == -1) {
-                            break
-                        }
-                        offset += result
-                    }
-                    if (matchCount != patterns.size) -1 else offset
-                }
-            },
-            alternation to {
-                val patterns = state.patterns.removeLast(2 + children[3].children.size)
-                state.patterns += newPattern(patterns.joinToString("|") { it.description }) { s, i ->
-                    patterns.forEach { pattern ->
-                        val result = pattern.accept(s, i)
-                        if (result != -1) {
-                            return@newPattern result
-                        }
-                    }
-                    -1
-                }
+    override fun actions(): TransformMap<ExpressionState> = bindFinal(
+        charOrEscape to ExpressionState.charOrEscapeAction,
+        embeddedCharExpr to {
+            val charPattern = resultsOf(CharExpressionParser).single().pattern() as RichPattern
+            state.patterns += newPattern(charPattern.description) { s, i ->
+                if (charPattern.accept(s, i) == 1) 1 else -1
             }
-        )
-    }
+        },
+        captureGroup to {
+            val subPattern = state.patterns.removeLast()
+            state.patterns += when (children[3].choice) {
+                0 -> captureGroupModifiers.getValue(children[3].capture.single())(subPattern)
+                else /* -1 */ -> newPattern("{${subPattern.description}}", subPattern::accept)
+            }
+        },
+        substring to {
+            val expansion = children.joinToString("") { child ->
+                if (child.choice == 0) END_OF_INPUT.toString() else state.charData.removeFirst().toString()
+            }
+            val matchLength = if (END_OF_INPUT in expansion) {
+                expansion.dropLastWhile { it != END_OF_INPUT }.length
+            } else {
+                expansion.length
+            }
+            state.patterns += newPattern(expansion) { s, i ->
+                val success = expansion.withIndex().all { (ei, c) ->
+                    if (c == END_OF_INPUT) i >= s.length else i + ei < s.length && s[i + ei] == c
+                }
+                if (success) matchLength else -1
+            }
+        },
+        concatenation to {
+            val patterns = state.patterns.removeLast(children.size)
+            state.patterns += newPattern(patterns.joinToString("") { it.description }) { s, i ->
+                var offset = 0
+                var matchCount = 0
+                for (pattern in patterns) {
+                    val result = pattern.accept(s, i + offset)
+                    if (result != -1) {
+                        ++matchCount
+                    }
+                    if (i + offset >= s.length || result == -1) {
+                        break
+                    }
+                    offset += result
+                }
+                if (matchCount != patterns.size) -1 else offset
+            }
+        },
+        alternation to {
+            val patterns = state.patterns.removeLast(2 + children[3].children.size)
+            state.patterns += newPattern(patterns.joinToString("|") { it.description }) { s, i ->
+                patterns.forEach { pattern ->
+                    val result = pattern.accept(s, i)
+                    if (result != -1) {
+                        return@newPattern result
+                    }
+                }
+                -1
+            }
+        }
+    )
 }

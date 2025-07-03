@@ -30,7 +30,7 @@ import io.github.aeckar.parsing.state.LoggingStrategy
  * @see DeclarativeMatcherContext.oneOrSpread
  */
 @Suppress("UNCHECKED_CAST")
-public fun using(
+public fun matcher(
     loggingStrategy: LoggingStrategy? = null,
     separator: () -> Matcher
 ): GenericMatcherStrategy {
@@ -61,7 +61,7 @@ public fun using(
  * @see DeclarativeMatcherContext.zeroOrSpread
  * @see DeclarativeMatcherContext.oneOrSpread
  */
-public fun using(
+public fun matcher(
     loggingStrategy: LoggingStrategy? = null,
     separator: Matcher = ImperativeMatcher.EMPTY
 ): GenericMatcherStrategy {

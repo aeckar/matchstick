@@ -1,10 +1,10 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.dsl.CombinatorDsl
-import io.github.aeckar.parsing.dsl.matcherUsing
+import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.newMatcher
-import io.github.aeckar.parsing.patterns.CharExpression
-import io.github.aeckar.parsing.patterns.TextExpression
+import io.github.aeckar.parsing.patterns.CharExpressionParser
+import io.github.aeckar.parsing.patterns.TextExpressionParser
 import io.github.aeckar.parsing.patterns.resolveCharPattern
 import io.github.aeckar.parsing.patterns.resolveTextPattern
 import io.github.aeckar.parsing.state.LoggingStrategy
@@ -12,8 +12,8 @@ import java.util.Collections.unmodifiableList
 
 /**
  * Provides a scope, evaluated lazily, to describe the behavior of an imperative matcher.
+ * @see matcher
  * @see newMatcher
- * @see matcherUsing
  */
 public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
 
@@ -28,8 +28,8 @@ public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
  *
  * It is the user's responsibility to ensure that operations on instances of this class are pure.
  * This ensures correct caching of matched substrings.
+ * @see matcher
  * @see newMatcher
- * @see matcherUsing
  * @see RichMatcher.collectMatches
  */
 @CombinatorDsl
@@ -119,7 +119,7 @@ public class ImperativeMatcherContext internal constructor(
     /**
      * Returns 1 if a character satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see charBy
-     * @see CharExpression.Grammar
+     * @see CharExpressionParser
      */
     public fun lengthOfCharBy(expr: String): Int {
         return resolveCharPattern(expr).accept(driver.tape.input, driver.tape.offset)
@@ -128,7 +128,7 @@ public class ImperativeMatcherContext internal constructor(
     /**
      * Returns 1 if a string satisfying the pattern prefixes the offset input, or -1 if one is not found.
      * @see textBy
-     * @see TextExpression.Grammar
+     * @see TextExpressionParser
      */
     public fun lengthOfTextBy(expr: String): Int {
         return resolveTextPattern(expr).accept(driver.tape.input, driver.tape.offset)

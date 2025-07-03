@@ -4,12 +4,14 @@ import io.github.aeckar.parsing.DeclarativeMatcherContext
 import io.github.aeckar.parsing.ImperativeMatcherContext
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.Parser
-import io.github.aeckar.parsing.dsl.*
+import io.github.aeckar.parsing.dsl.matcher
+import io.github.aeckar.parsing.dsl.provideDelegate
 import io.github.aeckar.parsing.output.TransformMap
 import io.github.aeckar.parsing.output.bindFinal
 import io.github.aeckar.parsing.patterns.CharExpressionParser.initial
 import io.github.aeckar.parsing.patterns.CharExpressionParser.intersection
 import io.github.aeckar.parsing.patterns.CharExpressionParser.prefix
+import io.github.aeckar.parsing.patterns.CharExpressionParser.start
 import io.github.aeckar.parsing.patterns.CharExpressionParser.union
 import io.github.aeckar.parsing.state.classLogger
 import io.github.aeckar.parsing.state.removeLast
@@ -19,9 +21,9 @@ import io.github.aeckar.parsing.state.removeLast
  * @see DeclarativeMatcherContext.charBy
  * @see ImperativeMatcherContext.lengthOfCharBy
  */
-public object CharExpressionParser : Parser<Expression>() {
+public object CharExpressionParser : Parser<ExpressionState>() {
     /** Contains the [matchers][Matcher] used to parse character expressions, and provides documentation for each. */
-    private val rule = using(classLogger()).declarative()
+    private val rule = matcher(classLogger()).declarative()
 
     private val charClassEscapes = mapOf(
         'a' to "abcdefghijklmnopqrstuvwxyz",
@@ -30,8 +32,8 @@ public object CharExpressionParser : Parser<Expression>() {
         'h' to " \t\r\u000c"
     )
 
-    private val classCharOrEscape by Expression.charOrEscape(rule, "^&|()[]{}")
-    private val rangeCharOrEscape by Expression.charOrEscape(rule, ".&|()[]{}")
+    private val classCharOrEscape by ExpressionState.charOrEscape(rule, "^&|()[]{}")
+    private val rangeCharOrEscape by ExpressionState.charOrEscape(rule, ".&|()[]{}")
 
     /**
      * Denotes a pattern accepting a character that satisfies the first among multiple conditions.
@@ -135,7 +137,7 @@ public object CharExpressionParser : Parser<Expression>() {
      * @see initial
      */
     public val embeddedTextExpr: Matcher by rule {
-        char('{') * TextExpressionParser.start * char('}') or TextExpressionParser.start
+        char('{') * TextExpressionParser() * char('}') or TextExpressionParser()
     }
 
     /**
@@ -211,99 +213,96 @@ public object CharExpressionParser : Parser<Expression>() {
 
     override val start: Matcher = charExpr
 
-    override fun actions(): TransformMap<Expression> {
-        return bindFinal(
-            classCharOrEscape to Expression.charOrEscapeAction,
-            rangeCharOrEscape to Expression.charOrEscapeAction,
-            union to {
-                val subPatterns = state.patterns.removeLast(2 + children[3].children.size)
-                state.patterns += newPattern(subPatterns.joinToString("|") { it.description }) { s, i ->
-                    subPatterns.any { it.accept(s, i) != -1 }
-                }
-            },
-            intersection to {
-                val subPatterns = state.patterns.removeLast(2 + children[3].children.size)
-                state.patterns += newPattern(subPatterns.joinToString("&") { it.description }) { s, i ->
-                    subPatterns.all { it.accept(s, i) != -1 }
-                }
-            },
-            negation to {
-                val subPattern = state.patterns.removeLast()
-                state.patterns += newPattern("!${subPattern.description}") { s, i -> subPattern.accept(s, i) == -1 }
-            },
-            charClass to {
-                val charClasses = children[1].children
-                var isEndAcceptable = false
-                val expansion = charClasses.mapTo(mutableSetOf()) { charClass ->
-                    when (charClass.choice) {
-                        0 -> {
-                            isEndAcceptable = true
-                            ""
-                        }
-
-                        1 -> charClassEscapes.getValue(charClass.child().capture[1])
-                        else /* 2 */ -> state.charData.removeFirst()
-                    }
-                }.joinToString("")
-                val description = buildString {
-                    append("[")
-                    append(expansion)
-                    if (isEndAcceptable) {
-                        append('^')
-                    }
-                    append("]")
-                }
-                val isCharAcceptable = expansion.isNotEmpty()
-                state.patterns += when {
-                    isEndAcceptable && isCharAcceptable -> newPattern(description) { s, i ->
-                        when {
-                            i >= s.length -> 0
-                            s[i] in expansion -> 1
-                            else -> -1
-                        }
-                    }
-
-                    isEndAcceptable -> newPattern(description) { s, i -> if (i >= s.length) 0 else -1 }
-                    isCharAcceptable -> {
-                        newPattern(description) { s, i ->
-                            i < s.length && s[i] in expansion
-                        }
-                    }
-
-                    else -> newPattern(description) { _, _ -> false }
-                }
-            },
-            charRange to {
-                val range = state.charData.removeFirst()..state.charData.removeFirst()
-                val description = range.toString()
-                state.patterns += when {
-                    range.first == range.last -> {
-                        newPattern(description) { s, i ->
-                            i < s.length && s[i] == range.first
-                        }
-                    }
-
-                    else -> newPattern(description) { s, i -> i < s.length && s[i] in range }
-                }
-            },
-            embeddedTextExpr to {
-                state.patterns += resultsOf(TextExpressionParser).single().pattern() as RichPattern
-            },
-            suffix to {
-                val subPattern = state.patterns.removeLast()
-                state.patterns += newPattern(">${subPattern.description}") { s, i ->
-                    subPattern.accept(s, i - 1) != -1
-                }
-            },
-            prefix to {
-                val subPattern = state.patterns.removeLast()
-                val description = "<${subPattern.description}"
-                state.patterns += newPattern(description) { s, i -> subPattern.accept(s, i + 1) != -1 }
-            },
-            initial to {
-                val subPattern = state.patterns.removeLast()
-                state.patterns += newPattern("=${subPattern.description}") { s, i -> subPattern.accept(s, i) != -1 }
+    override fun actions(): TransformMap<ExpressionState> = bindFinal(
+        classCharOrEscape to ExpressionState.charOrEscapeAction,
+        rangeCharOrEscape to ExpressionState.charOrEscapeAction,
+        union to {
+            val subPatterns = state.patterns.removeLast(2 + children[3].children.size)
+            state.patterns += newPattern(subPatterns.joinToString("|") { it.description }) { s, i ->
+                subPatterns.any { it.accept(s, i) != -1 }
             }
-        )
-    }
+        },
+        intersection to {
+            val subPatterns = state.patterns.removeLast(2 + children[3].children.size)
+            state.patterns += newPattern(subPatterns.joinToString("&") { it.description }) { s, i ->
+                subPatterns.all { it.accept(s, i) != -1 }
+            }
+        },
+        negation to {
+            val subPattern = state.patterns.removeLast()
+            state.patterns += newPattern("!${subPattern.description}") { s, i -> subPattern.accept(s, i) == -1 }
+        },
+        charClass to {
+            val charClasses = children[1].children
+            var isEndAcceptable = false
+            val expansion = charClasses.mapTo(mutableSetOf()) { charClass ->
+                when (charClass.choice) {
+                    0 -> {
+                        isEndAcceptable = true
+                        ""
+                    }
+                    1 -> charClassEscapes.getValue(charClass.child().capture[1])
+                    else /* 2 */ -> state.charData.removeFirst()
+                }
+            }.joinToString("")
+            val description = buildString {
+                append("[")
+                append(expansion)
+                if (isEndAcceptable) {
+                    append('^')
+                }
+                append("]")
+            }
+            val isCharAcceptable = expansion.isNotEmpty()
+            state.patterns += when {
+                isEndAcceptable && isCharAcceptable -> newPattern(description) { s, i ->
+                    when {
+                        i >= s.length -> 0
+                        s[i] in expansion -> 1
+                        else -> -1
+                    }
+                }
+
+                isEndAcceptable -> newPattern(description) { s, i -> if (i >= s.length) 0 else -1 }
+                isCharAcceptable -> {
+                    newPattern(description) { s, i ->
+                        i < s.length && s[i] in expansion
+                    }
+                }
+
+                else -> newPattern(description) { _, _ -> false }
+            }
+        },
+        charRange to {
+            val range = state.charData.removeFirst()..state.charData.removeFirst()
+            val description = range.toString()
+            state.patterns += when {
+                range.first == range.last -> {
+                    newPattern(description) { s, i ->
+                        i < s.length && s[i] == range.first
+                    }
+                }
+
+                else -> newPattern(description) { s, i -> i < s.length && s[i] in range }
+            }
+        },
+        embeddedTextExpr to {
+            state.patterns += resultsOf(TextExpressionParser).single().pattern() as RichPattern
+        },
+        suffix to {
+            val subPattern = state.patterns.removeLast()
+            state.patterns += newPattern(">${subPattern.description}") { s, i ->
+                subPattern.accept(s, i - 1) != -1
+            }
+        },
+        prefix to {
+            val subPattern = state.patterns.removeLast()
+            val description = "<${subPattern.description}"
+            state.patterns += newPattern(description) { s, i -> subPattern.accept(s, i + 1) != -1 }
+        },
+        initial to {
+            val subPattern = state.patterns.removeLast()
+            state.patterns += newPattern("=${subPattern.description}") { s, i -> subPattern.accept(s, i) != -1 }
+        }
+    )
 }

@@ -2,7 +2,6 @@ package io.github.aeckar.parsing.patterns
 
 import io.github.aeckar.parsing.*
 import io.github.aeckar.parsing.state.escaped
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.experimental.ExperimentalTypeInference
 
 /**
@@ -50,7 +49,7 @@ internal fun resolveTextPattern(input: String) = resolvePattern(input, Pattern.t
 private fun resolvePattern(
     input: String,
     cache: MutableMap<String, RichPattern>,
-    parser: Parser<Expression>
+    parser: Parser<ExpressionState>
 ): RichPattern {
     if (input !in cache) {
         try {

@@ -11,7 +11,7 @@ import io.github.aeckar.parsing.state.LoggingStrategy
  * [cacheable] should be set to `true` if the code within [scope] does not use any outside mutable state.
  *
  * The separator block is invoked lazily once.
- * @see using
+ * @see matcher
  * @see newRule
  * @see DeclarativeMatcherContext.separator
  */
@@ -21,14 +21,14 @@ public fun newMatcher(
     separator: () -> Matcher,
     scope: ImperativeMatcherScope
 ): Matcher {
-    return using(loggingStrategy, separator).imperative()(cacheable, scope)
+    return matcher(loggingStrategy, separator).imperative()(cacheable, scope)
 }
 
 /**
  * Configures and returns an imperative matcher whose separator is an empty string.
  *
  * [cacheable] should be set to `true` if the code within [scope] does not use any outside mutable state.
- * @see using
+ * @see matcher
  * @see newRule
  * @see DeclarativeMatcherContext.separator
  */
@@ -45,8 +45,8 @@ public fun newMatcher(
  * Configures and returns a declarative matcher whose separator is an empty string.
  *
  * The separator block is invoked only once.
+ * @see matcher
  * @see newMatcher
- * @see using
  * @see DeclarativeMatcherContext.separator
  */
 public fun newRule(
@@ -56,15 +56,15 @@ public fun newRule(
     separator: () -> Matcher,
     scope: DeclarativeMatcherScope
 ): Matcher {
-    return using(loggingStrategy, separator).declarative()(greedy, nonRecursive, scope)
+    return matcher(loggingStrategy, separator).declarative()(greedy, nonRecursive, scope)
 }
 
 /**
  * Configures and returns a declarative matcher whose separator is an empty string.
  *
  * The separator block is invoked only once.
+ * @see matcher
  * @see newMatcher
- * @see using
  * @see DeclarativeMatcherContext.separator
  */
 public fun newRule(
