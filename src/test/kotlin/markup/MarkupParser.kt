@@ -87,8 +87,12 @@ object MarkupParser : Parser<MarkupState>() {
         (SharedMatchers.literal or variable or textBy("{[%a%A]}+")) * char(':')
     }
 
+    val headingNumbering by rule {
+        textBy("{\${[dDaAiI]}*}?")
+    }
+
     val heading by rule {
-        textIn("#" * (1..6)) + textBy("{\${[dDaAiI]}?}?") + maybe(label) + line
+        textIn("#" * (1..MAX_DEPTH)) + headingNumbering + maybe(label) + line
     }
 
     val topLevelElement by rule {
@@ -105,7 +109,7 @@ object MarkupParser : Parser<MarkupState>() {
 
     override fun actions() = bind<MarkupState>(
         paragraph to {
-            state.emitHtmlTag("p", "$FILE_EXT-paragraph") {
+            state.emitHtmlTag("p", "paragraph") {
                 children.forEach { child ->
                     if (child.choice == 1) {
                         append(child.capture)
@@ -116,41 +120,68 @@ object MarkupParser : Parser<MarkupState>() {
             }
         },
         variable to {
-            val p = state.preprocessor
-            state.out.append(p.definitions[p.varUsages.single { it.index == index }.varName])
+            state.output.append(state.preprocessor.definitions[state.variableNameByIndex(index)])
         },
         content to {
             state.emitHtml { append(capture) }
         },
         bold to {
-            state.emitHtmlTag("strong", "$FILE_EXT-bold") { visitRemaining() }
+            state.emitHtmlTag("strong", "bold") { visitRemaining() }
         },
         italics to {
-            state.emitHtmlTag("em", "$FILE_EXT-italics") { visitRemaining() }
+            state.emitHtmlTag("em", "italics") { visitRemaining() }
         },
         underline to {
-            state.emitHtmlTag("u", "$FILE_EXT-underline") { visitRemaining() }
+            state.emitHtmlTag("u", "underline") { visitRemaining() }
         },
         strikethrough to {
-            state.emitHtmlTag("del", "$FILE_EXT-strikethrough") { visitRemaining() }
+            state.emitHtmlTag("del", "strikethrough") { visitRemaining() }
         },
         highlight to {
-            state.emitHtmlTag("mark", "$FILE_EXT-highlight") { visitRemaining() }
+            state.emitHtmlTag("mark", "highlight") { visitRemaining() }
+        },
+        label to {
+            state.emitHtmlTag("b", "label") {
+                val label = when (children[0].choice) {
+                    0 -> {
+                        val literal = children[0][1].capture
+
+                    }
+                    1 -> {
+                        val variable = state.variableNameByIndex(index)
+                        state.preprocessor.definitions[variable]
+                    }
+                    else /* 2 */ -> {
+                        val word = children[0].capture
+                        if ()
+                    }
+                }
+                append(label, ' ')
+            }
+        },
+        headingNumbering to {
+            if (capture.isEmpty()) {
+                return@to
+            }
+            state.emitHtmlTag("strong", "num", "heading-num") {
+                val headings = state.headings
+                if (capture != "$") {
+                    headings.formats.retain(headings.depth - 1)
+                    capture.drop(1).forEach { key ->
+                        headings.formats += NumberingFormat.entries.first { it.key == key }
+                    }
+                }
+                append(headings.trueFormat().format(headings), ' ')
+            }
         },
         heading to {
             val depth = children[0].capture.length
-            state.emitHtmlTag("h$depth", "$FILE_EXT-heading", "$FILE_EXT-h$depth") {
-                if (children[1].capture.isNotEmpty()) {
-                    state.emitHtmlTag("b") {
-                        if (children[1].capture == "$") {
-
-                        }
-                    }
-                }
-                if (children[2].choice != -1) {
-
-                }
+            state.headings.depth = depth
+            state.emitHtmlTag("h$depth", "heading", "h$depth") {
+                children[2].visit() // label?
+                children[1].visit() // headingNumbering
             }
+            children[3].visit() // line
         }
     )
 }

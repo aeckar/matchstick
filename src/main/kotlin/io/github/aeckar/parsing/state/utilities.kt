@@ -4,12 +4,6 @@ import io.github.aeckar.parsing.StateInitializerException
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 
-internal fun <E> MutableList<E>.removeLast(count: Int): List<E> {
-    val subList = subList(size - count, size)
-    return subList.toList()
-        .also { subList.clear() }
-}
-
 internal infix fun <T> T.instanceOf(type: KType): Boolean {
     if (this == null) {
         return type.isMarkedNullable

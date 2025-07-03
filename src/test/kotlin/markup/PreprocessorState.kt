@@ -6,8 +6,9 @@ package markup
  */
 class PreprocessorState {
     val definitions = mutableMapOf<String, CharSequence>()
-    val varUsages = mutableListOf<Usage>()
-    var maxSectionDepth = 0
+    val variables = mutableListOf<VariableInstance>()
+    val headings = mutableListOf<HeadingInstance>()
 
-    data class Usage(val varName: String, val index: Int)
+    data class VariableInstance(val name: String, val index: Int)
+    data class HeadingInstance(val index: Int, val depth: Int)
 }

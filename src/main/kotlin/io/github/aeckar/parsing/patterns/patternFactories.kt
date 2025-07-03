@@ -6,6 +6,9 @@ import kotlin.experimental.ExperimentalTypeInference
 
 /**
  * Returns the text pattern specified by the given expression.
+ *
+ * Text patterns are primarily useful in matching a substring in an input.
+ * If sectioning of an input is required, a [Regex] should be used instead.
  * @see TextExpressionParser
  */
 public fun pattern(expr: String): Pattern = resolveTextPattern(expr)

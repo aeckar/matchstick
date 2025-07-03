@@ -12,6 +12,6 @@ object SharedMatchers {
     }
 
     val literal by rule {
-        textBy("\"{{![\"\n]}|\\\"}+\"")
+        char('"') * textBy("{{![\"\n]}|\\\"}+") * char('"')
     }
 }

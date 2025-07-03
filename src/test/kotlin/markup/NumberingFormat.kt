@@ -2,31 +2,43 @@ package markup
 
 import java.util.TreeMap
 
-enum class NumberingFormat(private val numberingSupplier: (count: Int) -> String) {
-    NUMBER({ count ->
-        count.toString()
+enum class NumberingFormat(
+    val key: Char?,
+    private val formatter: (struct: MarkupState.Structure) -> String
+) {
+    NUMBER('d', { struct ->
+        struct.count().toString() + '.'
     }),
-    LOWER({ count ->
-        var remaining = count
+    LOWER('a', { struct ->
+        var remaining = struct.count()
         buildString {
             do {
                 insert(0, 'a' + (remaining % 26))
                 remaining -= 26
             } while (remaining >= 0)
+            append('.')
         }
     }),
-    ROMAN_LOWER({ count ->
-        count.toRomanNumerals()
+    ROMAN_LOWER('i', { struct ->
+        struct.count().toRomanNumerals() + '.'
     }),
-    UPPER({ count ->
-        LOWER.numbering(count).uppercase()
+    UPPER('A', { struct ->
+        LOWER.format(struct).uppercase()
     }),
-    ROMAN_UPPER({ count ->
-        ROMAN_LOWER.numbering(count).uppercase()
+    ROMAN_UPPER('I', { struct ->
+        ROMAN_LOWER.format(struct).uppercase()
+    }),
+    LONG_NUMBER('D', { struct ->
+        val indices = 0..struct.parentFormats().indexOf(LONG_NUMBER)
+        val countsReversed = struct.counts.asReversed()
+        indices.joinToString(".") { index -> countsReversed[index].toString() }
+    }),
+    DEFAULT(null, { struct ->
+        entries[struct.depth % 3].format(struct)
     });
 
     /** Returns the numbering according to the depth and format. */
-    fun numbering(depth: Int) = numberingSupplier(depth)
+    fun format(struct: MarkupState.Structure) = formatter(struct)
 
     companion object {
         // https://stackoverflow.com/a/19759564
@@ -47,9 +59,6 @@ enum class NumberingFormat(private val numberingSupplier: (count: Int) -> String
                 1 to "i",
             )
         )
-
-        /** Returns the default numbering format for the given depth. */
-        fun forDepth(depth: Int) = entries[depth % 3]
 
         private fun Int.toRomanNumerals(): String {
             val key = romanNumerals.floorKey(this)

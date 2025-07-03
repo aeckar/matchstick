@@ -1,10 +1,11 @@
 package io.github.aeckar.parsing.output
 
+import io.github.aeckar.parsing.GrammarContext
 import io.github.aeckar.parsing.Grammar
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.RichMatcher
-import io.github.aeckar.parsing.dsl.CombinatorDsl
+import io.github.aeckar.parsing.dsl.GrammarContextDsl
 import java.util.*
 
 /**
@@ -20,12 +21,11 @@ public typealias TransformScope<R> = TransformContext<R>.() -> Unit
  * @see SyntaxTreeNode.transform
  * @see io.github.aeckar.parsing.parse
  */
-@CombinatorDsl
 public class TransformContext<R> @PublishedApi internal constructor(
     internal val bindings: TransformMap<*>,
     private val node: SyntaxTreeNode,
     state: R
-) {
+) : GrammarContext() {
     internal val resultsBySubMatcher = mutableMapOf<RichMatcher, MutableList<Any?>>()
 
     /** Some state, whose final value is the output. */

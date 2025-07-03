@@ -10,11 +10,9 @@ import io.github.aeckar.parsing.output.bind
 import io.github.aeckar.parsing.parse
 import io.github.aeckar.parsing.state.classLogger
 import java.io.File
-import kotlin.collections.set
 
 object PreprocessorParser : Parser<PreprocessorState>() {
     private val rule = matcher(classLogger(), SharedMatchers.whitespace).declarative()
-    private val markupFileExtension = Regex("\\.$FILE_EXT\\s*$")
 
     /*
         Identifiers must start with a letter or underscore,
@@ -46,37 +44,25 @@ object PreprocessorParser : Parser<PreprocessorState>() {
         char('$') * identifier + char('=') + textBy("$grouping|$mathBlock|$codeBlock|$grid|{![\n^]}*")
     }
 
-    val heading by rule {
-        textBy("{#}+")
-    }
-
     val document by newRule(separator = newRule { textBy("{!=$|\\$}+|{!=\n{[%h]}*{#}+}\n{[%h]}*") }) {
-        separator() * zeroOrSpread(definition or variable or import or heading or char('$'))
+        separator() * zeroOrSpread(definition or variable or import or char('$'))
     }
 
     override val start = document
 
-    override fun actions(): TransformMap<PreprocessorState> {
-        return bind<PreprocessorState>(
-            variable to {
-                val name = (if (children[1].choice == 0) children[1].child() else children[1].child()[1]).capture
-                state.varUsages += PreprocessorState.Usage(name, index)
-            },
-            import to {
-                val fileName = children[1].capture.trim('"')
-                if (markupFileExtension in fileName) {
-                    parse(File(fileName).readText(), state) // Run preprocessor on file
-                }
-            },
-            definition to {
-                state.definitions[children[0][1].capture] = MarkupParser.parse(children[2].capture).result().output()
-            },
-            heading to {
-                if (state.maxSectionDepth < capture.length) {
-                    state.maxSectionDepth = capture.length
-                }
-            },
-            start to {}
-        )
-    }
+    override fun actions(): TransformMap<PreprocessorState> = bind<PreprocessorState>(
+        variable to {
+            val name = (if (children[1].choice == 0) children[1].child() else children[1].child()[1]).capture
+            state.variables += PreprocessorState.VariableInstance(name, index)
+        },
+        import to {
+            val fileName = children[1][1].capture.trim()
+            if (fileName.endsWith(FILE_EXT)) {
+                parse(File(fileName).readText(), state) // Run preprocessor on file
+            }
+        },
+        definition to {
+            state.definitions[children[0][1].capture] = MarkupParser.parse(children[2].capture).result().output
+        }
+    )
 }

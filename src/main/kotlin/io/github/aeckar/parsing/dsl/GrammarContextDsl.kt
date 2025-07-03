@@ -9,4 +9,4 @@ import io.github.aeckar.parsing.output.TransformContext
  */
 @Target(AnnotationTarget.CLASS)
 @DslMarker
-public annotation class CombinatorDsl
+public annotation class GrammarContextDsl

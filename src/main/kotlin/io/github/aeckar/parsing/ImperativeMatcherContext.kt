@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.CombinatorDsl
+import io.github.aeckar.parsing.dsl.GrammarContextDsl
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.patterns.CharExpressionParser
@@ -32,7 +32,6 @@ public typealias ImperativeMatcherScope = ImperativeMatcherContext.() -> Unit
  * @see newMatcher
  * @see RichMatcher.collectMatches
  */
-@CombinatorDsl
 public class ImperativeMatcherContext internal constructor(
     loggingStrategy: LoggingStrategy?,
     internal val driver: Driver,

@@ -1,6 +1,6 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.CombinatorDsl
+import io.github.aeckar.parsing.dsl.GrammarContextDsl
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.patterns.CharExpressionParser
@@ -26,12 +26,11 @@ public typealias DeclarativeMatcherScope = DeclarativeMatcherContext.() -> Match
  * @see ImperativeMatcherContext
  * @see RichMatcher.collectMatches
  */
-@CombinatorDsl
 public open class DeclarativeMatcherContext internal constructor(
     private val loggingStrategy: LoggingStrategy?,
     greedy: Boolean,
     lazySeparator: () -> RichMatcher
-) {
+) : GrammarContext() {
     internal val isGreedy = greedy
     private val singleChar = cacheableMatcher(".") { yield(1) }
     protected var isMatchingEnabled: Boolean = true
@@ -50,11 +49,6 @@ public open class DeclarativeMatcherContext internal constructor(
                 isMatchingEnabled = isMatching
             }
         }
-    }
-
-    /** Maps each integer to the receiver repeated that number of times. */
-    public operator fun String.times(counts: Iterable<Int>): List<String> {
-        return counts.map { repeat(it) }
     }
 
     /* ------------------------------ matcher factories ------------------------------ */
