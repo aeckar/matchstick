@@ -9,6 +9,8 @@ import io.github.aeckar.parsing.output.TransformMap
 import io.github.aeckar.parsing.output.bind
 import io.github.aeckar.parsing.parse
 import io.github.aeckar.parsing.state.classLogger
+import markup.PreprocessorState.VariableInstance
+import markup.PreprocessorState.VariableValue
 import java.io.File
 
 object PreprocessorParser : Parser<PreprocessorState>() {
@@ -41,7 +43,8 @@ object PreprocessorParser : Parser<PreprocessorState>() {
         val mathBlock = "%{{!=\n%}}*\n%}"
         val codeBlock = "``{!=\n``}*\n``"
         val grid = "[{!=\n]}*\n]"
-        char('$') * identifier + char('=') + textBy("$grouping|$mathBlock|$codeBlock|$grid|{![\n^]}*")
+        val embeddedMarkup = "$grouping|$mathBlock|$codeBlock|$grid|{![\n^]}*"
+        (char('$') * identifier) + char('=') + (SharedMatchers.literal or textBy(embeddedMarkup))
     }
 
     val document by newRule(separator = newRule { textBy("{!=$|\\$}+|{!=\n{[%h]}*{#}+}\n{[%h]}*") }) {
@@ -53,7 +56,7 @@ object PreprocessorParser : Parser<PreprocessorState>() {
     override fun actions(): TransformMap<PreprocessorState> = bind<PreprocessorState>(
         variable to {
             val name = (if (children[1].choice == 0) children[1].child() else children[1].child()[1]).capture
-            state.variables += PreprocessorState.VariableInstance(name, index)
+            state.variables += VariableInstance(name, index)
         },
         import to {
             val fileName = children[1][1].capture.trim()
@@ -62,7 +65,11 @@ object PreprocessorParser : Parser<PreprocessorState>() {
             }
         },
         definition to {
-            state.definitions[children[0][1].capture] = MarkupParser.parse(children[2].capture).result().output
+            state.definitions[children[0][1].capture] = if (children[2].choice == 0) {
+                VariableValue(children[2].child()[1].capture, true)
+            } else {
+                VariableValue(MarkupParser.parse(children[2].capture).result().output.toString(), false)
+            }
         }
     )
 }

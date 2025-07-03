@@ -97,10 +97,12 @@ public open class SyntaxTreeNode internal constructor(
             return
         }
         val state = context.state
+        action as TransformScope<R>
         if (state instanceOf bindings.stateType) {
             action(TransformContext(bindings, this, state)) // Invokes this function recursively
             return
         }
+
         val subContext = TransformContext(bindings, this, initialStateOf<R>(bindings.stateType))
         val result = action(subContext) // Visit sub-context
         if (matcher.id === UNKNOWN_ID && matcher.coreScope() == null) {

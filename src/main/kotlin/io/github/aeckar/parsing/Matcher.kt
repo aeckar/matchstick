@@ -1,8 +1,8 @@
 package io.github.aeckar.parsing
 
+import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.newMatcher
 import io.github.aeckar.parsing.dsl.newRule
-import io.github.aeckar.parsing.dsl.using
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.state.Enumerated
 
@@ -27,9 +27,9 @@ import io.github.aeckar.parsing.state.Enumerated
  * or [matches][DeclarativeMatcherContext.char] a substring in an input.
  *
  * Matchers are equivalent according to their matching logic.
+ * @see matcher
  * @see newMatcher
  * @see newRule
- * @see using
  * @see DeclarativeMatcherContext
  * @see ImperativeMatcherContext
  */
