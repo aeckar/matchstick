@@ -3,13 +3,13 @@ package markup
 import java.util.TreeMap
 
 enum class NumberingFormat(
-    val key: Char?,
+    val key: String,
     private val formatter: (struct: MarkupState.Structure) -> String
 ) {
-    NUMBER('d', { struct ->
+    NUMBER("d", { struct ->
         struct.count().toString() + '.'
     }),
-    LOWER('a', { struct ->
+    LOWER("a", { struct ->
         var remaining = struct.count()
         buildString {
             do {
@@ -19,21 +19,21 @@ enum class NumberingFormat(
             append('.')
         }
     }),
-    ROMAN_LOWER('i', { struct ->
+    ROMAN_LOWER("i", { struct ->
         struct.count().toRomanNumerals() + '.'
     }),
-    UPPER('A', { struct ->
+    UPPER("A", { struct ->
         LOWER.format(struct).uppercase()
     }),
-    ROMAN_UPPER('I', { struct ->
+    ROMAN_UPPER("I", { struct ->
         ROMAN_LOWER.format(struct).uppercase()
     }),
-    LONG_NUMBER('D', { struct ->
+    LONG_NUMBER("D", { struct ->
         val indices = 0..struct.parentFormats().indexOf(LONG_NUMBER)
         val countsReversed = struct.counts.asReversed()
         indices.joinToString(".") { index -> countsReversed[index].toString() }
     }),
-    DEFAULT(null, { struct ->
+    DEFAULT("", { struct ->
         entries[struct.depth % 3].format(struct)
     });
 

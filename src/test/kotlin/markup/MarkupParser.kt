@@ -169,7 +169,7 @@ object MarkupParser : Parser<MarkupState>() {
                 if (capture != "$") {
                     headings.formats.retain(headings.depth - 1)
                     capture.drop(1).forEach { key ->
-                        headings.formats += NumberingFormat.entries.first { it.key == key }
+                        headings.formats += NumberingFormat.entries.first { it.key == key.toString() }
                     }
                 }
                 append(headings.trueFormat().format(headings), ' ')

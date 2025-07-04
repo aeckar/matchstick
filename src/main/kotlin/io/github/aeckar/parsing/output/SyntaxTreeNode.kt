@@ -84,11 +84,11 @@ public open class SyntaxTreeNode internal constructor(
     @PublishedApi
     @Suppress("UNCHECKED_CAST")
     internal fun <R> transform(context: TransformContext<R>) {
-        var bindings = context.bindings
-        var action = bindings[matcher as RichMatcher]
+        var actions = context.actions
+        var action = actions[matcher as RichMatcher]
         while (action is TransformMap<*>) { // Resolve base action if using inherited bindings
-            bindings = action
-            action = bindings[matcher]
+            actions = action
+            action = actions[matcher]
         }
         if (action == null) {
             if (matcher !is StumpMatcher) {
@@ -98,12 +98,12 @@ public open class SyntaxTreeNode internal constructor(
         }
         val state = context.state
         action as TransformScope<R>
-        if (state instanceOf bindings.stateType) {
-            action(TransformContext(bindings, this, state)) // Invokes this function recursively
+        if (state instanceOf actions.stateType) {
+            action(TransformContext(actions, this, state)) // Invokes this function recursively
             return
         }
 
-        val subContext = TransformContext(bindings, this, initialStateOf<R>(bindings.stateType))
+        val subContext = TransformContext(actions, this, initialStateOf<R>(actions.stateType))
         val result = action(subContext) // Visit sub-context
         if (matcher.id === UNKNOWN_ID && matcher.coreScope() == null) {
             // Hoist results of unnamed compound rules

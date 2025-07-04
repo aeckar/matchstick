@@ -42,7 +42,7 @@ public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
     val driver = Driver(Tape(input), matches)
     (this as RichMatcher).loggingStrategy?.apply {
-        logger.debug { "Received input ${yellow.ifSupported()(input.truncated().escaped())}" }
+        logger.info { "Received input ${yellow.ifSupported()(input.truncated().escaped())}" }
     }
     collectMatches(driver)
     matches.retainAll(Match::isPersistent)
@@ -99,7 +99,7 @@ public inline fun <reified R> Matcher.parse(
             }
         }
         (this as RichMatcher).loggingStrategy?.apply {
-            logger.debug { "Transforming syntax tree of ${yellow.ifSupported()(input.truncated().escaped())}" }
+            logger.info { "Transforming syntax tree of ${yellow.ifSupported()(input.truncated().escaped())}" }
         }
         SyntaxTreeNode
             .treeOf(input, matches as MutableList<Match>, null)

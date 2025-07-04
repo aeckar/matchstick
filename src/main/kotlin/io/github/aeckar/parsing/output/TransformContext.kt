@@ -5,7 +5,6 @@ import io.github.aeckar.parsing.Grammar
 import io.github.aeckar.parsing.Matcher
 import io.github.aeckar.parsing.Parser
 import io.github.aeckar.parsing.RichMatcher
-import io.github.aeckar.parsing.dsl.GrammarContextDsl
 import java.util.*
 
 /**
@@ -22,7 +21,7 @@ public typealias TransformScope<R> = TransformContext<R>.() -> Unit
  * @see io.github.aeckar.parsing.parse
  */
 public class TransformContext<R> @PublishedApi internal constructor(
-    internal val bindings: TransformMap<*>,
+    internal val actions: TransformMap<*>,
     private val node: SyntaxTreeNode,
     state: R
 ) : GrammarContext() {
