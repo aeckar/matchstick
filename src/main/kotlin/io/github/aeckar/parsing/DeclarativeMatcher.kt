@@ -43,7 +43,7 @@ internal class DeclarativeMatcher(
 
     override fun collectMatches(driver: Driver): Int {
         if (isNonRecursive && this in driver.matchers()) {
-            driver.debugWithTrace(loggingStrategy, driver.tape.offset) { "Recursion found for non-recursive matcher" }
+            driver.logTrace(loggingStrategy, driver.tape.offset) { "Recursion found for non-recursive matcher" }
             return -1
         }
         return identity.collectMatches(driver)

@@ -80,5 +80,5 @@ public fun newRule(
 /** Returns an equivalent parser whose [ID][io.github.aeckar.parsing.state.Enumerated.id] is as given. */
 @Suppress("UNCHECKED_CAST")
 public infix fun <T : Matcher> T.named(id: String): T {
-    return MatcherProperty(id, this as RichMatcher) as T
+    return MatcherProperty(id, rich()) as T
 }

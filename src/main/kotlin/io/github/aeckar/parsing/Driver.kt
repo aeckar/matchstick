@@ -1,6 +1,5 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.ansi.*
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.rules.Alternation
 import io.github.aeckar.parsing.rules.CompoundRule
@@ -92,12 +91,13 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
     }
 
     /** Logs the debug message, followed by the current stack of matchers. */
-    inline fun debugWithTrace(
+    inline fun logTrace(
         loggingStrategy: LoggingStrategy?,
         offset: Int = -1,
         crossinline message: LoggingStrategy.() -> String
     ) {
         val logger = loggingStrategy?.logger ?: return
+        val grey = loggingStrategy.grey
         if (!logger.isDebugEnabled()) {
             return
         }
@@ -109,9 +109,9 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             } else {
                 "(end of input)"
             }
-            " ${(grey given loggingStrategy.supportsAnsi)("@ $offset $cursor")}"
+            " ${grey("@ $offset $cursor")}"
         }
-        logger.debug { "${message(loggingStrategy)}$position ${grey(matchers.joinToString(" > ", "[", "]"))}" }
+        logger.trace { "${message(loggingStrategy)}$position ${grey(matchers.joinToString(" > ", "[", "]"))}" }
     }
 
     /**
@@ -124,16 +124,16 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
         val beginMatchCount = matches.size
         val loggingStrategy = root.loggingStrategy
         if (localMatchers().count { it == root } > 1) {
-            debugWithTrace(loggingStrategy, begin) { "Unrecoverable recursion found" }
+            logTrace(loggingStrategy, begin) { "Unrecoverable recursion found" }
             return -1
         }
         matchers += root
         matchersPerIndex.getOrSet(begin) += root
         choiceCounts += 0
         ++depth
-        debugWithTrace(loggingStrategy, begin) {
+        logTrace(loggingStrategy, begin) {
             buildString {
-                append("Attempting match to ${blue.ifSupported()(root)}")
+                append("Attempting match to ${blue(root)}")
                 val uniqueMatcher = root.coreLogic()
                 if (uniqueMatcher !== root) {
                     append(" ($uniqueMatcher)")
@@ -150,10 +150,10 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
                     matches.last().isPersistent = isPersistenceEnabled
                     val success = matches.last()
                     tape.offset += success.length
-                    debugWithTrace(loggingStrategy, begin) { "Match previously succeeded" }
+                    logTrace(loggingStrategy, begin) { "Match previously succeeded" }
                     return result.matches.last().length
                 } else if (result is MatchFailure) {
-                    debugWithTrace(loggingStrategy, begin) { "Match previously failed" }
+                    logTrace(loggingStrategy, begin) { "Match previously failed" }
                     throw MatchInterrupt { result.cause.orEmpty() }
                 } // Else, not in cache
             }
@@ -163,31 +163,31 @@ internal class Driver(val tape: Tape, private val matches: MutableList<Match>) {
             context.apply(scope)
             context.yieldRemaining()
             recordMatch(root, begin)
-            debugWithTrace(loggingStrategy, begin) {
+            logTrace(loggingStrategy, begin) {
                 val substring = if (begin < tape.input.length) tape.input.substring(begin, tape.offset) else ""
-                "Match to ${blue.ifSupported()(root)} ${green.ifSupported()("succeeded")} ${"(${yellow.ifSupported()("'${substring.escaped()}'")})"}"
+                "Match to ${blue(root)} ${green("succeeded")} ${"(${yellow("'${substring.escaped()}'")})"}"
             }
             val length = tape.offset - begin
             if (root.isCacheable) {
                 val newMatches = matches.slice(beginMatchCount..<matches.size)
                 val success = MatchSuccess(newMatches, dependencies.toSet())
                 successesPerIndex.getOrSet(begin) += success
-                debugWithTrace(loggingStrategy, begin) { "Cached success" }
+                logTrace(loggingStrategy, begin) { "Cached success" }
             }
             chainedFailures.clear()
             return length
         } catch (e: MatchInterrupt) {
-            debugWithTrace(loggingStrategy, begin) {
-                "Match to ${blue.ifSupported()(root)} ${red.ifSupported()("failed")}"
+            logTrace(loggingStrategy, begin) {
+                "Match to ${blue(root)} ${red("failed")}"
             }
             val failure = MatchFailure(e.lazyCause, tape.offset, root, dependencies.toSet())
             chainedFailures += failure
             if (root.isCacheable) {
                 failuresPerIndex.getOrSet(begin) += failure
-                debugWithTrace(loggingStrategy, begin) { "Cached failure" }
+                logTrace(loggingStrategy, begin) { "Cached failure" }
             }
             dependencies.retainAll { it.depth <= depth }
-            debugWithTrace(loggingStrategy) { "Current dependencies: $dependencies" }
+            logTrace(loggingStrategy) { "Current dependencies: $dependencies" }
             tape.offset -= tape.offset - begin
             matches.subList(beginMatchCount, matches.size).clear()
             return -1

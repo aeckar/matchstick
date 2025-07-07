@@ -1,7 +1,6 @@
 package io.github.aeckar.parsing.output
 
-import io.github.aeckar.parsing.MalformedTransformException
-import io.github.aeckar.parsing.output.TransformContext
+import io.github.aeckar.parsing.DuplicateVisitException
 
 /**
  * A child of the current node in a [TransformContext].
@@ -16,11 +15,11 @@ public class ChildNode internal constructor(
 
     /**
      * [Transforms][SyntaxTreeNode.transform] the state assigned to each node in the subtree rooted by this node.
-     * @throws MalformedTransformException this node is visited more than once
+     * @throws DuplicateVisitException this node is visited more than once
      */
     public fun visit() {
         if (isVisited) {
-            throw MalformedTransformException("Child '$this' is visited more than once")
+            throw DuplicateVisitException("Child '$this' is visited more than once")
         }
         transform(context)
         isVisited = true

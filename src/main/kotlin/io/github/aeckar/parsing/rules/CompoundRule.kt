@@ -164,9 +164,9 @@ internal sealed class CompoundRule(
         if (separator === ImperativeMatcher.EMPTY) {
             return 0
         }
-        driver.debugWithTrace(loggingStrategy) { "Begin separator matches" }
+        driver.logTrace(loggingStrategy) { "Begin separator matches" }
         return driver.discardMatches { separator.collectMatches(driver) }
-            .also { driver.debugWithTrace(loggingStrategy) { "End separator matches" } }
+            .also { driver.logTrace(loggingStrategy) { "End separator matches" } }
             .coerceAtLeast(0)
     }
 }

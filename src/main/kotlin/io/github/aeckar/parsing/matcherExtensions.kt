@@ -1,6 +1,5 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.ansi.yellow
 import io.github.aeckar.parsing.output.ChildNode
 import io.github.aeckar.parsing.output.Match
 import io.github.aeckar.parsing.output.SyntaxTreeNode
@@ -14,7 +13,16 @@ import io.github.aeckar.parsing.state.escaped
 import io.github.aeckar.parsing.state.initialStateOf
 import io.github.aeckar.parsing.state.truncated
 import kotlin.collections.retainAll
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 import kotlin.reflect.typeOf
+
+@PublishedApi   // Inlined by 'parse'
+@OptIn(ExperimentalContracts::class)
+internal fun Matcher.rich(): RichMatcher {
+    contract { returns() implies (this@rich is RichMatcher) }
+    return this as RichMatcher
+}
 
 /**
  * If this matcher is of the given type and is of the same contiguosity, returns its sub-rules.
@@ -41,9 +49,7 @@ internal inline fun <reified T: CompoundRule> Matcher.groupBy(isContiguous: Bool
 public fun Matcher.match(input: CharSequence): Result<List<Match>> {
     val matches = mutableListOf<Match>()
     val driver = Driver(Tape(input), matches)
-    (this as RichMatcher).loggingStrategy?.apply {
-        logger.info { "Received input ${yellow.ifSupported()(input.truncated().escaped())}" }
-    }
+    rich().logTrace { "Received input ${yellow(input.truncated().escaped())}" }
     collectMatches(driver)
     matches.retainAll(Match::isPersistent)
     // IMPORTANT: Return mutable list to be used by 'treeify' and 'parse'
@@ -79,7 +85,7 @@ public fun Matcher.treeify(input: CharSequence): Result<SyntaxTreeNode> {
  * Exceptions thrown when walking the resulting syntax tree are not caught.
  * @throws UnrecoverableRecursionException there exists a left recursion in the matcher
  * @throws NoSuchMatchException a match cannot be made to the input
- * @throws MalformedTransformException any [ChildNode] is visited more than once in the same [TransformScope]
+ * @throws DuplicateVisitException any [ChildNode] is visited more than once in the same [TransformScope]
  * @throws StateInitializerException the initial state is not provided, and the nullary constructor of [R] is inaccessible
  * @see match
  * @see parse
@@ -98,9 +104,7 @@ public inline fun <reified R> Matcher.parse(
                 throw NoSuchMatchException("Match length $matchLength does not span input length ${input.length} for input ${input.truncated()}")
             }
         }
-        (this as RichMatcher).loggingStrategy?.apply {
-            logger.info { "Transforming syntax tree of ${yellow.ifSupported()(input.truncated().escaped())}" }
-        }
+        rich().logTrace { "Transforming syntax tree of ${yellow(input.truncated().escaped())}" }
         SyntaxTreeNode
             .treeOf(input, matches as MutableList<Match>, null)
             .transform(actions, initialState)

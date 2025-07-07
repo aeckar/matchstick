@@ -72,7 +72,7 @@ public class ImperativeMatcherContext internal constructor(
 
     /** Returns the length of the matched substring, or -1 if one is not found. */
     public fun lengthOf(matcher: Matcher): Int {
-        val length = driver.discardMatches { (matcher as RichMatcher).collectMatches(driver) }
+        val length = driver.discardMatches { matcher.rich().collectMatches(driver) }
         if (length != -1) {
             driver.tape.offset -= length    // Reset tape to original position
         }

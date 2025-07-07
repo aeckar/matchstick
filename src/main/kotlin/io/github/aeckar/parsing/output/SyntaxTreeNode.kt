@@ -62,12 +62,18 @@ public open class SyntaxTreeNode internal constructor(
      * Transforms the given object using the transforms defined by the matchers that produced each.
      *
      * The transforms are encountered during post-order traversal of the syntax tree whose root is this node.
+     *
+     * If no actions are bound to any matcher encountered, the initial state is returned.
      * @see parse
      */
     public inline fun <reified R> transform(
         actions: TransformMap<R>,
         initialState: R = initialStateOf(typeOf<R>())
     ): R {
+        if (matcher == null) {
+            return initialState
+        }
+        matcher.rich().logTrace { "Transforming syntax tree:\n${treeString()}\n" }
         val context = TransformContext(actions, ROOT_PLACEHOLDER, initialState)
         transform(context)
         return context.state
@@ -86,28 +92,43 @@ public open class SyntaxTreeNode internal constructor(
     internal fun <R> transform(context: TransformContext<R>) {
         var actions = context.actions
         var action = actions[matcher as RichMatcher]
+        val isNotRoot = matcher !is RootMatcher
         while (action is TransformMap<*>) { // Resolve base action if using inherited bindings
             actions = action
             action = actions[matcher]
         }
         if (action == null) {
-            if (matcher !is StumpMatcher) {
+            matcher.logTrace { "No action found for ${blue(matcher)}" }
+            if (isNotRoot || matcher.type !== RootMatcher.Type.STUMP) {
+                matcher.logTrace { "Visiting children" }
                 children.forEach { it.transform(context) }  // Invoke child transforms directly
+            } else {
+                matcher.logTrace { "Returning to parent of stump" }
             }
             return
         }
-        val state = context.state
         action as TransformScope<R>
-        if (state instanceOf actions.stateType) {
-            action(TransformContext(actions, this, state)) // Invokes this function recursively
+        val state = context.state
+        if ((isNotRoot || matcher.type !== RootMatcher.Type.ROOT)
+                && state instanceOf actions.stateType) {
+            matcher.loggingStrategy?.apply {
+
+            }
+            val subContext = TransformContext(actions, this, state)
+            action(subContext)  // Invokes this function recursively
+            subContext.visitRemaining()
             return
         }
-
         val subContext = TransformContext(actions, this, initialStateOf<R>(actions.stateType))
+        subContext.visitRemaining()
         val result = action(subContext) // Visit sub-context
+        subContext.visitRemaining()
         if (matcher.id === UNKNOWN_ID && matcher.coreScope() == null) {
             // Hoist results of unnamed compound rules
             // Scope check ensures results are only hoisted from the same matcher scope
+            matcher.loggingStrategy?.apply {
+
+            }
             subContext.resultsBySubMatcher.forEach { (key, value) -> context.addResult(key, value) }
             return
         }

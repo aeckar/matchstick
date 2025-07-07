@@ -136,7 +136,9 @@ public object CharExpressionParser : Parser<ExpressionState>() {
      * @see initial
      */
     public val embeddedTextExpr: Matcher by rule {
-        char('{') * TextExpressionParser() * char('}') or TextExpressionParser()
+        val textExpr = root(TextExpressionParser())
+
+        char('{') * textExpr * char('}') or textExpr
     }
 
     /**

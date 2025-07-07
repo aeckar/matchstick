@@ -13,6 +13,11 @@ public class LoggingStrategy @PublishedApi internal constructor(    // Inlined b
     public val logger: KLogger,
     public val supportsAnsi: Boolean
 ) {
-    /** Returns this text style printing ANSI escape codes if [supportsAnsi] is true. */
-    public fun TextStyle.ifSupported(): TextStyle = this given supportsAnsi
+    internal val blue = io.github.aeckar.ansi.blue given supportsAnsi
+    internal val green = io.github.aeckar.ansi.green given supportsAnsi
+    internal val red = io.github.aeckar.ansi.red given supportsAnsi
+    internal val grey = io.github.aeckar.ansi.grey given supportsAnsi
+
+    @PublishedApi   // Inlined by 'parse'
+    internal val yellow: TextStyle = io.github.aeckar.ansi.yellow given supportsAnsi
 }

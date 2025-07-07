@@ -4,6 +4,7 @@ import io.github.aeckar.parsing.output.ChildNode
 import io.github.aeckar.parsing.output.TransformScope
 import io.github.aeckar.parsing.rules.CompoundRule
 import io.github.aeckar.parsing.state.escaped
+import io.github.aeckar.parsing.output.SyntaxTreeNode
 
 /**
  * Thrown when a pattern expression is malformed.
@@ -12,11 +13,11 @@ import io.github.aeckar.parsing.state.escaped
  */
 public class MalformedPatternException internal constructor(
     message: String,
-    override val cause: Throwable? = null
-) : RuntimeException(message.escaped())
+    cause: Throwable? = null
+) : RuntimeException(message.escaped(), cause)
 
 /** Thrown when any [ChildNode] is visited more than once in the same [TransformScope]. */
-public class MalformedTransformException internal constructor(message: String) : RuntimeException(message.escaped())
+public class DuplicateVisitException internal constructor(message: String) : RuntimeException(message.escaped())
 
 /** Thrown when there exists no matches from which to derive a syntax tree from. */
 public class NoSuchMatchException @PublishedApi internal constructor( // Inlined in 'parse'
@@ -26,8 +27,8 @@ public class NoSuchMatchException @PublishedApi internal constructor( // Inlined
 /** Thrown when an initial state cannot be created using the nullary constructor of a class. */
 public class StateInitializerException @PublishedApi internal constructor(  // Inlined in 'initialStateOf'
     message: String,
-    override val cause: Throwable?
-) : RuntimeException(message.escaped())
+    cause: Throwable?
+) : RuntimeException(message.escaped(), cause)
 
 /**
  * Thrown when a left-recursion is found in a [CompoundRule] that is not

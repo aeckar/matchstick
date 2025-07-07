@@ -48,7 +48,7 @@ public object TextExpressionParser : Parser<ExpressionState>() {
     private val charOrEscape = ExpressionState.charOrEscape(rule, "^&|()[]{}+*?")
 
     private val embeddedCharExpr by rule {
-        CharExpressionParser()
+        root(CharExpressionParser())
     }
 
     /**

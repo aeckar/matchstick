@@ -1,6 +1,7 @@
 package io.github.aeckar.parsing
 
 import io.github.aeckar.parsing.state.Enumerated.Companion.UNKNOWN_ID
+import io.github.aeckar.parsing.state.LoggingStrategy
 
 /** Returns the string representation of this matcher, parenthesized if it comprises multiple other rules. */
 internal fun RichMatcher.unambiguousString(): String {
@@ -25,4 +26,9 @@ internal fun RichMatcher.collectMatchesOrFail(driver: Driver): Int {
         throw MatchInterrupt.UNCONDITIONAL
     }
     return length
+}
+
+@PublishedApi   // Inlined by 'parse'
+internal inline fun RichMatcher.logTrace(crossinline block: LoggingStrategy.() -> String) {
+    loggingStrategy?.apply { logger.trace { block() } }
 }

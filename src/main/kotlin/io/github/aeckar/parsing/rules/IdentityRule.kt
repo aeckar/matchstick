@@ -10,7 +10,7 @@ internal class IdentityRule(
     subMatcher: Matcher
 ) : CompoundRule(loggingStrategy, context, listOf(subMatcher)), RichMatcher.Modifier {
     override val subMatcher = subMatchers.single()
-    private val lazyCoreLogic by lazy((subMatcher as RichMatcher)::coreLogic)
+    private val lazyCoreLogic by lazy(subMatcher.rich()::coreLogic)
 
     override fun resolveDescription() = "{ ${subMatcher.coreIdentity().unambiguousString()} }"
     override fun coreLogic() = lazyCoreLogic

@@ -25,8 +25,8 @@ internal class Alternation(
         for ((index, matcher) in subMatchers.withIndex()) {  // Loops at least once
             if (matcher.coreLogic() in driver.localMatchers()) {
                 driver.addDependency(matcher)
-                loggingStrategy?.apply {
-                    driver.debugWithTrace(loggingStrategy) { "Left recursion found for ${blue.ifSupported()(matcher)}" }
+                if (loggingStrategy != null) {
+                    driver.logTrace(loggingStrategy) { "Left recursion found for ${blue(matcher)}" }
                 }
                 continue
             }

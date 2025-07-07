@@ -1,6 +1,5 @@
 package io.github.aeckar.parsing
 
-import io.github.aeckar.parsing.dsl.GrammarContextDsl
 import io.github.aeckar.parsing.dsl.matcher
 import io.github.aeckar.parsing.dsl.newRule
 import io.github.aeckar.parsing.patterns.CharExpressionParser
@@ -61,7 +60,15 @@ public open class DeclarativeMatcherContext internal constructor(
 
     /** Returns an equivalent matcher whose syntax subtree does not get transformed during parsing. */
     public fun stump(matcher: Matcher): Matcher {
-        return StumpMatcher(matcher as RichMatcher)
+        return RootMatcher(matcher as RichMatcher, RootMatcher.Type.STUMP)
+    }
+
+    /**
+     * Returns an equivalent matcher whose syntax subtree uses its own state when being transformed,
+     * regardless of whether its type is assignable from that of its root.
+     */
+    public fun root(matcher: Matcher): Matcher {
+        return RootMatcher(matcher as RichMatcher, RootMatcher.Type.ROOT)
     }
 
     /** Returns a rule matching the next character, including the end-of-input character. */
